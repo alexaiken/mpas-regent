@@ -1,7 +1,7 @@
 import "regent"
 
 local cio = terralib.includec("stdio.h")
-local clib = terralib.includec("stdlib.h
+local clib = terralib.includec("stdlib.h)
 
 
 -- Link the .so and header files: If working in sherlock, these should be the same.
