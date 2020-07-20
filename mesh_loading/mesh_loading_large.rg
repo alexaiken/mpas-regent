@@ -17,40 +17,53 @@ local nVertLevels = 1
 
 local FILE_NAME = "x1.2562.grid.nc"
 
-
 --Terra function to open the netcdf file and store NCID in the variable passed in.
-terra open_file(ncid: int, file_name: &int8)
-	var retval = netcdf.nc_open(file_name, netcdf.NC_NOWRITE, &ncid)
-	return ncid	
+terra open_file(ncid: &int, file_name: &int8)
+	var retval = netcdf.nc_open(file_name, netcdf.NC_NOWRITE, ncid)
+    if retval == 1 then 
+        cio.printf("Error opening file %s \n", file_name)
+    end
 end
 
 --Terra function to extract file information (no. of dims, etc).
-terra file_inquiry(ncid: int, ndims_in: int , nvars_in: int, ngatts_in: int, unlimdimid_in: int)
-	var retval = netcdf.nc_inq(ncid, &ndims_in, &nvars_in, &ngatts_in, &unlimdimid_in)
-	return ndims_in
+terra file_inquiry(ncid: int, ndims_in: &int , nvars_in: &int, ngatts_in: &int, unlimdimid_in: &int)
+	var retval = netcdf.nc_inq(ncid, ndims_in, nvars_in, ngatts_in, unlimdimid_in)
+    if retval == 1 then 
+        cio.printf("Error extracting file information of NCID %d \n", ncid)
+    end
 end
 
 --Terra function to get the variable ID, given the variable name.
-terra get_varid(ncid: int, name: &int8,  varid: int)
-	var retval = netcdf.nc_inq_varid(ncid, name, &varid)
+terra get_varid(ncid: int, name: &int8,  varid: &int)
+	var retval = netcdf.nc_inq_varid(ncid, name, varid)
+    if retval == 1 then 
+        cio.printf("Error extracting variable ID of %s\n", name)
+    end
 	return varid
 end
 
 --Terra function to get the variable values, given the variable ID: For variables with type double.
 terra get_var_double(ncid: int, varid: int,  var_array_ptr: &double)
 	var retval = netcdf.nc_get_var_double(ncid, varid, var_array_ptr)
-	return retval
+    if retval == 1 then 
+        cio.printf("Error extracting variable values of variable ID %d\n", varid)
+    end
 end
 
 --Terra function to get the variable values, given the variable ID: For variables with type int.
 terra get_var_int(ncid: int, varid: int,  var_array_ptr: &int)
 	var retval = netcdf.nc_get_var_int(ncid, varid, var_array_ptr)
-	return retval
+    if retval == 1 then 
+        cio.printf("Error extracting variable values of variable ID %d\n", varid)
+    end
 end
 
+--Terra function to close file given NCID
 terra file_close(ncid: int)
 	var retval = netcdf.nc_close(ncid)
-	return retval
+    if retval == 1 then 
+        cio.printf("Error closing file of NCID %d \n", ncid)
+    end
 end
 
 
@@ -141,47 +154,47 @@ task main()
 
 	
     -- Open the file and store the NCID
-	ncid = open_file(ncid, FILE_NAME)
+	open_file(&ncid, FILE_NAME)
 
     -- Get the variable IDs of all the variables
-	latCell_varid = get_varid(ncid, "latCell", latCell_varid)	
-	lonCell_varid = get_varid(ncid, "lonCell", lonCell_varid)
-    meshDensity_varid = get_varid(ncid, "meshDensity", meshDensity_varid)
-	xCell_varid = get_varid(ncid, "xCell", xCell_varid) 
-	yCell_varid = get_varid(ncid, "yCell", yCell_varid) 
-	zCell_varid = get_varid(ncid, "zCell", zCell_varid)
-	indexToCellID_varid = get_varid(ncid, "indexToCellID", indexToCellID_varid)
-    latEdge_varid = get_varid(ncid, "latEdge", latEdge_varid)
-	lonEdge_varid = get_varid(ncid, "lonEdge", lonEdge_varid)
-	xEdge_varid = get_varid(ncid, "xEdge", xEdge_varid)
-	yEdge_varid = get_varid(ncid, "yEdge", yEdge_varid)
-	zEdge_varid = get_varid(ncid, "zEdge", zEdge_varid)
-	indexToEdgeID_varid = get_varid(ncid, "indexToEdgeID", indexToEdgeID_varid)
-    latVertex_varid = get_varid(ncid, "latVertex", latVertex_varid)
-	lonVertex_varid = get_varid(ncid, "lonVertex", lonVertex_varid)
-	xVertex_varid = get_varid(ncid, "xVertex", xVertex_varid)
-	yVertex_varid = get_varid(ncid, "yVertex", yVertex_varid)
-	zVertex_varid = get_varid(ncid, "zVertex", zVertex_varid)
-	indexToVertexID_varid = get_varid(ncid, "indexToVertexID", indexToVertexID_varid)
-    cellsOnEdge_varid = get_varid(ncid, "cellsOnEdge", cellsOnEdge_varid)
-	nEdgesOnCell_varid = get_varid(ncid, "nEdgesOnCell", nEdgesOnCell_varid)
-	nEdgesOnEdge_varid = get_varid(ncid, "nEdgesOnEdge", nEdgesOnEdge_varid)
-	edgesOnCell_varid = get_varid(ncid, "edgesOnCell", edgesOnCell_varid)
-	edgesOnEdge_varid = get_varid(ncid, "edgesOnEdge", edgesOnEdge_varid)
-	weightsOnEdge_varid = get_varid(ncid, "weightsOnEdge", weightsOnEdge_varid)
-    dvEdge_varid = get_varid(ncid, "dvEdge", dvEdge_varid)
-	dv1Edge_varid = get_varid(ncid, "dv1Edge", dv1Edge_varid)
-	dv2Edge_varid = get_varid(ncid, "dv2Edge", dv2Edge_varid)
-	dcEdge_varid = get_varid(ncid, "dcEdge", dcEdge_varid)
-	angleEdge_varid = get_varid(ncid, "angleEdge", angleEdge_varid)
-	areaCell_varid = get_varid(ncid, "areaCell", areaCell_varid)
-	areaTriangle_varid = get_varid(ncid, "areaTriangle", areaTriangle_varid)
-	cellsOnCell_varid = get_varid(ncid, "cellsOnCell", cellsOnCell_varid)
-	verticesOnCell_varid = get_varid(ncid, "verticesOnCell", verticesOnCell_varid)
-	verticesOnEdge_varid = get_varid(ncid, "verticesOnEdge", verticesOnEdge_varid)
-	edgesOnVertex_varid = get_varid(ncid, "edgesOnVertex", edgesOnVertex_varid)
-	cellsOnVertex_varid = get_varid(ncid, "cellsOnVertex", cellsOnVertex_varid)
-	kiteAreasOnVertex_varid = get_varid(ncid, "kiteAreasOnVertex", kiteAreasOnVertex_varid)
+	get_varid(ncid, "latCell", &latCell_varid)	
+	get_varid(ncid, "lonCell", &lonCell_varid)
+    get_varid(ncid, "meshDensity", &meshDensity_varid)
+	get_varid(ncid, "xCell", &xCell_varid) 
+	get_varid(ncid, "yCell", &yCell_varid) 
+	get_varid(ncid, "zCell", &zCell_varid)
+	get_varid(ncid, "indexToCellID", &indexToCellID_varid)
+    get_varid(ncid, "latEdge", &latEdge_varid)
+	get_varid(ncid, "lonEdge", &lonEdge_varid)
+	get_varid(ncid, "xEdge", &xEdge_varid)
+	get_varid(ncid, "yEdge", &yEdge_varid)
+	get_varid(ncid, "zEdge", &zEdge_varid)
+	get_varid(ncid, "indexToEdgeID", &indexToEdgeID_varid)
+    get_varid(ncid, "latVertex", &latVertex_varid)
+	get_varid(ncid, "lonVertex", &lonVertex_varid)
+	get_varid(ncid, "xVertex", &xVertex_varid)
+	get_varid(ncid, "yVertex", &yVertex_varid)
+	get_varid(ncid, "zVertex", &zVertex_varid)
+	get_varid(ncid, "indexToVertexID", &indexToVertexID_varid)
+    get_varid(ncid, "cellsOnEdge", &cellsOnEdge_varid)
+	get_varid(ncid, "nEdgesOnCell", &nEdgesOnCell_varid)
+	get_varid(ncid, "nEdgesOnEdge", &nEdgesOnEdge_varid)
+	get_varid(ncid, "edgesOnCell", &edgesOnCell_varid)
+	get_varid(ncid, "edgesOnEdge", &edgesOnEdge_varid)
+	get_varid(ncid, "weightsOnEdge", &weightsOnEdge_varid)
+    get_varid(ncid, "dvEdge", &dvEdge_varid)
+	get_varid(ncid, "dv1Edge", &dv1Edge_varid)
+	get_varid(ncid, "dv2Edge", &dv2Edge_varid)
+	get_varid(ncid, "dcEdge", &dcEdge_varid)
+	get_varid(ncid, "angleEdge", &angleEdge_varid)
+	get_varid(ncid, "areaCell", &areaCell_varid)
+	get_varid(ncid, "areaTriangle", &areaTriangle_varid)
+	get_varid(ncid, "cellsOnCell", &cellsOnCell_varid)
+	get_varid(ncid, "verticesOnCell", &verticesOnCell_varid)
+	get_varid(ncid, "verticesOnEdge", &verticesOnEdge_varid)
+	get_varid(ncid, "edgesOnVertex", &edgesOnVertex_varid)
+	get_varid(ncid, "cellsOnVertex", &cellsOnVertex_varid)
+	get_varid(ncid, "kiteAreasOnVertex", &kiteAreasOnVertex_varid)
 
     -- Printing IDs out to test
 	cio.printf("weightsOnEdge_varid is %d\n", weightsOnEdge_varid)
@@ -191,46 +204,47 @@ task main()
     cio.printf("kiteAreasOnVertex_varid is %d\n", kiteAreasOnVertex_varid)
    
 	-- Get the variable values, given the variable IDs
-	var retval = get_var_double(ncid, latCell_varid, &latCell_in[0])
-	retval = get_var_double(ncid, lonCell_varid, &lonCell_in[0])
-    retval = get_var_double(ncid, meshDensity_varid, &meshDensity_in[0])
-    retval = get_var_double(ncid, xCell_varid, &xCell_in[0])
-    retval = get_var_double(ncid, yCell_varid, &yCell_in[0])
-    retval = get_var_double(ncid, zCell_varid, &zCell_in[0])
-    retval = get_var_int(ncid, indexToCellID_varid, &indexToCellID_in[0])
-    retval = get_var_double(ncid, latEdge_varid, &latEdge_in[0])
-    retval = get_var_double(ncid, lonEdge_varid, &lonEdge_in[0])
-    retval = get_var_double(ncid, xEdge_varid, &xEdge_in[0])
-    retval = get_var_double(ncid, yEdge_varid, &yEdge_in[0])
-    retval = get_var_double(ncid, zEdge_varid, &zEdge_in[0])
-    retval = get_var_int(ncid, indexToEdgeID_varid, &indexToEdgeID_in[0])
-    retval = get_var_double(ncid, latVertex_varid, &latVertex_in[0])
-    retval = get_var_double(ncid, lonVertex_varid, &lonVertex_in[0])
-    retval = get_var_double(ncid, xVertex_varid, &xVertex_in[0])
-    retval = get_var_double(ncid, yVertex_varid, &yVertex_in[0])
-    retval = get_var_double(ncid, zVertex_varid, &zVertex_in[0])
-    retval = get_var_int(ncid, indexToVertexID_varid, &indexToVertexID_in[0])
-    retval = get_var_int(ncid, cellsOnEdge_varid, &cellsOnEdge_in[0][0])
-    retval = get_var_int(ncid, nEdgesOnCell_varid, &nEdgesOnCell_in[0])
-    retval = get_var_int(ncid, nEdgesOnEdge_varid, &nEdgesOnEdge_in[0])
-    retval = get_var_int(ncid, edgesOnCell_varid, &edgesOnCell_in[0][0])
-    retval = get_var_int(ncid, edgesOnEdge_varid, &edgesOnEdge_in[0][0])
-    --retval = get_var_double(ncid, weightsOnEdge_varid, &weightsOnEdge_in[0][0])
-    retval = get_var_double(ncid, dvEdge_varid, &dvEdge_in[0])
-    retval = get_var_double(ncid, dv1Edge_varid, &dv1Edge_in[0])
-    retval = get_var_double(ncid, dv2Edge_varid, &dv2Edge_in[0])
-    retval = get_var_double(ncid, dcEdge_varid, &dcEdge_in[0])
-    retval = get_var_double(ncid, angleEdge_varid, &angleEdge_in[0])
-    retval = get_var_double(ncid, areaCell_varid, &areaCell_in[0])
-    retval = get_var_double(ncid, areaTriangle_varid, &areaTriangle_in[0])
-    retval = get_var_int(ncid, cellsOnCell_varid, &cellsOnCell_in[0][0])
-    --retval = get_var_int(ncid, verticesOnCell_varid, &verticesOnCell_in[0][0])
-    --retval = get_var_int(ncid, verticesOnEdge_varid, &verticesOnEdge_in[0][0])
-    retval = get_var_int(ncid, edgesOnVertex_varid, &edgesOnVertex_in[0][0])
-    --retval = get_var_int(ncid, cellsOnVertex_varid, &cellsOnVertex_in[0][0])
-    --retval = get_var_double(ncid, kiteAreasOnVertex_varid, &kiteAreasOnVertex_in[0][0])
+	get_var_double(ncid, latCell_varid, &latCell_in[0])
+	get_var_double(ncid, lonCell_varid, &lonCell_in[0])
+    get_var_double(ncid, meshDensity_varid, &meshDensity_in[0])
+    get_var_double(ncid, xCell_varid, &xCell_in[0])
+    get_var_double(ncid, yCell_varid, &yCell_in[0])
+    get_var_double(ncid, zCell_varid, &zCell_in[0])
+    get_var_int(ncid, indexToCellID_varid, &indexToCellID_in[0])
+    get_var_double(ncid, latEdge_varid, &latEdge_in[0])
+    get_var_double(ncid, lonEdge_varid, &lonEdge_in[0])
+    get_var_double(ncid, xEdge_varid, &xEdge_in[0])
+    get_var_double(ncid, yEdge_varid, &yEdge_in[0])
+    get_var_double(ncid, zEdge_varid, &zEdge_in[0])
+    get_var_int(ncid, indexToEdgeID_varid, &indexToEdgeID_in[0])
+    get_var_double(ncid, latVertex_varid, &latVertex_in[0])
+    get_var_double(ncid, lonVertex_varid, &lonVertex_in[0])
+    get_var_double(ncid, xVertex_varid, &xVertex_in[0])
+    get_var_double(ncid, yVertex_varid, &yVertex_in[0])
+    get_var_double(ncid, zVertex_varid, &zVertex_in[0])
+    get_var_int(ncid, indexToVertexID_varid, &indexToVertexID_in[0])
+    get_var_int(ncid, cellsOnEdge_varid, &cellsOnEdge_in[0][0])
+    get_var_int(ncid, nEdgesOnCell_varid, &nEdgesOnCell_in[0])
+    get_var_int(ncid, nEdgesOnEdge_varid, &nEdgesOnEdge_in[0])
+    get_var_int(ncid, edgesOnCell_varid, &edgesOnCell_in[0][0])
+    get_var_int(ncid, edgesOnEdge_varid, &edgesOnEdge_in[0][0])
+    --get_var_double(ncid, weightsOnEdge_varid, &weightsOnEdge_in[0][0])
+    get_var_double(ncid, dvEdge_varid, &dvEdge_in[0])
+    get_var_double(ncid, dv1Edge_varid, &dv1Edge_in[0])
+    get_var_double(ncid, dv2Edge_varid, &dv2Edge_in[0])
+    get_var_double(ncid, dcEdge_varid, &dcEdge_in[0])
+    get_var_double(ncid, angleEdge_varid, &angleEdge_in[0])
+    get_var_double(ncid, areaCell_varid, &areaCell_in[0])
+    get_var_double(ncid, areaTriangle_varid, &areaTriangle_in[0])
+    get_var_int(ncid, cellsOnCell_varid, &cellsOnCell_in[0][0])
+    --get_var_int(ncid, verticesOnCell_varid, &verticesOnCell_in[0][0])
+    --get_var_int(ncid, verticesOnEdge_varid, &verticesOnEdge_in[0][0])
+    get_var_int(ncid, edgesOnVertex_varid, &edgesOnVertex_in[0][0])
+    --get_var_int(ncid, cellsOnVertex_varid, &cellsOnVertex_in[0][0])
+    --get_var_double(ncid, kiteAreasOnVertex_varid, &kiteAreasOnVertex_in[0][0])
 
-	retval = file_close(ncid)
+     -- Close the file
+	file_close(ncid)
 	
 	cio.printf("The 2nd element of the areaTriangle_in array is %f \n", areaTriangle_in[1])
     
