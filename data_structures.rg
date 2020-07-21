@@ -41,7 +41,6 @@ fspace l_e {
   distance : double
 }
 
-
 --edges that outline P_i
 fspace edges_on_cell(maxEdges : int,
                      re : region(int)) {
@@ -66,7 +65,6 @@ fspace cells_on_edge(maxEdges : int,
 fspace cells_on_vertex(rc : region(int)) {
   {cell1, cell2, cell3} : ptr(int, rc),
 }
-
 
 --vertex ids for triangles centered on the points of an edge
 fspace vertices_on_edge(rv : region(int)) {
