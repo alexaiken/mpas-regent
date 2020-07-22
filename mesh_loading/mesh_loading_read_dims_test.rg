@@ -90,9 +90,9 @@ task main()
 	open_file(&ncid, FILE_NAME)
 
 	-- Define dim IDs
-    var nCells_dimid : int
-    var nEdges_dimid : int
-    var nVertices_dimid : int 
+	var nCells_dimid : int
+	var nEdges_dimid : int
+	var nVertices_dimid : int 
 
 	-- Get dimIDs of all of the mesh_dimensions
 	get_dimid(ncid, "nCells", &nCells_dimid)	
@@ -110,35 +110,35 @@ task main()
 	cio.printf("CAST: nCells is %u\n nVertices is %u\n nEdges is %u\n", terralib.cast(int,mesh_vars.nCells), terralib.cast(int,mesh_vars.nVertices), terralib.cast(int,mesh_vars.nEdges))
 
 	
-    -- Define the variable IDs
+	-- Define the variable IDs
 	var latCell_varid : int
 	var lonEdge_varid : int
 	var indexToCellID_varid : int
 
-    -- Define the data structures to store the variable values
+	-- Define the data structures to store the variable values
 	var latCell_in : double[mesh_vars.nCells]
 	var lonEdge_in : double[nEdges]
 	var indexToCellID_in : int[nCells]
 
 
-    -- Get the variable IDs of all the variables
+	-- Get the variable IDs of all the variables
 	get_varid(ncid, "latCell", &latCell_varid)	
 	get_varid(ncid, "lonEdge", &lonEdge_varid)
 	get_varid(ncid, "indexToCellID", &indexToCellID_varid)
 	
-    -- Get the variable values, given the variable IDs (To add: error checking)
+	-- Get the variable values, given the variable IDs (To add: error checking)
 	get_var_double(ncid, latCell_varid, &latCell_in[0])
 	get_var_double(ncid, lonEdge_varid, &lonEdge_in[0])
-    get_var_int(ncid, indexToCellID_varid, &indexToCellID_in[0])
+	get_var_int(ncid, indexToCellID_varid, &indexToCellID_in[0])
 
 
 
-    --for i = 0, nEdges do 
-	--	cio.printf("lonEdge index %d is %f\n", i, lonEdge_in[i])
+	--for i = 0, nEdges do 
+		cio.printf("lonEdge index %d is %f\n", i, lonEdge_in[i])
 	--end
 
 
-    -- Close the file
+	-- Close the file
 	file_close(ncid)
 	
 end
