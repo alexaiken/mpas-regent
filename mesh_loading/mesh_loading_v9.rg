@@ -195,6 +195,10 @@ end
 
 
 task main()
+
+    -------------------------------------------
+    ----- READ VARIABLES FROM NETCDF FILE -----
+    -------------------------------------------
     cio.printf("Starting to read file... \n")
 	var ncid : int
 
@@ -363,9 +367,9 @@ task main()
     --get_var_int(ncid, cellsOnVertex_varid, &cellsOnVertex_in[0][0])
     --get_var_double(ncid, kiteAreasOnVertex_varid, &kiteAreasOnVertex_in[0][0])
 
-    -----------------------------------------------
-    ----- Converting 2d arrays into 1d arrays -----
-    -----------------------------------------------
+    --------------------------------------------
+    ----- CONVERT 2D ARRAYS INTO 1D ARRAYS -----
+    --------------------------------------------
     --Ugly code because the netcdf function return the 2d arrays incorrectly, so I covert them to 1d arrays for easy access. 
     -- To look into: there is probably a better way of doing this
 
@@ -438,9 +442,9 @@ task main()
         end
 	end
 
-    -----------------------------------------------
-    ----- Defining Index Spaces and Regions -----
-    -----------------------------------------------
+    -------------------------------------------
+    ----- DEFINE INDEX SPACES AND REGIONS -----
+    -------------------------------------------
 
     -- Define index spaces for cell IDs, vertex IDs and edge IDs
     var cell_id_space = ispace(int1d, nCells)
@@ -453,9 +457,9 @@ task main()
     var vertex_region = region(vertex_id_space, D_v)
 
 
-    -------------------------------------
-    ----- Copying data into Regions -----
-    -------------------------------------
+    ----------------------------------
+    ----- COPY DATA INTO REGIONS -----
+    ----------------------------------
 
     -- Copy data into cell region
     for i = 0, nCells do 
@@ -537,7 +541,9 @@ task main()
         --cio.printf("Vertex ID is %d, xVertex is %f, yVertex is %f, zVertex is %f \n", i, vertex_region[i].x, vertex_region[i].y, vertex_region[i].z)
     end
 
-
+    -------------------------
+    ----- CALCULATE EVC -----
+    -------------------------
     -- I know I should do something more intelligent to get the common elements: but for now we do a brute force search to get EVC
     
     --First, we iterate through the cells and get the edgesOnCell array for each cell
@@ -820,6 +826,5 @@ task main()
 	file_close(ncid_copy)
     cio.printf("Successfully written netcdf file!\n")
 
-	
 end
 regentlib.start(main)
