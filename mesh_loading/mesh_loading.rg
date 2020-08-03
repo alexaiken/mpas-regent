@@ -17,13 +17,16 @@ local vertexDegree = 3
 local nVertLevels = 1
 
 local FILE_NAME = "x1.2562.grid.nc"
+local GRAPH_FILE_NAME = "x1.2562.graph.info.part.16"
+local MAXCHAR = 5
+local NUM_PARTITIONS = 16
 
 -----------------------------------------------
 ------- FIELD SPACES FOR MESH ELEMENTS --------
 -----------------------------------------------
 
 --a hexagonal/primal cell (aka cell)
-fspace P_i {
+fspace cell_fs {
     cellID : int,
     lat : double,
     lon : double,
@@ -33,6 +36,7 @@ fspace P_i {
     meshDensity : double,
     nEdgesOnCell : int,
     areaCell : double,
+    partitionNumber: int1d,
     edgesOnCell : int[maxEdges],
     cellsOnCell : int[maxEdges],
     verticesOnCell : int[maxEdges],
@@ -40,7 +44,7 @@ fspace P_i {
 }
 
 -- A triangluar/dual cell (aka vertex)
-fspace D_v {
+fspace vertex_fs {
     vertexID : int,
     lat : double,
     lon : double,
@@ -54,19 +58,19 @@ fspace D_v {
 }
 
 -- An edge between two vertices that borders two primal cells. (aka edge)
-fspace edge {
+fspace edge_fs {
     edgeID : int,
     lat : double,
     lon : double,
     x : double,
     y : double,
     z : double,
-    angleEdge : double,
     nEdgesOnEdge : int,
     dvEdge : double,
     dv1Edge : double,
     dv2Edge : double,
     dcEdge : double,
+    angleEdge : double,
     cellsOnEdge : int[TWO],
     verticesOnEdge : int[TWO],
     edgesOnEdge_ECP : int[maxEdges2],
@@ -136,6 +140,38 @@ terra get_var_int(ncid: int, varid: int,  var_array_ptr: &int)
     end
 end
 
+--Terra function to get the global attribute length
+terra get_global_att_len(ncid: int, name: &int8, varlen_ptr: &uint64)
+	var retval = netcdf.nc_inq_attlen(ncid, netcdf.NC_GLOBAL, name, varlen_ptr)
+    if retval == 1 then 
+        cio.printf("Error extracting global attribute length of varname %s\n", name)
+    end
+end
+
+--Terra function to get the global attributes, given the variable ID: For variables with type int.
+terra get_global_att_double(ncid: int, name: &int8, att_array_ptr: &double)
+	var retval = netcdf.nc_get_att_double(ncid, netcdf.NC_GLOBAL, name, att_array_ptr)
+    if retval == 1 then 
+        cio.printf("Error extracting global attribute values of varname %s\n", name)
+    end
+end
+
+--Terra function to get the global attributes, given the variable ID: For variables with type int.
+terra get_global_att_int(ncid: int, name: &int8, att_array_ptr: &int)
+	var retval = netcdf.nc_get_att_int(ncid, netcdf.NC_GLOBAL, name, att_array_ptr)
+    if retval == 1 then 
+        cio.printf("Error extracting global attribute values of varname %s\n", name)
+    end
+end
+
+--Terra function to get the global attributes, given the variable ID: For variables with type int.
+terra get_global_att_text(ncid: int, name: &int8, att_array_ptr: &int8)
+	var retval = netcdf.nc_get_att_text(ncid, netcdf.NC_GLOBAL, name, att_array_ptr)
+    if retval == 1 then 
+        cio.printf("Error extracting global attribute values of varname %s\n", name)
+    end
+end
+
 --Tera function to close file given NCID
 terra file_close(ncid: int)
     var retval = netcdf.nc_close(ncid)
@@ -190,6 +226,20 @@ terra put_var_int(ncid: int, varid: int, var_array_ptr: &int)
     if retval == 1 then 
         cio.printf("Error writing variable def of varid %d \n", varid)
     end
+end
+
+--Terra function to read the cell partitions from graph.info file. Returns an array where each element is the partition number of that cell index.
+terra read_file(file_name: &int8) : int[nCells]
+    var file = c.fopen(file_name, "r")
+    regentlib.assert(file ~= nil, "failed to open graph.info file")
+    var str : int8[MAXCHAR]
+    var partition_array : int[nCells]
+    var i = 0
+    while c.fgets(str, MAXCHAR, file) ~= nil do
+        partition_array[i] = c.atoi(str)
+        i = i+1
+    end
+    return partition_array
 end
 
 
@@ -325,7 +375,7 @@ task main()
     get_varid(ncid, "edgesOnVertex", &edgesOnVertex_varid)
     get_varid(ncid, "cellsOnVertex", &cellsOnVertex_varid)
     get_varid(ncid, "kiteAreasOnVertex", &kiteAreasOnVertex_varid)
-    
+
     -- Get the variable values, given the variable IDs
     get_var_double(ncid, latCell_varid, latCell_in)
     get_var_double(ncid, lonCell_varid, lonCell_in)
@@ -376,10 +426,11 @@ task main()
     var edge_id_space = ispace(int1d, nEdges)
 
     -- Define regions
-    var edge_region = region(edge_id_space, edge)
-    var cell_region = region(cell_id_space, P_i)
-    var vertex_region = region(vertex_id_space, D_v)
+    var edge_region = region(edge_id_space, edge_fs)
+    var cell_region = region(cell_id_space, cell_fs)
+    var vertex_region = region(vertex_id_space, vertex_fs)
 
+    var partition_array = read_file(GRAPH_FILE_NAME)
 
     ----------------------------------
     ----- COPY DATA INTO REGIONS -----
@@ -393,9 +444,12 @@ task main()
         cell_region[i].x = xCell_in[i]
         cell_region[i].y = yCell_in[i]
         cell_region[i].z = zCell_in[i]
-        cell_region[i].nEdgesOnCell = nEdgesOnCell_in[i]
         cell_region[i].meshDensity = meshDensity_in[i]
+        cell_region[i].nEdgesOnCell = nEdgesOnCell_in[i]
         cell_region[i].areaCell = areaCell_in[i]
+        cell_region[i].partitionNumber = partition_array[i]
+
+        --cio.printf("Cell : Cell ID %d, partitionNumber %d\n", cell_region[i].cellID, cell_region[i].partitionNumber)
         
         for j = 0, maxEdges do
             cell_region[i].edgesOnCell[j] = edgesOnCell_in[i*maxEdges + j] --cell_region[i].edgesOnCell is a int[maxEdges]
@@ -417,11 +471,12 @@ task main()
         edge_region[i].y = yEdge_in[i]
         edge_region[i].z = zEdge_in[i]
         edge_region[i].nEdgesOnEdge = nEdgesOnEdge_in[i]
+        edge_region[i].angleEdge = angleEdge_in[i]
         edge_region[i].dvEdge = dvEdge_in[i]
         edge_region[i].dv1Edge = dv1Edge_in[i]
         edge_region[i].dv2Edge = dv2Edge_in[i]
         edge_region[i].dcEdge = dcEdge_in[i]
-        edge_region[i].angleEdge = angleEdge_in[i]
+        
 
         for j = 0, TWO do
             edge_region[i].cellsOnEdge[j] = cellsOnEdge_in[i*TWO + j]
@@ -547,7 +602,24 @@ task main()
 
     cio.printf("Successfully read file! \n")
 
-    
+    ------------------------------------
+    ------- PARTITIONING REGION --------
+    ------------------------------------
+
+    var partition_is = ispace(int1d, NUM_PARTITIONS)
+    var cell_partition = partition(complete, cell_region.partitionNumber, partition_is)
+
+    --Test code by printing out partitions
+    --var i = 0
+    --for p in partition_is do
+    --    var sub_region = cell_partition[p]
+    --    cio.printf("Sub region %d\n", i)
+    --    for cell in sub_region do
+    --        cio.printf("partitionNumber is %d\n", cell.partitionNumber)
+    --    end
+    --    i=i+1
+    --end
+
     ----------------------------------------------------
     ------- TESTING CODE: WRITING NETCDF OUTPUT --------
     ----------------------------------------------------
@@ -715,13 +787,12 @@ task main()
     for i = 0, nCells do 
         latCell_in_copy[i] = cell_region[i].lat
         lonCell_in_copy[i] = cell_region[i].lon
-        meshDensity_in_copy[i] = cell_region[i].meshDensity
         xCell_in_copy[i] = cell_region[i].x
         yCell_in_copy[i] = cell_region[i].y
         zCell_in_copy[i] = cell_region[i].z
         indexToCellID_in_copy[i] = cell_region[i].cellID
+        meshDensity_in_copy[i] = cell_region[i].meshDensity
         nEdgesOnCell_in_copy[i] = cell_region[i].nEdgesOnCell
-        
         areaCell_in_copy[i] = cell_region[i].areaCell
 
         for j = 0, maxEdges do
