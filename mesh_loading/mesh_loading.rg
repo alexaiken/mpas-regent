@@ -1,6 +1,7 @@
 import "regent"
 
 require "data_structures"
+require "netcdf_tasks"
 
 local c = regentlib.c
 local cio = terralib.includec("stdio.h")
@@ -23,155 +24,6 @@ local GRAPH_FILE_NAME = "x1.2562.graph.info.part.16"
 local MAXCHAR = 5
 local NUM_PARTITIONS = 16
 
-
------------------------------------------------
------ TERRA WRAPPERS FOR NETCDF FUNCTIONS -----
------------------------------------------------
-
---Terra function to open the netcdf file and store NCID in the variable passed in.
-terra open_file(ncid: &int, file_name: &int8)
-    var retval = netcdf.nc_open(file_name, netcdf.NC_NOWRITE, ncid)
-    if retval == 1 then 
-        cio.printf("Error opening file %s \n", file_name)
-    end
-end
-
---Terra function to extract file information (no. of dims, etc).
-terra file_inquiry(ncid: int, ndims_in: &int , nvars_in: &int, ngatts_in: &int, unlimdimid_in: &int)
-    var retval = netcdf.nc_inq(ncid, ndims_in, nvars_in, ngatts_in, unlimdimid_in)
-    if retval == 1 then 
-        cio.printf("Error extracting file information of NCID %d \n", ncid)
-    end
-end
-
---Terra function to extract dimension ID 
-terra get_dimid(ncid: int, name: &int8, dimid: &int)
-    var retval = netcdf.nc_inq_dimid(ncid, name, dimid)
-    if retval == 1 then 
-        cio.printf("Error extracting dimension ID of dimension %s \n", name)
-    end
-end
-
---Terra function to extract dimension value 
-terra get_dimlength(ncid: int, dimid: int,  dimlength: &uint64)
-    var retval = netcdf.nc_inq_dimlen(ncid, dimid, dimlength)
-    if retval == 1 then 
-        cio.printf("Error extracting dimension length of dimID %d \n", dimid)
-    end
-end
-
-
---Terra function to get the variable ID, given the variable name.
-terra get_varid(ncid: int, name: &int8,  varid: &int)
-	var retval = netcdf.nc_inq_varid(ncid, name, varid)
-    if retval == 1 then 
-        cio.printf("Error extracting variable ID of %s\n", name)
-    end
-end
-
---Terra function to get the variable values, given the variable ID: For variables with type double.
-terra get_var_double(ncid: int, varid: int,  var_array_ptr: &double)
-    var retval = netcdf.nc_get_var_double(ncid, varid, var_array_ptr)
-    if retval == 1 then 
-        cio.printf("Error extracting variable values of variable ID %d\n", varid)
-    end
-end
-
---Terra function to get the variable values, given the variable ID: For variables with type int.
-terra get_var_int(ncid: int, varid: int,  var_array_ptr: &int)
-	var retval = netcdf.nc_get_var_int(ncid, varid, var_array_ptr)
-    if retval == 1 then 
-        cio.printf("Error extracting variable values of variable ID %d\n", varid)
-    end
-end
-
---Terra function to get the global attribute length
-terra get_global_att_len(ncid: int, name: &int8, varlen_ptr: &uint64)
-	var retval = netcdf.nc_inq_attlen(ncid, netcdf.NC_GLOBAL, name, varlen_ptr)
-    if retval == 1 then 
-        cio.printf("Error extracting global attribute length of varname %s\n", name)
-    end
-end
-
---Terra function to get the global attributes, given the variable ID: For variables with type int.
-terra get_global_att_double(ncid: int, name: &int8, att_array_ptr: &double)
-	var retval = netcdf.nc_get_att_double(ncid, netcdf.NC_GLOBAL, name, att_array_ptr)
-    if retval == 1 then 
-        cio.printf("Error extracting global attribute values of varname %s\n", name)
-    end
-end
-
---Terra function to get the global attributes, given the variable ID: For variables with type int.
-terra get_global_att_int(ncid: int, name: &int8, att_array_ptr: &int)
-	var retval = netcdf.nc_get_att_int(ncid, netcdf.NC_GLOBAL, name, att_array_ptr)
-    if retval == 1 then 
-        cio.printf("Error extracting global attribute values of varname %s\n", name)
-    end
-end
-
---Terra function to get the global attributes, given the variable ID: For variables with type int.
-terra get_global_att_text(ncid: int, name: &int8, att_array_ptr: &int8)
-	var retval = netcdf.nc_get_att_text(ncid, netcdf.NC_GLOBAL, name, att_array_ptr)
-    if retval == 1 then 
-        cio.printf("Error extracting global attribute values of varname %s\n", name)
-    end
-end
-
---Tera function to close file given NCID
-terra file_close(ncid: int)
-    var retval = netcdf.nc_close(ncid)
-    if retval == 1 then 
-        cio.printf("Error closing file of NCID %d \n", ncid)
-    end
-end
-
---Terra function to close file given NCID
-terra file_create(file_name: &int8, ncid_ptr: &int)
-    var retval = netcdf.nc_create(file_name, netcdf.NC_CLOBBER, ncid_ptr)
-    if retval == 1 then 
-        cio.printf("Error creating file of name %s \n", file_name)
-    end
-end
-
---Terra function to define a dimension
-terra define_dim(ncid: int, dim_name: &int8, dim_size: int, dim_id_ptr: &int)
-    var retval = netcdf.nc_def_dim(ncid, dim_name, dim_size, dim_id_ptr)
-    if retval == 1 then 
-        cio.printf("Error defining dimension of name %s \n", dim_name)
-    end
-end
-
---Terra function to define a variable
-terra define_var(ncid: int, var_name: &int8, var_type: int, num_dims: int, dim_ids: &int, var_id_ptr: &int)
-    var retval = netcdf.nc_def_var(ncid, var_name, var_type, num_dims, dim_ids, var_id_ptr)
-    if retval == 1 then 
-        cio.printf("Error defining variable of name %s \n", var_name)
-    end
-end
-
---Terra function to end metadata reading
-terra end_def(ncid: int)
-	var retval = netcdf.nc_enddef(ncid)
-    if retval == 1 then 
-        cio.printf("Error ending def of ncid %d \n", ncid)
-    end
-end
-
---Terra function to read variable
-terra put_var_double(ncid: int, varid: int, var_array_ptr: &double)
-    var retval = netcdf.nc_put_var_double(ncid, varid, var_array_ptr)
-    if retval == 1 then 
-        cio.printf("Error writing variable def of varid %d \n", varid)
-    end
-end
-
---Terra function to read variable
-terra put_var_int(ncid: int, varid: int, var_array_ptr: &int)
-    var retval = netcdf.nc_put_var_int(ncid, varid, var_array_ptr)
-    if retval == 1 then 
-        cio.printf("Error writing variable def of varid %d \n", varid)
-    end
-end
 
 --Terra function to read the cell partitions from graph.info file. Returns an array where each element is the partition number of that cell index.
 terra read_file(file_name: &int8) : int[nCells]
@@ -203,7 +55,7 @@ task main()
     var latCell_varid : int
     var lonCell_varid : int
     var meshDensity_varid : int
-    var xCell_varid : int 
+    var xCell_varid : int
     var yCell_varid : int
     var zCell_varid : int
     var indexToCellID_varid : int
@@ -259,12 +111,12 @@ task main()
     var yVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices))
     var zVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices))
     var indexToVertexID_in : &int = [&int](c.malloc([sizeof(int)] * nVertices))
-    var cellsOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO)) 
+    var cellsOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
     var nEdgesOnCell_in : &int = [&int](c.malloc([sizeof(int)] * nCells))
     var nEdgesOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges))
-    var edgesOnCell_in : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))   
-    var edgesOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges*maxEdges2)) 
-    var weightsOnEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges*maxEdges2)) 
+    var edgesOnCell_in : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
+    var edgesOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges*maxEdges2))
+    var weightsOnEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges*maxEdges2))
     var dvEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
     var dv1Edge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
     var dv2Edge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
@@ -278,14 +130,14 @@ task main()
     var edgesOnVertex_in : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
     var cellsOnVertex_in : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
     var kiteAreasOnVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices*vertexDegree))
-    
+
 
     -- Get the variable IDs of all the variables
-    get_varid(ncid, "latCell", &latCell_varid)	
+    get_varid(ncid, "latCell", &latCell_varid)
     get_varid(ncid, "lonCell", &lonCell_varid)
     get_varid(ncid, "meshDensity", &meshDensity_varid)
-    get_varid(ncid, "xCell", &xCell_varid) 
-    get_varid(ncid, "yCell", &yCell_varid) 
+    get_varid(ncid, "xCell", &xCell_varid)
+    get_varid(ncid, "yCell", &yCell_varid)
     get_varid(ncid, "zCell", &zCell_varid)
     get_varid(ncid, "indexToCellID", &indexToCellID_varid)
     get_varid(ncid, "latEdge", &latEdge_varid)
@@ -382,7 +234,7 @@ task main()
     ----------------------------------
 
     -- Copy data into cell region
-    for i = 0, nCells do 
+    for i = 0, nCells do
         cell_region[i].cellID = indexToCellID_in[i]
         cell_region[i].lat = latCell_in[i]
         cell_region[i].lon = lonCell_in[i]
@@ -395,7 +247,7 @@ task main()
         cell_region[i].partitionNumber = partition_array[i]
 
         --cio.printf("Cell : Cell ID %d, partitionNumber %d\n", cell_region[i].cellID, cell_region[i].partitionNumber)
-        
+
         for j = 0, maxEdges do
             cell_region[i].edgesOnCell[j] = edgesOnCell_in[i*maxEdges + j] --cell_region[i].edgesOnCell is a int[maxEdges]
             cell_region[i].verticesOnCell[j] = verticesOnCell_in[i*maxEdges + j] --cell_region[i].verticesOnCell is a int[maxEdges]
@@ -403,7 +255,7 @@ task main()
             --cio.printf("edgesOnCell : Cell %d, Edge %d: edge index is %d\n", i, j, cell_region[i].edgesOnCell[j])
             --cio.printf("verticesOnCell : Cell %d, Vertex %d: Vertex index is %d\n", i, j, cell_region[i].verticesOnCell[j])
             --cio.printf("cellsOnCell : InnerCell %d, OuterCell %d: Cell index is %d\n", i, j, cell_region[i].cellsOnCell[j])
-        end 
+        end
         --cio.printf("Cell : Cell ID %d, nEdgesOnCell is %d\n", cell_region[i].cellID, cell_region[i].nEdgesOnCell)
     end
 
@@ -421,7 +273,7 @@ task main()
         edge_region[i].dv1Edge = dv1Edge_in[i]
         edge_region[i].dv2Edge = dv2Edge_in[i]
         edge_region[i].dcEdge = dcEdge_in[i]
-        
+
 
         for j = 0, TWO do
             edge_region[i].cellsOnEdge[j] = cellsOnEdge_in[i*TWO + j]
@@ -468,25 +320,25 @@ task main()
 
     --First, we iterate through the cells and get the edgesOnCell array for each cell
     for i = 0, nCells do
-        var curr_edgesOnCell = cell_region[i].edgesOnCell 
+        var curr_edgesOnCell = cell_region[i].edgesOnCell
 
-    --Then we iterate through the vertices of that cell 
+    --Then we iterate through the vertices of that cell
         for j = 0, maxEdges do
             var currVertexID = cell_region[i].verticesOnCell[j]
             cell_region[i].evc[j*3] = currVertexID
             --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3, cell_region[i].evc[j*3])
-    
+
             if currVertexID == 0 then
                 cell_region[i].evc[j*3 + 1] = 0
                 cell_region[i].evc[j*3 + 2] = 0
                 --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + 1, cell_region[i].evc[j*3 + 1])
                 --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + 2, cell_region[i].evc[j*3 + 2])
-    
+
             --If there is a vertex, we get the edges on that vertex
-            elseif currVertexID ~= 0 then 
-                var curr_edgesOnVertex = vertex_region[currVertexID-1].edgesOnVertex               
-                var count = 1 
-    
+            elseif currVertexID ~= 0 then
+                var curr_edgesOnVertex = vertex_region[currVertexID-1].edgesOnVertex
+                var count = 1
+
                 --Then, we get overlapping edges between curr_edgesOnVertex and curr_edgesOnCell to get EVC
                 for k = 0, vertexDegree do
                     var currEdgeID = curr_edgesOnVertex[k]
@@ -609,7 +461,7 @@ task main()
     var latCell_varid_copy : int
     var lonCell_varid_copy : int
     var meshDensity_varid_copy : int
-    var xCell_varid_copy : int 
+    var xCell_varid_copy : int
     var yCell_varid_copy : int
     var zCell_varid_copy : int
     var indexToCellID_varid_copy : int
@@ -684,7 +536,7 @@ task main()
     define_var(ncid_copy, "edgesOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &edgesOnVertex_varid_copy)
     define_var(ncid_copy, "cellsOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &cellsOnVertex_varid_copy)
     define_var(ncid_copy, "kiteAreasOnVertex", netcdf.NC_DOUBLE, 2, nVertices_vertexDegree_dimids, &kiteAreasOnVertex_varid_copy)
-    
+
     --This function signals that we're done writing the metadata.
     end_def(ncid_copy)
 
@@ -708,12 +560,12 @@ task main()
     var yVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
     var zVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
     var indexToVertexID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices))
-    var cellsOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO)) 
+    var cellsOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
     var nEdgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells))
     var nEdgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges))
-    var edgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))   
-    var edgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*maxEdges2)) 
-    var weightsOnEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges*maxEdges2)) 
+    var edgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
+    var edgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*maxEdges2))
+    var weightsOnEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges*maxEdges2))
     var dvEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
     var dv1Edge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
     var dv2Edge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
@@ -729,7 +581,7 @@ task main()
     var kiteAreasOnVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices*vertexDegree))
 
     --Now we copy the data into the arrays so they can be read into the netcdf files
-    for i = 0, nCells do 
+    for i = 0, nCells do
         latCell_in_copy[i] = cell_region[i].lat
         lonCell_in_copy[i] = cell_region[i].lon
         xCell_in_copy[i] = cell_region[i].x
@@ -744,7 +596,7 @@ task main()
             edgesOnCell_in_copy[i*maxEdges + j] = cell_region[i].edgesOnCell[j]
             verticesOnCell_in_copy[i*maxEdges + j] = cell_region[i].verticesOnCell[j]
             cellsOnCell_in_copy[i*maxEdges + j] = cell_region[i].cellsOnCell[j]
-        end 
+        end
         --cio.printf("Cell COPY : Cell ID %d, nEdgesOnCell is %d\n", indexToCellID_in_copy[i], nEdgesOnCell_in_copy[i])
     end
 
@@ -764,7 +616,7 @@ task main()
 
         for j = 0, TWO do
             cellsOnEdge_in_copy[i*TWO + j] = edge_region[i].cellsOnEdge[j]
-            verticesOnEdge_in_copy[i*TWO + j] = edge_region[i].verticesOnEdge[j] 
+            verticesOnEdge_in_copy[i*TWO + j] = edge_region[i].verticesOnEdge[j]
         end
 
         for j = 0, maxEdges2 do
@@ -784,11 +636,11 @@ task main()
 
         for j = 0, vertexDegree do
             edgesOnVertex_in_copy[i*vertexDegree + j] = vertex_region[i].edgesOnVertex[j]
-            cellsOnVertex_in_copy[i*vertexDegree + j] = vertex_region[i].cellsOnVertex[j] 
+            cellsOnVertex_in_copy[i*vertexDegree + j] = vertex_region[i].cellsOnVertex[j]
             kiteAreasOnVertex_in_copy[i*vertexDegree + j] = vertex_region[i].kiteAreasOnVertex[j]
         end
     end
-    
+
 
     --Now we put the data into the netcdf file.
     put_var_double(ncid_copy, latCell_varid_copy, latCell_in_copy)
