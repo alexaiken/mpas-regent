@@ -1,5 +1,7 @@
 import "regent"
 
+require "data_structures"
+
 local c = regentlib.c
 local cio = terralib.includec("stdio.h")
 local clib = terralib.includec("stdlib.h")
@@ -20,63 +22,6 @@ local FILE_NAME = "x1.2562.grid.nc"
 local GRAPH_FILE_NAME = "x1.2562.graph.info.part.16"
 local MAXCHAR = 5
 local NUM_PARTITIONS = 16
-
------------------------------------------------
-------- FIELD SPACES FOR MESH ELEMENTS --------
------------------------------------------------
-
---a hexagonal/primal cell (aka cell)
-fspace cell_fs {
-    cellID : int,
-    lat : double,
-    lon : double,
-    x : double,
-    y : double,
-    z : double,
-    meshDensity : double,
-    nEdgesOnCell : int,
-    areaCell : double,
-    partitionNumber: int1d,
-    edgesOnCell : int[maxEdges],
-    cellsOnCell : int[maxEdges],
-    verticesOnCell : int[maxEdges],
-    evc : int[3*maxEdges]   --edge pair associated with vertex v and mesh cell i. This is stored as (vertexID, edge1, edge2), and each cell has 10 of those triples arranged sequentially in the array
-}
-
--- A triangluar/dual cell (aka vertex)
-fspace vertex_fs {
-    vertexID : int,
-    lat : double,
-    lon : double,
-    x : double,
-    y : double,
-    z : double,
-    areaTriangle : double,
-    edgesOnVertex : int[vertexDegree],
-    cellsOnVertex : int[vertexDegree],
-    kiteAreasOnVertex : double[vertexDegree]
-}
-
--- An edge between two vertices that borders two primal cells. (aka edge)
-fspace edge_fs {
-    edgeID : int,
-    lat : double,
-    lon : double,
-    x : double,
-    y : double,
-    z : double,
-    nEdgesOnEdge : int,
-    dvEdge : double,
-    dv1Edge : double,
-    dv2Edge : double,
-    dcEdge : double,
-    angleEdge : double,
-    cellsOnEdge : int[TWO],
-    verticesOnEdge : int[TWO],
-    edgesOnEdge_ECP : int[maxEdges2],
-    weightsOnEdge : double[maxEdges2]
-}
-
 
 
 -----------------------------------------------
@@ -550,7 +495,7 @@ task main()
                             cell_region[i].evc[j*3 + count] = currEdgeID
                             --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + count, cell_region[i].evc[j*3 + count])
                             count = count+1
-                       end
+                        end
                     end
                 end
             end
@@ -558,7 +503,7 @@ task main()
     end
 
      -- Close the file
-	file_close(ncid)
+	  file_close(ncid)
 
     -- Free allocated arrays
     c.free(latCell_in)
