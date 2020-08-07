@@ -2,6 +2,8 @@ import "regent"
 
 require "data_structures"
 require "netcdf_tasks"
+require "dynamics_tasks"
+require "rk_timestep"
 
 local c = regentlib.c
 local cio = terralib.includec("stdio.h")
@@ -727,6 +729,11 @@ task main()
     -- Close the file
     file_close(ncid_copy)
     cio.printf("Successfully written netcdf file!\n")
+
+
+    --test timestep compile with regions
+    --atm_timestep(20.0, vertex_region, edge_region, cell_region)
+
 
 end
 regentlib.start(main)

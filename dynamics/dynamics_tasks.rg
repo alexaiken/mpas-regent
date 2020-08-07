@@ -201,7 +201,9 @@ where reads writes(er), reads(cr) do
 end
 
 
---TODO: need vertical structure implemented to access, dss, zgrid, zt
+
+
+
 --task atm_compute_damping_coefs()
 --    var m1 = -1.0
 --    var pii = acos(m1) -- find equivelent transformation in Regent for acos()
@@ -220,8 +222,43 @@ end
 --end
 
 task atm_couple_coef_3rd_order()
---TODO: need to explore config_coef_3rd_order
   --  adv_coefs_3rd(:,:) = config_coef_3rd_order * adv_coefs_3rd(:,:)
    -- zb3_cell(:,:,:) = config_coef_3rd_order * zb3_cell(:,:,:)
 end
 
+
+task atm_compute_moist_coefficients()
+  cio.printf("computing moist coefficients\n")
+end  
+
+task atm_compute_vert_imp_coefs()  
+  cio.printf("computing vertical coefficients\n")
+end
+
+task atm_compute_dyn_tend()
+  cio.printf("computing dynamic tendencies\n")
+end
+
+task atm_set_smlstep_pert_variables()
+  cio.printf("set small step vars\n")
+end
+
+task atm_advance_acoustic_step()
+  cio.printf("advancing acoustic step\n")
+end
+
+task atm_divergence_damping_3d()
+  cio.printf("update horizontal momentum\n")
+end
+
+task atm_recover_large_step_variables()
+  cio.printf("recovering large step vars\n")
+end
+
+task atm_compute_solve_diagnostics()
+  cio.printf("computing solve diagnostics\n")
+end
+
+task atm_rk_dynamics_substep_finish()
+  cio.printf("finishing substep\n")
+end
