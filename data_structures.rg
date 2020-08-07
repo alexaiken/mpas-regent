@@ -33,6 +33,29 @@ fspace cell_fs {
     verticesOnCell : int[maxEdges],
     evc : int[3*maxEdges],   --edge pair associated with vertex v and mesh cell i. This is stored as (vertexID, edge1, edge2), and each cell has 10 of those triples arranged sequentially in the array
 
+    -----------begin halo fields------------------
+    neighbor0 : int1d,
+    neighbor1 : int1d,
+    neighbor2 : int1d,
+    neighbor3 : int1d,
+    neighbor4 : int1d,
+    neighbor5 : int1d,
+    neighbor6 : int1d,
+    neighbor7 : int1d,
+    neighbor8 : int1d,
+    neighbor9 : int1d,
+
+    neighbor00 : int1d,
+    neighbor11 : int1d,
+    neighbor22 : int1d,
+    neighbor33 : int1d,
+    neighbor44 : int1d,
+    neighbor55 : int1d,
+    neighbor66 : int1d,
+    neighbor77 : int1d,
+    neighbor88 : int1d,
+    neighbor99 : int1d,
+
     -----------begin dynamics fields--------------
     kiteForCell : int[maxEdges], --Index of kite in kiteAreasOnVertex that lies within a cell for eac    h of verticesOnCell
     edgesOnCellSign : double[maxEdges], --Sign for edges surrounding a cell: positive for positive outwa    rd normal velocity
@@ -79,5 +102,3 @@ fspace edge_fs {
     nAdvCellsForEdge : int, --Number of cells used to reconstruct a cell-based field at an edge
     adv_coefs : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at     edges
 }
-
-

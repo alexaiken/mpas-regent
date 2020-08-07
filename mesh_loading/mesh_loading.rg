@@ -221,12 +221,12 @@ task main()
 
     -- Define index spaces for cell IDs, vertex IDs and edge IDs
     var cell_id_space = ispace(int1d, nCells)
-    var vertex_id_space = ispace(int1d, nVertices)
     var edge_id_space = ispace(int1d, nEdges)
+    var vertex_id_space = ispace(int1d, nVertices)
 
     -- Define regions
-    var edge_region = region(edge_id_space, edge_fs)
     var cell_region = region(cell_id_space, cell_fs)
+    var edge_region = region(edge_id_space, edge_fs)
     var vertex_region = region(vertex_id_space, vertex_fs)
 
     var partition_array = read_file(GRAPH_FILE_NAME)
@@ -356,6 +356,35 @@ task main()
         end
     end
 
+    -----------------------------------
+    ----- Copy Neighbours -----
+    -----------------------------------
+    for i = 0, nCells do
+      -- cell.cellsOnCell[0] contains an integer with the index of the cell neighbour. I would like cell.neighbour to point to that cell in the region
+      -- we subtract 1 because the index spaces are 0-indexed but the cellIDs are 1-indexed
+      cell_region[i].neighbor0 = cell_region[i].cellsOnCell[0] - 1
+      cell_region[i].neighbor1 = cell_region[i].cellsOnCell[1] - 1
+      cell_region[i].neighbor2 = cell_region[i].cellsOnCell[2] - 1
+      cell_region[i].neighbor3 = cell_region[i].cellsOnCell[3] - 1
+      cell_region[i].neighbor4 = cell_region[i].cellsOnCell[4] - 1
+      cell_region[i].neighbor5 = cell_region[i].cellsOnCell[5] - 1
+      cell_region[i].neighbor6 = cell_region[i].cellsOnCell[6] - 1
+      cell_region[i].neighbor7 = cell_region[i].cellsOnCell[7] - 1
+      cell_region[i].neighbor8 = cell_region[i].cellsOnCell[8] - 1
+      cell_region[i].neighbor9 = cell_region[i].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor00 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[0] - 1
+      cell_region[i].neighbor11 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[1] - 1
+      cell_region[i].neighbor22 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[2] - 1
+      cell_region[i].neighbor33 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[3] - 1
+      cell_region[i].neighbor44 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[4] - 1
+      cell_region[i].neighbor55 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[5] - 1
+      cell_region[i].neighbor66 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[6] - 1
+      cell_region[i].neighbor77 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[7] - 1
+      cell_region[i].neighbor88 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[8] - 1
+      cell_region[i].neighbor99 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[9] - 1
+    end
+
      -- Close the file
 	  file_close(ncid)
 
@@ -401,23 +430,69 @@ task main()
 
     cio.printf("Successfully read file! \n")
 
-    ------------------------------------
-    ------- PARTITIONING REGION --------
-    ------------------------------------
+    -----------------------------------------------
+    ------- PARTITION REGIONS  --------
+    -----------------------------------------------
 
-    var partition_is = ispace(int1d, NUM_PARTITIONS)
-    var cell_partition = partition(complete, cell_region.partitionNumber, partition_is)
+    --Create initial partition based on METIS graph partition
+    var color_space = ispace(int1d, NUM_PARTITIONS)
+    var cell_partition_initial = partition(complete, cell_region.partitionNumber, color_space)
 
-    --Test code by printing out partitions
+    --Create dependent partitions based on neighbour fields
+    -- Syntax for image: var p = image(parent_region, source_partition, data_region.field)
+    -- cell_partition_i = {cell \in cell_region | cell_region[j].neighbour0 matches that cell index and cell_region[j] is in subregion i of pc_initial}
+    var cell_partition_neighbor0 = image(cell_region, cell_partition_initial, cell_region.neighbor0)
+    var cell_partition_neighbor1 = image(cell_region, cell_partition_initial, cell_region.neighbor1)
+    var cell_partition_neighbor2 = image(cell_region, cell_partition_initial, cell_region.neighbor2)
+    var cell_partition_neighbor3 = image(cell_region, cell_partition_initial, cell_region.neighbor3)
+    var cell_partition_neighbor4 = image(cell_region, cell_partition_initial, cell_region.neighbor4)
+    var cell_partition_neighbor5 = image(cell_region, cell_partition_initial, cell_region.neighbor5)
+    var cell_partition_neighbor6 = image(cell_region, cell_partition_initial, cell_region.neighbor6)
+    var cell_partition_neighbor7 = image(cell_region, cell_partition_initial, cell_region.neighbor7)
+    var cell_partition_neighbor8 = image(cell_region, cell_partition_initial, cell_region.neighbor8)
+    var cell_partition_neighbor9 = image(cell_region, cell_partition_initial, cell_region.neighbor9)
+
+    -- Construct halo1
+    var partition_s_1 = cell_partition_neighbor0 | cell_partition_neighbor1 | cell_partition_neighbor2 | cell_partition_neighbor3 | cell_partition_neighbor4 | cell_partition_neighbor5 | cell_partition_neighbor6 | cell_partition_neighbor7 | cell_partition_neighbor8 | cell_partition_neighbor9
+    var partition_halo_1 = partition_s_1 - cell_partition_initial
+
+    -- Repeat to create halo2
+    var cell_partition_neighbor00 = image(cell_region, cell_partition_initial, cell_region.neighbor00)
+    var cell_partition_neighbor11 = image(cell_region, cell_partition_initial, cell_region.neighbor11)
+    var cell_partition_neighbor22 = image(cell_region, cell_partition_initial, cell_region.neighbor22)
+    var cell_partition_neighbor33 = image(cell_region, cell_partition_initial, cell_region.neighbor33)
+    var cell_partition_neighbor44 = image(cell_region, cell_partition_initial, cell_region.neighbor44)
+    var cell_partition_neighbor55 = image(cell_region, cell_partition_initial, cell_region.neighbor55)
+    var cell_partition_neighbor66 = image(cell_region, cell_partition_initial, cell_region.neighbor66)
+    var cell_partition_neighbor77 = image(cell_region, cell_partition_initial, cell_region.neighbor77)
+    var cell_partition_neighbor88 = image(cell_region, cell_partition_initial, cell_region.neighbor88)
+    var cell_partition_neighbor99 = image(cell_region, cell_partition_initial, cell_region.neighbor99)
+
+    var partition_s_2 = cell_partition_neighbor00 | cell_partition_neighbor11 | cell_partition_neighbor22 | cell_partition_neighbor33 | cell_partition_neighbor44 | cell_partition_neighbor55 | cell_partition_neighbor66 | cell_partition_neighbor77 | cell_partition_neighbor88 | cell_partition_neighbor99
+    var partition_halo_2 = partition_s_2  - cell_partition_initial
+
+    --Test code by printing out first neighbours in the original partition
     --var i = 0
-    --for p in partition_is do
-    --    var sub_region = cell_partition[p]
+    --for p in color_space do
+    --    var sub_region = cell_partition_initial[p]
     --    cio.printf("Sub region %d\n", i)
     --    for cell in sub_region do
-    --        cio.printf("partitionNumber is %d\n", cell.partitionNumber)
+    --        cio.printf("%d\n", cell.cellsOnCell[0])
     --    end
     --    i=i+1
     --end
+
+    --Print out first neighbour partition to check against the original partition
+    --i = 0
+    --for p in cell_partition_neighbor0.colors do
+    --    var sub_region = cell_partition_neighbor0[p]
+    --    cio.printf("Sub region %d\n", i)
+    --    for cell in sub_region do
+    --        cio.printf("%d\n", cell.cellID)
+    --    end
+    --    i=i+1
+    --end
+
 
     ----------------------------------------------------
     ------- TESTING CODE: WRITING NETCDF OUTPUT --------
