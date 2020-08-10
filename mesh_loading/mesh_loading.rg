@@ -2,8 +2,6 @@ import "regent"
 
 require "data_structures"
 require "netcdf_tasks"
-require "dynamics_tasks"
-require "rk_timestep"
 
 local c = regentlib.c
 local cio = terralib.includec("stdio.h")
@@ -356,35 +354,6 @@ task main()
         end
     end
 
-    -----------------------------------
-    ----- Copy Neighbours -----
-    -----------------------------------
-    for i = 0, nCells do
-      -- cell.cellsOnCell[0] contains an integer with the index of the cell neighbour. I would like cell.neighbour to point to that cell in the region
-      -- we subtract 1 because the index spaces are 0-indexed but the cellIDs are 1-indexed
-      cell_region[i].neighbor0 = cell_region[i].cellsOnCell[0] - 1
-      cell_region[i].neighbor1 = cell_region[i].cellsOnCell[1] - 1
-      cell_region[i].neighbor2 = cell_region[i].cellsOnCell[2] - 1
-      cell_region[i].neighbor3 = cell_region[i].cellsOnCell[3] - 1
-      cell_region[i].neighbor4 = cell_region[i].cellsOnCell[4] - 1
-      cell_region[i].neighbor5 = cell_region[i].cellsOnCell[5] - 1
-      cell_region[i].neighbor6 = cell_region[i].cellsOnCell[6] - 1
-      cell_region[i].neighbor7 = cell_region[i].cellsOnCell[7] - 1
-      cell_region[i].neighbor8 = cell_region[i].cellsOnCell[8] - 1
-      cell_region[i].neighbor9 = cell_region[i].cellsOnCell[9] - 1
-
-      cell_region[i].neighbor00 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[0] - 1
-      cell_region[i].neighbor11 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[1] - 1
-      cell_region[i].neighbor22 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[2] - 1
-      cell_region[i].neighbor33 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[3] - 1
-      cell_region[i].neighbor44 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[4] - 1
-      cell_region[i].neighbor55 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[5] - 1
-      cell_region[i].neighbor66 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[6] - 1
-      cell_region[i].neighbor77 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[7] - 1
-      cell_region[i].neighbor88 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[8] - 1
-      cell_region[i].neighbor99 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[9] - 1
-    end
-
      -- Close the file
 	  file_close(ncid)
 
@@ -430,6 +399,134 @@ task main()
 
     cio.printf("Successfully read file! \n")
 
+    -----------------------------------
+    ----- Copy Neighbours -----
+    -----------------------------------
+    for i = 0, nCells do
+      -- cell.cellsOnCell[0] contains an integer with the index of the cell neighbour. I would like cell.neighbour to point to that cell in the region
+      -- we subtract 1 because the index spaces are 0-indexed but the cellIDs are 1-indexed
+      cell_region[i].neighbor0 = cell_region[i].cellsOnCell[0] - 1
+      cell_region[i].neighbor1 = cell_region[i].cellsOnCell[1] - 1
+      cell_region[i].neighbor2 = cell_region[i].cellsOnCell[2] - 1
+      cell_region[i].neighbor3 = cell_region[i].cellsOnCell[3] - 1
+      cell_region[i].neighbor4 = cell_region[i].cellsOnCell[4] - 1
+      cell_region[i].neighbor5 = cell_region[i].cellsOnCell[5] - 1
+      cell_region[i].neighbor6 = cell_region[i].cellsOnCell[6] - 1
+      cell_region[i].neighbor7 = cell_region[i].cellsOnCell[7] - 1
+      cell_region[i].neighbor8 = cell_region[i].cellsOnCell[8] - 1
+      cell_region[i].neighbor9 = cell_region[i].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor00 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[0] - 1
+      cell_region[i].neighbor01 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[1] - 1
+      cell_region[i].neighbor02 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[2] - 1
+      cell_region[i].neighbor03 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[3] - 1
+      cell_region[i].neighbor04 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[4] - 1
+      cell_region[i].neighbor05 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[5] - 1
+      cell_region[i].neighbor06 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[6] - 1
+      cell_region[i].neighbor07 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[7] - 1
+      cell_region[i].neighbor08 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[8] - 1
+      cell_region[i].neighbor09 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor10 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[0] - 1
+      cell_region[i].neighbor11 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[1] - 1
+      cell_region[i].neighbor12 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[2] - 1
+      cell_region[i].neighbor13 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[3] - 1
+      cell_region[i].neighbor14 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[4] - 1
+      cell_region[i].neighbor15 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[5] - 1
+      cell_region[i].neighbor16 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[6] - 1
+      cell_region[i].neighbor17 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[7] - 1
+      cell_region[i].neighbor18 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[8] - 1
+      cell_region[i].neighbor19 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor20 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[0] - 1
+      cell_region[i].neighbor21 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[1] - 1
+      cell_region[i].neighbor22 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[2] - 1
+      cell_region[i].neighbor23 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[3] - 1
+      cell_region[i].neighbor24 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[4] - 1
+      cell_region[i].neighbor25 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[5] - 1
+      cell_region[i].neighbor26 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[6] - 1
+      cell_region[i].neighbor27 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[7] - 1
+      cell_region[i].neighbor28 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[8] - 1
+      cell_region[i].neighbor29 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor30 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[0] - 1
+      cell_region[i].neighbor31 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[1] - 1
+      cell_region[i].neighbor32 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[2] - 1
+      cell_region[i].neighbor33 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[3] - 1
+      cell_region[i].neighbor34 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[4] - 1
+      cell_region[i].neighbor35 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[5] - 1
+      cell_region[i].neighbor36 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[6] - 1
+      cell_region[i].neighbor37 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[7] - 1
+      cell_region[i].neighbor38 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[8] - 1
+      cell_region[i].neighbor39 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor40 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[0] - 1
+      cell_region[i].neighbor41 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[1] - 1
+      cell_region[i].neighbor42 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[2] - 1
+      cell_region[i].neighbor43 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[3] - 1
+      cell_region[i].neighbor44 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[4] - 1
+      cell_region[i].neighbor45 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[5] - 1
+      cell_region[i].neighbor46 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[6] - 1
+      cell_region[i].neighbor47 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[7] - 1
+      cell_region[i].neighbor48 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[8] - 1
+      cell_region[i].neighbor49 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor50 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[0] - 1
+      cell_region[i].neighbor51 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[1] - 1
+      cell_region[i].neighbor52 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[2] - 1
+      cell_region[i].neighbor53 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[3] - 1
+      cell_region[i].neighbor54 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[4] - 1
+      cell_region[i].neighbor55 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[5] - 1
+      cell_region[i].neighbor56 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[6] - 1
+      cell_region[i].neighbor57 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[7] - 1
+      cell_region[i].neighbor58 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[8] - 1
+      cell_region[i].neighbor59 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor60 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[0] - 1
+      cell_region[i].neighbor61 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[1] - 1
+      cell_region[i].neighbor62 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[2] - 1
+      cell_region[i].neighbor63 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[3] - 1
+      cell_region[i].neighbor64 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[4] - 1
+      cell_region[i].neighbor65 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[5] - 1
+      cell_region[i].neighbor66 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[6] - 1
+      cell_region[i].neighbor67 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[7] - 1
+      cell_region[i].neighbor68 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[8] - 1
+      cell_region[i].neighbor69 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor70 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[0] - 1
+      cell_region[i].neighbor71 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[1] - 1
+      cell_region[i].neighbor72 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[2] - 1
+      cell_region[i].neighbor73 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[3] - 1
+      cell_region[i].neighbor74 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[4] - 1
+      cell_region[i].neighbor75 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[5] - 1
+      cell_region[i].neighbor76 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[6] - 1
+      cell_region[i].neighbor77 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[7] - 1
+      cell_region[i].neighbor78 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[8] - 1
+      cell_region[i].neighbor79 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor80 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[0] - 1
+      cell_region[i].neighbor81 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[1] - 1
+      cell_region[i].neighbor82 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[2] - 1
+      cell_region[i].neighbor83 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[3] - 1
+      cell_region[i].neighbor84 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[4] - 1
+      cell_region[i].neighbor85 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[5] - 1
+      cell_region[i].neighbor86 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[6] - 1
+      cell_region[i].neighbor87 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[7] - 1
+      cell_region[i].neighbor88 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[8] - 1
+      cell_region[i].neighbor89 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[9] - 1
+
+      cell_region[i].neighbor90 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[0] - 1
+      cell_region[i].neighbor91 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[1] - 1
+      cell_region[i].neighbor92 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[2] - 1
+      cell_region[i].neighbor93 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[3] - 1
+      cell_region[i].neighbor94 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[4] - 1
+      cell_region[i].neighbor95 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[5] - 1
+      cell_region[i].neighbor96 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[6] - 1
+      cell_region[i].neighbor97 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[7] - 1
+      cell_region[i].neighbor98 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[8] - 1
+      cell_region[i].neighbor99 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[9] - 1
+    end
+
     -----------------------------------------------
     ------- PARTITION REGIONS  --------
     -----------------------------------------------
@@ -452,24 +549,133 @@ task main()
     var cell_partition_neighbor8 = image(cell_region, cell_partition_initial, cell_region.neighbor8)
     var cell_partition_neighbor9 = image(cell_region, cell_partition_initial, cell_region.neighbor9)
 
-    -- Construct halo1
-    var partition_s_1 = cell_partition_neighbor0 | cell_partition_neighbor1 | cell_partition_neighbor2 | cell_partition_neighbor3 | cell_partition_neighbor4 | cell_partition_neighbor5 | cell_partition_neighbor6 | cell_partition_neighbor7 | cell_partition_neighbor8 | cell_partition_neighbor9
-    var partition_halo_1 = partition_s_1 - cell_partition_initial
-
-    -- Repeat to create halo2
+    -- For second halo
     var cell_partition_neighbor00 = image(cell_region, cell_partition_initial, cell_region.neighbor00)
+    var cell_partition_neighbor01 = image(cell_region, cell_partition_initial, cell_region.neighbor01)
+    var cell_partition_neighbor02 = image(cell_region, cell_partition_initial, cell_region.neighbor02)
+    var cell_partition_neighbor03 = image(cell_region, cell_partition_initial, cell_region.neighbor03)
+    var cell_partition_neighbor04 = image(cell_region, cell_partition_initial, cell_region.neighbor04)
+    var cell_partition_neighbor05 = image(cell_region, cell_partition_initial, cell_region.neighbor05)
+    var cell_partition_neighbor06 = image(cell_region, cell_partition_initial, cell_region.neighbor06)
+    var cell_partition_neighbor07 = image(cell_region, cell_partition_initial, cell_region.neighbor07)
+    var cell_partition_neighbor08 = image(cell_region, cell_partition_initial, cell_region.neighbor08)
+    var cell_partition_neighbor09 = image(cell_region, cell_partition_initial, cell_region.neighbor09)
+
+    var cell_partition_neighbor10 = image(cell_region, cell_partition_initial, cell_region.neighbor10)
     var cell_partition_neighbor11 = image(cell_region, cell_partition_initial, cell_region.neighbor11)
+    var cell_partition_neighbor12 = image(cell_region, cell_partition_initial, cell_region.neighbor12)
+    var cell_partition_neighbor13 = image(cell_region, cell_partition_initial, cell_region.neighbor13)
+    var cell_partition_neighbor14 = image(cell_region, cell_partition_initial, cell_region.neighbor14)
+    var cell_partition_neighbor15 = image(cell_region, cell_partition_initial, cell_region.neighbor15)
+    var cell_partition_neighbor16 = image(cell_region, cell_partition_initial, cell_region.neighbor16)
+    var cell_partition_neighbor17 = image(cell_region, cell_partition_initial, cell_region.neighbor17)
+    var cell_partition_neighbor18 = image(cell_region, cell_partition_initial, cell_region.neighbor18)
+    var cell_partition_neighbor19 = image(cell_region, cell_partition_initial, cell_region.neighbor19)
+
+    var cell_partition_neighbor20 = image(cell_region, cell_partition_initial, cell_region.neighbor20)
+    var cell_partition_neighbor21 = image(cell_region, cell_partition_initial, cell_region.neighbor21)
     var cell_partition_neighbor22 = image(cell_region, cell_partition_initial, cell_region.neighbor22)
+    var cell_partition_neighbor23 = image(cell_region, cell_partition_initial, cell_region.neighbor23)
+    var cell_partition_neighbor24 = image(cell_region, cell_partition_initial, cell_region.neighbor24)
+    var cell_partition_neighbor25 = image(cell_region, cell_partition_initial, cell_region.neighbor25)
+    var cell_partition_neighbor26 = image(cell_region, cell_partition_initial, cell_region.neighbor26)
+    var cell_partition_neighbor27 = image(cell_region, cell_partition_initial, cell_region.neighbor27)
+    var cell_partition_neighbor28 = image(cell_region, cell_partition_initial, cell_region.neighbor28)
+    var cell_partition_neighbor29 = image(cell_region, cell_partition_initial, cell_region.neighbor29)
+
+    var cell_partition_neighbor30 = image(cell_region, cell_partition_initial, cell_region.neighbor30)
+    var cell_partition_neighbor31 = image(cell_region, cell_partition_initial, cell_region.neighbor31)
+    var cell_partition_neighbor32 = image(cell_region, cell_partition_initial, cell_region.neighbor32)
     var cell_partition_neighbor33 = image(cell_region, cell_partition_initial, cell_region.neighbor33)
+    var cell_partition_neighbor34 = image(cell_region, cell_partition_initial, cell_region.neighbor34)
+    var cell_partition_neighbor35 = image(cell_region, cell_partition_initial, cell_region.neighbor35)
+    var cell_partition_neighbor36 = image(cell_region, cell_partition_initial, cell_region.neighbor36)
+    var cell_partition_neighbor37 = image(cell_region, cell_partition_initial, cell_region.neighbor37)
+    var cell_partition_neighbor38 = image(cell_region, cell_partition_initial, cell_region.neighbor38)
+    var cell_partition_neighbor39 = image(cell_region, cell_partition_initial, cell_region.neighbor39)
+
+    var cell_partition_neighbor40 = image(cell_region, cell_partition_initial, cell_region.neighbor40)
+    var cell_partition_neighbor41 = image(cell_region, cell_partition_initial, cell_region.neighbor41)
+    var cell_partition_neighbor42 = image(cell_region, cell_partition_initial, cell_region.neighbor42)
+    var cell_partition_neighbor43 = image(cell_region, cell_partition_initial, cell_region.neighbor43)
     var cell_partition_neighbor44 = image(cell_region, cell_partition_initial, cell_region.neighbor44)
+    var cell_partition_neighbor45 = image(cell_region, cell_partition_initial, cell_region.neighbor45)
+    var cell_partition_neighbor46 = image(cell_region, cell_partition_initial, cell_region.neighbor46)
+    var cell_partition_neighbor47 = image(cell_region, cell_partition_initial, cell_region.neighbor47)
+    var cell_partition_neighbor48 = image(cell_region, cell_partition_initial, cell_region.neighbor48)
+    var cell_partition_neighbor49 = image(cell_region, cell_partition_initial, cell_region.neighbor49)
+
+    var cell_partition_neighbor50 = image(cell_region, cell_partition_initial, cell_region.neighbor50)
+    var cell_partition_neighbor51 = image(cell_region, cell_partition_initial, cell_region.neighbor51)
+    var cell_partition_neighbor52 = image(cell_region, cell_partition_initial, cell_region.neighbor52)
+    var cell_partition_neighbor53 = image(cell_region, cell_partition_initial, cell_region.neighbor53)
+    var cell_partition_neighbor54 = image(cell_region, cell_partition_initial, cell_region.neighbor54)
     var cell_partition_neighbor55 = image(cell_region, cell_partition_initial, cell_region.neighbor55)
+    var cell_partition_neighbor56 = image(cell_region, cell_partition_initial, cell_region.neighbor56)
+    var cell_partition_neighbor57 = image(cell_region, cell_partition_initial, cell_region.neighbor57)
+    var cell_partition_neighbor58 = image(cell_region, cell_partition_initial, cell_region.neighbor58)
+    var cell_partition_neighbor59 = image(cell_region, cell_partition_initial, cell_region.neighbor59)
+
+    var cell_partition_neighbor60 = image(cell_region, cell_partition_initial, cell_region.neighbor60)
+    var cell_partition_neighbor61 = image(cell_region, cell_partition_initial, cell_region.neighbor61)
+    var cell_partition_neighbor62 = image(cell_region, cell_partition_initial, cell_region.neighbor62)
+    var cell_partition_neighbor63 = image(cell_region, cell_partition_initial, cell_region.neighbor63)
+    var cell_partition_neighbor64 = image(cell_region, cell_partition_initial, cell_region.neighbor64)
+    var cell_partition_neighbor65 = image(cell_region, cell_partition_initial, cell_region.neighbor65)
     var cell_partition_neighbor66 = image(cell_region, cell_partition_initial, cell_region.neighbor66)
+    var cell_partition_neighbor67 = image(cell_region, cell_partition_initial, cell_region.neighbor67)
+    var cell_partition_neighbor68 = image(cell_region, cell_partition_initial, cell_region.neighbor68)
+    var cell_partition_neighbor69 = image(cell_region, cell_partition_initial, cell_region.neighbor69)
+
+    var cell_partition_neighbor70 = image(cell_region, cell_partition_initial, cell_region.neighbor70)
+    var cell_partition_neighbor71 = image(cell_region, cell_partition_initial, cell_region.neighbor71)
+    var cell_partition_neighbor72 = image(cell_region, cell_partition_initial, cell_region.neighbor72)
+    var cell_partition_neighbor73 = image(cell_region, cell_partition_initial, cell_region.neighbor73)
+    var cell_partition_neighbor74 = image(cell_region, cell_partition_initial, cell_region.neighbor74)
+    var cell_partition_neighbor75 = image(cell_region, cell_partition_initial, cell_region.neighbor75)
+    var cell_partition_neighbor76 = image(cell_region, cell_partition_initial, cell_region.neighbor76)
     var cell_partition_neighbor77 = image(cell_region, cell_partition_initial, cell_region.neighbor77)
+    var cell_partition_neighbor78 = image(cell_region, cell_partition_initial, cell_region.neighbor78)
+    var cell_partition_neighbor79 = image(cell_region, cell_partition_initial, cell_region.neighbor79)
+
+    var cell_partition_neighbor80 = image(cell_region, cell_partition_initial, cell_region.neighbor80)
+    var cell_partition_neighbor81 = image(cell_region, cell_partition_initial, cell_region.neighbor81)
+    var cell_partition_neighbor82 = image(cell_region, cell_partition_initial, cell_region.neighbor82)
+    var cell_partition_neighbor83 = image(cell_region, cell_partition_initial, cell_region.neighbor83)
+    var cell_partition_neighbor84 = image(cell_region, cell_partition_initial, cell_region.neighbor84)
+    var cell_partition_neighbor85 = image(cell_region, cell_partition_initial, cell_region.neighbor85)
+    var cell_partition_neighbor86 = image(cell_region, cell_partition_initial, cell_region.neighbor86)
+    var cell_partition_neighbor87 = image(cell_region, cell_partition_initial, cell_region.neighbor87)
     var cell_partition_neighbor88 = image(cell_region, cell_partition_initial, cell_region.neighbor88)
+    var cell_partition_neighbor89 = image(cell_region, cell_partition_initial, cell_region.neighbor89)
+
+    var cell_partition_neighbor90 = image(cell_region, cell_partition_initial, cell_region.neighbor90)
+    var cell_partition_neighbor91 = image(cell_region, cell_partition_initial, cell_region.neighbor91)
+    var cell_partition_neighbor92 = image(cell_region, cell_partition_initial, cell_region.neighbor92)
+    var cell_partition_neighbor93 = image(cell_region, cell_partition_initial, cell_region.neighbor93)
+    var cell_partition_neighbor94 = image(cell_region, cell_partition_initial, cell_region.neighbor94)
+    var cell_partition_neighbor95 = image(cell_region, cell_partition_initial, cell_region.neighbor95)
+    var cell_partition_neighbor96 = image(cell_region, cell_partition_initial, cell_region.neighbor96)
+    var cell_partition_neighbor97 = image(cell_region, cell_partition_initial, cell_region.neighbor97)
+    var cell_partition_neighbor98 = image(cell_region, cell_partition_initial, cell_region.neighbor98)
     var cell_partition_neighbor99 = image(cell_region, cell_partition_initial, cell_region.neighbor99)
 
-    var partition_s_2 = cell_partition_neighbor00 | cell_partition_neighbor11 | cell_partition_neighbor22 | cell_partition_neighbor33 | cell_partition_neighbor44 | cell_partition_neighbor55 | cell_partition_neighbor66 | cell_partition_neighbor77 | cell_partition_neighbor88 | cell_partition_neighbor99
-    var partition_halo_2 = partition_s_2  - cell_partition_initial
+    var partition_s2_0 = cell_partition_neighbor00 | cell_partition_neighbor01 | cell_partition_neighbor02 | cell_partition_neighbor03 | cell_partition_neighbor04 | cell_partition_neighbor05 | cell_partition_neighbor06 | cell_partition_neighbor07 | cell_partition_neighbor08 | cell_partition_neighbor09
+    var partition_s2_1 = cell_partition_neighbor10 | cell_partition_neighbor11 | cell_partition_neighbor12 | cell_partition_neighbor13 | cell_partition_neighbor14 | cell_partition_neighbor15 | cell_partition_neighbor16 | cell_partition_neighbor17 | cell_partition_neighbor18 | cell_partition_neighbor19
+    var partition_s2_2 = cell_partition_neighbor20 | cell_partition_neighbor21 | cell_partition_neighbor22 | cell_partition_neighbor23 | cell_partition_neighbor24 | cell_partition_neighbor25 | cell_partition_neighbor26 | cell_partition_neighbor27 | cell_partition_neighbor28 | cell_partition_neighbor29
+    var partition_s2_3 = cell_partition_neighbor30 | cell_partition_neighbor31 | cell_partition_neighbor32 | cell_partition_neighbor33 | cell_partition_neighbor34 | cell_partition_neighbor35 | cell_partition_neighbor36 | cell_partition_neighbor37 | cell_partition_neighbor38 | cell_partition_neighbor39
+    var partition_s2_4 = cell_partition_neighbor40 | cell_partition_neighbor41 | cell_partition_neighbor42 | cell_partition_neighbor43 | cell_partition_neighbor44 | cell_partition_neighbor45 | cell_partition_neighbor46 | cell_partition_neighbor47 | cell_partition_neighbor48 | cell_partition_neighbor49
+    var partition_s2_5 = cell_partition_neighbor50 | cell_partition_neighbor51 | cell_partition_neighbor52 | cell_partition_neighbor53 | cell_partition_neighbor54 | cell_partition_neighbor55 | cell_partition_neighbor56 | cell_partition_neighbor57 | cell_partition_neighbor58 | cell_partition_neighbor59
+    var partition_s2_6 = cell_partition_neighbor60 | cell_partition_neighbor61 | cell_partition_neighbor62 | cell_partition_neighbor63 | cell_partition_neighbor64 | cell_partition_neighbor65 | cell_partition_neighbor66 | cell_partition_neighbor67 | cell_partition_neighbor68 | cell_partition_neighbor69
+    var partition_s2_7 = cell_partition_neighbor70 | cell_partition_neighbor71 | cell_partition_neighbor72 | cell_partition_neighbor73 | cell_partition_neighbor74 | cell_partition_neighbor75 | cell_partition_neighbor76 | cell_partition_neighbor77 | cell_partition_neighbor78 | cell_partition_neighbor79
+    var partition_s2_8 = cell_partition_neighbor80 | cell_partition_neighbor81 | cell_partition_neighbor82 | cell_partition_neighbor83 | cell_partition_neighbor84 | cell_partition_neighbor85 | cell_partition_neighbor86 | cell_partition_neighbor87 | cell_partition_neighbor88 | cell_partition_neighbor89
+    var partition_s2_9 = cell_partition_neighbor90 | cell_partition_neighbor91 | cell_partition_neighbor92 | cell_partition_neighbor93 | cell_partition_neighbor94 | cell_partition_neighbor95 | cell_partition_neighbor96 | cell_partition_neighbor97 | cell_partition_neighbor98 | cell_partition_neighbor99
+    var partition_s2 = partition_s2_0 | partition_s2_1 | partition_s2_2 | partition_s2_3 | partition_s2_4 | partition_s2_5 | partition_s2_6 | partition_s2_7 | partition_s2_8 | partition_s2_9
+
+    -- Construct halos
+    var partition_s_1 = cell_partition_neighbor0 | cell_partition_neighbor1 | cell_partition_neighbor2 | cell_partition_neighbor3 | cell_partition_neighbor4 | cell_partition_neighbor5 | cell_partition_neighbor6 | cell_partition_neighbor7 | cell_partition_neighbor8 | cell_partition_neighbor9
+    var partition_halo_1 = partition_s_1 - cell_partition_initial
+    var partition_halo_2 = partition_s2  - partition_halo_1 - cell_partition_initial
 
     --Test code by printing out first neighbours in the original partition
     --var i = 0
@@ -804,11 +1010,6 @@ task main()
     -- Close the file
     file_close(ncid_copy)
     cio.printf("Successfully written netcdf file!\n")
-
-
-    --test timestep compile with regions
-    --atm_timestep(20.0, vertex_region, edge_region, cell_region)
-
 
 end
 regentlib.start(main)
