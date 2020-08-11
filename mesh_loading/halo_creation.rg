@@ -30,6 +30,7 @@ fspace cell_fs{
     cellsOnCell : int[maxEdges],
 
     curr_neighbor_halo1 : int1d,
+    --curr_neighbor_halo2 : int1d,
   }
 
 
@@ -107,24 +108,30 @@ task main()
   var color_space = ispace(int1d, NUM_PARTITIONS)
   var cell_partition_initial = partition(complete, cell_region.partitionNumber, color_space)
 
-  --Define the s_1 partitions, that will eventually be the union of all of partitions created by the neighbour field in a subregion (as defined on call with alex)
+  --Define the s_1 partitions, that will eventually be the union of all of the images of the neighbour field in a subregion (as defined on call with alex)
   var partition_s_1 : partition(aliased, cell_region, ispace(int1d))
+  --var partition_s_2 : partition(aliased, cell_region, ispace(int1d))
 
   for j = 0, maxEdges do
     for i = 0, nCells do
-      -- populate the current neighbour
+      --populate the current neighbour
       -- we subtract 1 because the index spaces are 0-indexed but the cellIDs are 1-indexed
 
       cell_region[i].curr_neighbor_halo1 = cell_region[i].cellsOnCell[j] - 1
+      --cell_region[i].curr_neighbor_halo2 = cell_region[cell_region[i].cellsOnCell[j]].cellsOnCell[j] - 1
+
     end
 
     --create a partition based on the current neighbour, and add it to our union of neighbour partitions
     var cell_partition_curr_neighbor_halo1 = image(cell_region, cell_partition_initial, cell_region.curr_neighbor_halo1)
     partition_s_1 = partition_s_1 | cell_partition_curr_neighbor_halo1
 
+    --var cell_partition_curr_neighbor_halo2 = image(cell_region, cell_partition_initial, cell_region.curr_neighbor_halo2)
+    --partition_s_1 = partition_s_2 | cell_partition_curr_neighbor_halo2
   end
 
   var partition_halo_1 = partition_s_1 - cell_partition_initial
+  --var partition_halo_2 = partition_s_2 - cell_partition_initial
 
 
   --Test code by printing out first neighbours in the original partition
