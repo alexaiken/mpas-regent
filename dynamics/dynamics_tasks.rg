@@ -126,8 +126,8 @@ where reads writes(er), reads(cr) do
           --TODO: add adv_coefs to fspaces
             for coef = 0, FIFTEEN do
                 er[iEdge].adv_coefs[coef] = 0.0
+                er[iEdge].adv_coefs_3rd[coef] = 0.0
             end -- initialize list to 0
---            adv_coefs_3rd(:,iEdge) = 0.
           
           -- pull together third and fourth order contributions to the flux
           -- first from cell1
@@ -136,16 +136,16 @@ where reads writes(er), reads(cr) do
             for j=1, n do
                if (cell_list[j] == cell1 ) then j_in = j end
             end 
---            er[iEdge].adv_coefs[j_in]= er[iEdge].adv_coefs[j_in] + deriv_two(1,1,iEdge)
---            adv_coefs_3rd(j_in,iEdge) = adv_coefs_3rd(j_in,iEdge) + deriv_two(1,1,iEdge)
+            er[iEdge].adv_coefs[j_in]= er[iEdge].adv_coefs[j_in] + er[iEdge].deriv_two[0][0]
+            er[iEdge].adv_coefs_3rd[j_in]= er[iEdge].adv_coefs_3rd[j_in] + er[iEdge].deriv_two[0][0]
   
             for iCell = 1, cr[cell1].nEdgesOnCell do
                j_in = 0
                for j=1, n do
                  if( cell_list[j] == cr[cell1].cellsOnCell[iCell]) then j_in = j end
                end
---               adv_coefs    (j_in,iEdge) = adv_coefs    (j_in,iEdge) + deriv_two(iCell+1,1,iEdge)
---               adv_coefs_3rd(j_in,iEdge) = adv_coefs_3rd(j_in,iEdge) + deriv_two(iCell+1,1,iEdge)
+               er[iEdge].adv_coefs[j_in] = er[iEdge].adv_coefs[j_in] + er[iEdge].deriv_two[iCell][0]
+               er[iEdge].adv_coefs_3rd[j_in] = er[iEdge].adv_coefs_3rd[j_in] + er[iEdge].deriv_two[iCell][0]
             end 
   
           -- pull together third and fourth order contributions to the flux
@@ -155,19 +155,21 @@ where reads writes(er), reads(cr) do
             for j=1, n do
                if( cell_list[j] == cell2 ) then j_in = j end
             end 
---            adv_coefs    (j_in,iEdge) = adv_coefs    (j_in,iEdge) + deriv_two(1,2,iEdge)
---            adv_coefs_3rd(j_in,iEdge) = adv_coefs_3rd(j_in,iEdge) - deriv_two(1,2,iEdge)
+              er[iEdge].adv_coefs[j_in] = er[iEdge].adv_coefs[j_in] + er[iEdge].deriv_two[0][1]
+              er[iEdge].adv_coefs_3rd[j_in] = er[iEdge].adv_coefs_3rd[j_in] + er[iEdge].deriv_two[0][1]
   
             for iCell = 1, cr[cell2].nEdgesOnCell do
                j_in = 0
                for j=1, n do
                   if( cell_list[j] == cr[cell2].cellsOnCell[iCell] ) then j_in = j end
                end 
---               adv_coefs    (j_in,iEdge) = adv_coefs    (j_in,iEdge) + deriv_two(iCell+1,2,iEdge)
---               adv_coefs_3rd(j_in,iEdge) = adv_coefs_3rd(j_in,iEdge) - deriv_two(iCell+1,2,iEdge)
+               er[iEdge].adv_coefs[j_in] = er[iEdge].adv_coefs[j_in] + er[iEdge].deriv_two[iCell][1]
+               er[iEdge].adv_coefs_3rd[j_in] = er[iEdge].adv_coefs_3rd[j_in] + er[iEdge].deriv_two[iCell][1]
             end 
   
             for j = 1,n do
+              -- er[iEdge].adv_coefs[j] =  - er[iEdge].dcEdge**2 * er[iEdge].adv_coefs[j] / 12 -- this should be a negative number
+              -- er[iEdge].adv_coefs_3rd[j] =  - er[iEdge].dcEdge**2 * er[iEdge].adv_coefs_3rd[j] / 12 
 --               adv_coefs    (j,iEdge) = - (dcEdge(iEdge) **2) * adv_coefs    (j,iEdge) / 12.
 --               adv_coefs_3rd(j,iEdge) = - (dcEdge(iEdge) **2) * adv_coefs_3rd(j,iEdge) / 12.
             end 
@@ -189,8 +191,8 @@ where reads writes(er), reads(cr) do
           --  multiply by edge length - thus the flux is just dt*ru times the results of the vector-vector multiply
   
             for j=1,n do
---               adv_coefs    (j,iEdge) = dvEdge(iEdge) * adv_coefs    (j,iEdge)
---               adv_coefs_3rd(j,iEdge) = dvEdge(iEdge) * adv_coefs_3rd(j,iEdge)
+               er[iEdge].adv_coefs[j] = er[iEdge].dvEdge * er[iEdge].adv_coefs[j]
+               er[iEdge].adv_coefs_3rd[j] = er[iEdge].dvEdge * er[iEdge].adv_coefs_3rd[j]
             end 
  
          end  -- only do for edges of owned-cells

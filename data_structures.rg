@@ -56,9 +56,24 @@ fspace cell_fs {
     neighbor88 : int1d,
     neighbor99 : int1d,
 
+
+    -----------begin vertical structure ----------
+    zgrid : double, -- cell + level dependent
+    rdzw : double, -- level dependent
+    dzu : double, -- level dependent
+    rdzu : double, -- level dependent
+    fzm : double, -- level dependent
+    fzp : double, -- level dependent
+
+    zz : double, -- cell + level dependent
+
+    zb_cell : double[maxEdges], -- cell + level dependent
+    zb3_cell : double[maxEdges], -- cell + level dependent
+
     -----------begin dynamics fields--------------
     kiteForCell : int[maxEdges], --Index of kite in kiteAreasOnVertex that lies within a cell for eac    h of verticesOnCell
     edgesOnCellSign : double[maxEdges], --Sign for edges surrounding a cell: positive for positive outwa    rd normal velocity
+
 }
 
 -- A triangluar/dual cell (aka vertex)
@@ -96,9 +111,18 @@ fspace edge_fs {
     edgesOnEdge_ECP : int[maxEdges2],
     weightsOnEdge : double[maxEdges2],
 
+    -----------begin vertical structure ---------
+
+    zxu : double, -- EDGE DEPENDENT
+    zb : double[TWO], -- EDGE DEPENDENT
+    zb3 : double[TWO], -- EDGE DEPENDENT
 
     -----------begin dynamics fields--------------
     advCellsForEdge : int[FIFTEEN], --Cells used to reconstruct a cell-based field at an edge
     nAdvCellsForEdge : int, --Number of cells used to reconstruct a cell-based field at an edge
-    adv_coefs : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at     edges
+    adv_coefs : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
+    adv_coefs_3rd : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
+
+    deriv_two : double[FIFTEEN][TWO], --weights for cell-centered second derivative, normal to edge, for transport scheme, TODO: where is it initialized?
+
 }

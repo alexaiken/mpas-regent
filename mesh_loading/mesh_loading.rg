@@ -220,7 +220,7 @@ task main()
     -------------------------------------------
 
     -- Define index spaces for cell IDs, vertex IDs and edge IDs
-    var cell_id_space = ispace(int1d, nCells)
+    var cell_id_space = ispace(int2d, {nCells, nVertLevels + 1})
     var edge_id_space = ispace(int1d, nEdges)
     var vertex_id_space = ispace(int1d, nVertices)
 
@@ -237,23 +237,23 @@ task main()
 
     -- Copy data into cell region
     for i = 0, nCells do
-        cell_region[i].cellID = indexToCellID_in[i]
-        cell_region[i].lat = latCell_in[i]
-        cell_region[i].lon = lonCell_in[i]
-        cell_region[i].x = xCell_in[i]
-        cell_region[i].y = yCell_in[i]
-        cell_region[i].z = zCell_in[i]
-        cell_region[i].meshDensity = meshDensity_in[i]
-        cell_region[i].nEdgesOnCell = nEdgesOnCell_in[i]
-        cell_region[i].areaCell = areaCell_in[i]
-        cell_region[i].partitionNumber = partition_array[i]
+        cell_region[{i, 0}].cellID = indexToCellID_in[i]
+        cell_region[{i, 0}].lat = latCell_in[i]
+        cell_region[{i, 0}].lon = lonCell_in[i]
+        cell_region[{i, 0}].x = xCell_in[i]
+        cell_region[{i, 0}].y = yCell_in[i]
+        cell_region[{i, 0}].z = zCell_in[i]
+        cell_region[{i, 0}].meshDensity = meshDensity_in[i]
+        cell_region[{i, 0}].nEdgesOnCell = nEdgesOnCell_in[i]
+        cell_region[{i, 0}].areaCell = areaCell_in[i]
+        cell_region[{i, 0}].partitionNumber = partition_array[i]
 
         --cio.printf("Cell : Cell ID %d, partitionNumber %d\n", cell_region[i].cellID, cell_region[i].partitionNumber)
 
         for j = 0, maxEdges do
-            cell_region[i].edgesOnCell[j] = edgesOnCell_in[i*maxEdges + j] --cell_region[i].edgesOnCell is a int[maxEdges]
-            cell_region[i].verticesOnCell[j] = verticesOnCell_in[i*maxEdges + j] --cell_region[i].verticesOnCell is a int[maxEdges]
-            cell_region[i].cellsOnCell[j] = cellsOnCell_in[i*maxEdges + j] --cell_region[i].cellsOnCell is a int[maxEdges]
+            cell_region[{i, 0}].edgesOnCell[j] = edgesOnCell_in[i*maxEdges + j] --cell_region[i].edgesOnCell is a int[maxEdges]
+            cell_region[{i, 0}].verticesOnCell[j] = verticesOnCell_in[i*maxEdges + j] --cell_region[i].verticesOnCell is a int[maxEdges]
+            cell_region[{i, 0}].cellsOnCell[j] = cellsOnCell_in[i*maxEdges + j] --cell_region[i].cellsOnCell is a int[maxEdges]
             --cio.printf("edgesOnCell : Cell %d, Edge %d: edge index is %d\n", i, j, cell_region[i].edgesOnCell[j])
             --cio.printf("verticesOnCell : Cell %d, Vertex %d: Vertex index is %d\n", i, j, cell_region[i].verticesOnCell[j])
             --cio.printf("cellsOnCell : InnerCell %d, OuterCell %d: Cell index is %d\n", i, j, cell_region[i].cellsOnCell[j])
@@ -322,17 +322,17 @@ task main()
 
     --First, we iterate through the cells and get the edgesOnCell array for each cell
     for i = 0, nCells do
-        var curr_edgesOnCell = cell_region[i].edgesOnCell
+        var curr_edgesOnCell = cell_region[{i, 0}].edgesOnCell
 
     --Then we iterate through the vertices of that cell
         for j = 0, maxEdges do
-            var currVertexID = cell_region[i].verticesOnCell[j]
-            cell_region[i].evc[j*3] = currVertexID
+            var currVertexID = cell_region[{i, 0}].verticesOnCell[j]
+            cell_region[{i,0}].evc[j*3] = currVertexID
             --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3, cell_region[i].evc[j*3])
 
             if currVertexID == 0 then
-                cell_region[i].evc[j*3 + 1] = 0
-                cell_region[i].evc[j*3 + 2] = 0
+                cell_region[{i,0}].evc[j*3 + 1] = 0
+                cell_region[{i,0}].evc[j*3 + 2] = 0
                 --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + 1, cell_region[i].evc[j*3 + 1])
                 --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + 2, cell_region[i].evc[j*3 + 2])
 
@@ -346,7 +346,7 @@ task main()
                     var currEdgeID = curr_edgesOnVertex[k]
                     for l = 0, maxEdges do
                         if currEdgeID == curr_edgesOnCell[l] and count < 3 then
-                            cell_region[i].evc[j*3 + count] = currEdgeID
+                            cell_region[{i,0}].evc[j*3 + count] = currEdgeID
                             --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + count, cell_region[i].evc[j*3 + count])
                             count = count+1
                         end
@@ -362,27 +362,27 @@ task main()
     for i = 0, nCells do
       -- cell.cellsOnCell[0] contains an integer with the index of the cell neighbour. I would like cell.neighbour to point to that cell in the region
       -- we subtract 1 because the index spaces are 0-indexed but the cellIDs are 1-indexed
-      cell_region[i].neighbor0 = cell_region[i].cellsOnCell[0] - 1
-      cell_region[i].neighbor1 = cell_region[i].cellsOnCell[1] - 1
-      cell_region[i].neighbor2 = cell_region[i].cellsOnCell[2] - 1
-      cell_region[i].neighbor3 = cell_region[i].cellsOnCell[3] - 1
-      cell_region[i].neighbor4 = cell_region[i].cellsOnCell[4] - 1
-      cell_region[i].neighbor5 = cell_region[i].cellsOnCell[5] - 1
-      cell_region[i].neighbor6 = cell_region[i].cellsOnCell[6] - 1
-      cell_region[i].neighbor7 = cell_region[i].cellsOnCell[7] - 1
-      cell_region[i].neighbor8 = cell_region[i].cellsOnCell[8] - 1
-      cell_region[i].neighbor9 = cell_region[i].cellsOnCell[9] - 1
+      cell_region[{i, 0}].neighbor0 = cell_region[{i, 0}].cellsOnCell[0] - 1
+      cell_region[{i, 0}].neighbor1 = cell_region[{i, 0}].cellsOnCell[1] - 1
+      cell_region[{i, 0}].neighbor2 = cell_region[{i, 0}].cellsOnCell[2] - 1
+      cell_region[{i, 0}].neighbor3 = cell_region[{i, 0}].cellsOnCell[3] - 1
+      cell_region[{i, 0}].neighbor4 = cell_region[{i, 0}].cellsOnCell[4] - 1
+      cell_region[{i, 0}].neighbor5 = cell_region[{i, 0}].cellsOnCell[5] - 1
+      cell_region[{i, 0}].neighbor6 = cell_region[{i, 0}].cellsOnCell[6] - 1
+      cell_region[{i, 0}].neighbor7 = cell_region[{i, 0}].cellsOnCell[7] - 1
+      cell_region[{i, 0}].neighbor8 = cell_region[{i, 0}].cellsOnCell[8] - 1
+      cell_region[{i, 0}].neighbor9 = cell_region[{i, 0}].cellsOnCell[9] - 1
 
-      cell_region[i].neighbor00 = cell_region[cell_region[i].cellsOnCell[0]].cellsOnCell[0] - 1
-      cell_region[i].neighbor11 = cell_region[cell_region[i].cellsOnCell[1]].cellsOnCell[1] - 1
-      cell_region[i].neighbor22 = cell_region[cell_region[i].cellsOnCell[2]].cellsOnCell[2] - 1
-      cell_region[i].neighbor33 = cell_region[cell_region[i].cellsOnCell[3]].cellsOnCell[3] - 1
-      cell_region[i].neighbor44 = cell_region[cell_region[i].cellsOnCell[4]].cellsOnCell[4] - 1
-      cell_region[i].neighbor55 = cell_region[cell_region[i].cellsOnCell[5]].cellsOnCell[5] - 1
-      cell_region[i].neighbor66 = cell_region[cell_region[i].cellsOnCell[6]].cellsOnCell[6] - 1
-      cell_region[i].neighbor77 = cell_region[cell_region[i].cellsOnCell[7]].cellsOnCell[7] - 1
-      cell_region[i].neighbor88 = cell_region[cell_region[i].cellsOnCell[8]].cellsOnCell[8] - 1
-      cell_region[i].neighbor99 = cell_region[cell_region[i].cellsOnCell[9]].cellsOnCell[9] - 1
+      cell_region[{i, 0}].neighbor00 = cell_region[{cell_region[{i, 0}].cellsOnCell[0], 0}].cellsOnCell[0] - 1
+      cell_region[{i, 0}].neighbor11 = cell_region[{cell_region[{i, 0}].cellsOnCell[1], 0}].cellsOnCell[1] - 1
+      cell_region[{i, 0}].neighbor22 = cell_region[{cell_region[{i, 0}].cellsOnCell[2], 0}].cellsOnCell[2] - 1
+      cell_region[{i, 0}].neighbor33 = cell_region[{cell_region[{i, 0}].cellsOnCell[3], 0}].cellsOnCell[3] - 1
+      cell_region[{i, 0}].neighbor44 = cell_region[{cell_region[{i, 0}].cellsOnCell[4], 0}].cellsOnCell[4] - 1
+      cell_region[{i, 0}].neighbor55 = cell_region[{cell_region[{i, 0}].cellsOnCell[5], 0}].cellsOnCell[5] - 1
+      cell_region[{i, 0}].neighbor66 = cell_region[{cell_region[{i, 0}].cellsOnCell[6], 0}].cellsOnCell[6] - 1
+      cell_region[{i, 0}].neighbor77 = cell_region[{cell_region[{i, 0}].cellsOnCell[7], 0}].cellsOnCell[7] - 1
+      cell_region[{i, 0}].neighbor88 = cell_region[{cell_region[{i, 0}].cellsOnCell[8], 0}].cellsOnCell[8] - 1
+      cell_region[{i, 0}].neighbor99 = cell_region[{cell_region[{i, 0}].cellsOnCell[9], 0}].cellsOnCell[9] - 1
     end
 
      -- Close the file
@@ -659,20 +659,20 @@ task main()
 
     --Now we copy the data into the arrays so they can be read into the netcdf files
     for i = 0, nCells do
-        latCell_in_copy[i] = cell_region[i].lat
-        lonCell_in_copy[i] = cell_region[i].lon
-        xCell_in_copy[i] = cell_region[i].x
-        yCell_in_copy[i] = cell_region[i].y
-        zCell_in_copy[i] = cell_region[i].z
-        indexToCellID_in_copy[i] = cell_region[i].cellID
-        meshDensity_in_copy[i] = cell_region[i].meshDensity
-        nEdgesOnCell_in_copy[i] = cell_region[i].nEdgesOnCell
-        areaCell_in_copy[i] = cell_region[i].areaCell
+        latCell_in_copy[i] = cell_region[{i, 0}].lat
+        lonCell_in_copy[i] = cell_region[{i, 0}].lon
+        xCell_in_copy[i] = cell_region[{i, 0}].x
+        yCell_in_copy[i] = cell_region[{i, 0}].y
+        zCell_in_copy[i] = cell_region[{i, 0}].z
+        indexToCellID_in_copy[i] = cell_region[{i, 0}].cellID
+        meshDensity_in_copy[i] = cell_region[{i, 0}].meshDensity
+        nEdgesOnCell_in_copy[i] = cell_region[{i, 0}].nEdgesOnCell
+        areaCell_in_copy[i] = cell_region[{i, 0}].areaCell
 
         for j = 0, maxEdges do
-            edgesOnCell_in_copy[i*maxEdges + j] = cell_region[i].edgesOnCell[j]
-            verticesOnCell_in_copy[i*maxEdges + j] = cell_region[i].verticesOnCell[j]
-            cellsOnCell_in_copy[i*maxEdges + j] = cell_region[i].cellsOnCell[j]
+            edgesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].edgesOnCell[j]
+            verticesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].verticesOnCell[j]
+            cellsOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].cellsOnCell[j]
         end
         --cio.printf("Cell COPY : Cell ID %d, nEdgesOnCell is %d\n", indexToCellID_in_copy[i], nEdgesOnCell_in_copy[i])
     end
