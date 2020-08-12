@@ -243,9 +243,24 @@ end
 --    end 
 --end
 
-task atm_couple_coef_3rd_order()
-  --  adv_coefs_3rd(:,:) = config_coef_3rd_order * adv_coefs_3rd(:,:)
-   -- zb3_cell(:,:,:) = config_coef_3rd_order * zb3_cell(:,:,:)
+task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
+                               er : region(ispace(int2d), edge_fs),
+                               cr : region(ispace(int2d), cell_fs))
+where reads writes (er, cr) do
+  for iEdge = 0, nEdges do
+    for i = 0, FIFTEEN do
+      er[{iEdge, 0}].adv_coefs_3rd[i] = config_coef_3rd_order * er[{iEdge, 0}].adv_coefs_3rd[i]
+    end
+  end
+
+  
+  for iCell = 0, nCells do
+    for vLevel = 0, nVertLevels + 1 do
+      for i = 0, maxEdges do
+        cr[{iCell, vLevel}].zb3_cell[i] = config_coef_3rd_order * cr[{iCell, vLevel}].zb3_cell[i]
+      end
+    end
+  end
 end
 
 
