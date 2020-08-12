@@ -219,8 +219,8 @@ task main()
 
     -- Define index spaces for cell IDs, vertex IDs and edge IDs
     var cell_id_space = ispace(int2d, {nCells, nVertLevels + 1})
-    var edge_id_space = ispace(int1d, nEdges)
-    var vertex_id_space = ispace(int2d, {nVertices, nVertLevels + 1})
+    var edge_id_space = ispace(int2d, {nEdges, nVertLevels + 1})
+    var vertex_id_space = ispace(int1d, nVertices)
 
     -- Define regions
     var cell_region = region(cell_id_space, cell_fs)
