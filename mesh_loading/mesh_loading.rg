@@ -220,7 +220,7 @@ task main()
     -- Define index spaces for cell IDs, vertex IDs and edge IDs
     var cell_id_space = ispace(int2d, {nCells, nVertLevels + 1})
     var edge_id_space = ispace(int1d, nEdges)
-    var vertex_id_space = ispace(int1d, nVertices)
+    var vertex_id_space = ispace(int2d, {nVertices, nVertLevels + 1})
 
     -- Define regions
     var cell_region = region(cell_id_space, cell_fs)
@@ -261,34 +261,34 @@ task main()
 
     -- Copy data into edge region
     for i = 0, nEdges do
-        edge_region[i].edgeID = indexToEdgeID_in[i]
-        edge_region[i].lat = latEdge_in[i]
-        edge_region[i].lon = lonEdge_in[i]
-        edge_region[i].x = xEdge_in[i]
-        edge_region[i].y = yEdge_in[i]
-        edge_region[i].z = zEdge_in[i]
-        edge_region[i].nEdgesOnEdge = nEdgesOnEdge_in[i]
-        edge_region[i].angleEdge = angleEdge_in[i]
-        edge_region[i].dvEdge = dvEdge_in[i]
-        edge_region[i].dv1Edge = dv1Edge_in[i]
-        edge_region[i].dv2Edge = dv2Edge_in[i]
-        edge_region[i].dcEdge = dcEdge_in[i]
+        edge_region[{i, 0}].edgeID = indexToEdgeID_in[i]
+        edge_region[{i, 0}].lat = latEdge_in[i]
+        edge_region[{i, 0}].lon = lonEdge_in[i]
+        edge_region[{i, 0}].x = xEdge_in[i]
+        edge_region[{i, 0}].y = yEdge_in[i]
+        edge_region[{i, 0}].z = zEdge_in[i]
+        edge_region[{i, 0}].nEdgesOnEdge = nEdgesOnEdge_in[i]
+        edge_region[{i, 0}].angleEdge = angleEdge_in[i]
+        edge_region[{i, 0}].dvEdge = dvEdge_in[i]
+        edge_region[{i, 0}].dv1Edge = dv1Edge_in[i]
+        edge_region[{i, 0}].dv2Edge = dv2Edge_in[i]
+        edge_region[{i, 0}].dcEdge = dcEdge_in[i]
 
 
         for j = 0, TWO do
-            edge_region[i].cellsOnEdge[j] = cellsOnEdge_in[i*TWO + j]
-            edge_region[i].verticesOnEdge[j] = verticesOnEdge_in[i*TWO + j]
-            --cio.printf("cellsOnEdge : Edge %d, Cell %d is %d\n", i, j, edge_region[i].cellsOnEdge[j])
-            --cio.printf("VerticesOnEdge : Edge %d: Vertex %d is $d\n", i, j, edge_region[i].verticesOnEdge[j])
+            edge_region[{i, 0}].cellsOnEdge[j] = cellsOnEdge_in[i*TWO + j]
+            edge_region[{i, 0}].verticesOnEdge[j] = verticesOnEdge_in[i*TWO + j]
+            --cio.printf("cellsOnEdge : Edge %d, Cell %d is %d\n", i, j, edge_region[{i, 0}].cellsOnEdge[j])
+            --cio.printf("VerticesOnEdge : Edge %d: Vertex %d is $d\n", i, j, edge_region[{i, 0}].verticesOnEdge[j])
         end
 
         for j = 0, maxEdges2 do
-            edge_region[i].edgesOnEdge_ECP[j] = edgesOnEdge_in[i*maxEdges2 + j]
-            edge_region[i].weightsOnEdge[j] = weightsOnEdge_in[i*maxEdges2 + j]
-            --cio.printf("edgesOnEdge_ECP : InnerEdge %d, OuterEdge %d is %d\n", i, j, edge_region[i].edgesOnEdge_ECP[j])
-            --cio.printf("weightsOnEdge : Edge %d: Weight %d is $f\n", i, j, edge_region[i].weightsOnEdge[j])
+            edge_region[{i, 0}].edgesOnEdge_ECP[j] = edgesOnEdge_in[i*maxEdges2 + j]
+            edge_region[{i, 0}].weightsOnEdge[j] = weightsOnEdge_in[i*maxEdges2 + j]
+            --cio.printf("edgesOnEdge_ECP : InnerEdge %d, OuterEdge %d is %d\n", i, j, edge_region[{i, 0}].edgesOnEdge_ECP[j])
+            --cio.printf("weightsOnEdge : Edge %d: Weight %d is $f\n", i, j, edge_region[{i, 0}].weightsOnEdge[j])
         end
-        --cio.printf("Edge: ID is %d, xEdge is %f, yEdge is %f, zEdge is %f \n", i, edge_region[i].x, edge_region[i].y, edge_region[i].z)
+        --cio.printf("Edge: ID is %d, xEdge is %f, yEdge is %f, zEdge is %f \n", i, edge_region[{i, 0}].x, edge_region[{i, 0}].y, edge_region[{i, 0}].z)
     end
 
     -- Copy data into vertex region
@@ -884,27 +884,27 @@ task main()
     end
 
     for i = 0, nEdges do
-        latEdge_in_copy[i] = edge_region[i].lat
-        lonEdge_in_copy[i] = edge_region[i].lon
-        xEdge_in_copy[i] = edge_region[i].x
-        yEdge_in_copy[i] = edge_region[i].y
-        zEdge_in_copy[i] = edge_region[i].z
-        indexToEdgeID_in_copy[i] = edge_region[i].edgeID
-        nEdgesOnEdge_in_copy[i] = edge_region[i].nEdgesOnEdge
-        dvEdge_in_copy[i] = edge_region[i].dvEdge
-        dv1Edge_in_copy[i] = edge_region[i].dv1Edge
-        dv2Edge_in_copy[i] = edge_region[i].dv2Edge
-        dcEdge_in_copy[i] = edge_region[i].dcEdge
-        angleEdge_in_copy[i] = edge_region[i].angleEdge
+        latEdge_in_copy[i] = edge_region[{i, 0}].lat
+        lonEdge_in_copy[i] = edge_region[{i, 0}].lon
+        xEdge_in_copy[i] = edge_region[{i, 0}].x
+        yEdge_in_copy[i] = edge_region[{i, 0}].y
+        zEdge_in_copy[i] = edge_region[{i, 0}].z
+        indexToEdgeID_in_copy[i] = edge_region[{i, 0}].edgeID
+        nEdgesOnEdge_in_copy[i] = edge_region[{i, 0}].nEdgesOnEdge
+        dvEdge_in_copy[i] = edge_region[{i, 0}].dvEdge
+        dv1Edge_in_copy[i] = edge_region[{i, 0}].dv1Edge
+        dv2Edge_in_copy[i] = edge_region[{i, 0}].dv2Edge
+        dcEdge_in_copy[i] = edge_region[{i, 0}].dcEdge
+        angleEdge_in_copy[i] = edge_region[{i, 0}].angleEdge
 
         for j = 0, TWO do
-            cellsOnEdge_in_copy[i*TWO + j] = edge_region[i].cellsOnEdge[j]
-            verticesOnEdge_in_copy[i*TWO + j] = edge_region[i].verticesOnEdge[j]
+            cellsOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].cellsOnEdge[j]
+            verticesOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].verticesOnEdge[j]
         end
 
         for j = 0, maxEdges2 do
-            edgesOnEdge_in_copy[i*maxEdges2 + j] = edge_region[i].edgesOnEdge_ECP[j]
-            weightsOnEdge_in_copy[i*maxEdges2 + j] = edge_region[i].weightsOnEdge[j]
+            edgesOnEdge_in_copy[i*maxEdges2 + j] = edge_region[{i, 0}].edgesOnEdge_ECP[j]
+            weightsOnEdge_in_copy[i*maxEdges2 + j] = edge_region[{i, 0}].weightsOnEdge[j]
         end
     end
 
