@@ -223,25 +223,28 @@ where reads writes(er), reads(cr) do
 end
 
 
+--config_zd: default 22000.0, config_xnutr: default 0.2. From config
+task atm_compute_damping_coefs(config_zd : double, config_xnutr : double, cr : region(ispace(int2d), cell_fs))
+where reads writes (cr) do
+  var m1 = -1.0
+  var pii = cmath.acos(m1) -- find equivelent transformation in Regent for acos()
+  --cio.printf("pii = %f\n", pii)
+  
+  var dx_scale_power = 1.0
+  fill(cr.dss, 0)
+  --cio.printf("cr[{%d, %d}].dss is %f\n", 10, 3, cr[{10, 3}].dss)
 
-
-
---task atm_compute_damping_coefs()
---    var m1 = -1.0
---    var pii = acos(m1) -- find equivelent transformation in Regent for acos()
---    var dx_scale_power = 1.0
---    dss(:,:) = 0.0 --dss should come from the mesh (dimensions vertlevels x ncells)
---    for iCell=1, nCells do
---        zt = zgrid(nVertLevels+1,iCell)
---        for k=1, nVertLevels do
---            z = 0.5*(zgrid(k,iCell) + zgrid(k+1,iCell))
---            if (z > config_zd) then
---                dss(k,iCell) = config_xnutr*sin(0.5*pii*(z-config_zd)/(zt-config_zd))**2.0
- --               dss(k,iCell) = dss(k,iCell) / meshDensity(iCell)**(0.25*dx_scale_power)
- --           end 
- --       end 
---    end 
---end
+  for iCell = 0, nCells do
+    var zt = cr[{iCell, nVertLevels}].zgrid
+    for k = 0, nVertLevels do
+      var z = 0.5 * (cr[{iCell, k}].zgrid + cr[{iCell, k+1}].zgrid)
+      if (z > config_zd) then
+        cr[{iCell, k}].dss = config_xnutr * cmath.pow(cmath.sin(0.5 * pii * (z-config_zd)/(zt-config_zd)), 2.0)
+        cr[{iCell, k}].dss = cr[{iCell, k}].dss / cmath.pow(cr[{iCell, 0}].meshDensity, (0.25*dx_scale_power))
+      end
+    end
+  end
+end
 
 task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
                                er : region(ispace(int2d), edge_fs),
