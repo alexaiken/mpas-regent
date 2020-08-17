@@ -266,6 +266,152 @@ where reads writes (er, cr) do
   end
 end
 
+--Comments for atm_advance_acoustic_step_work
+--Constants declared in task: rgas, cp, epssm, dts
+--Constants from mpas_constants.F : rgas, cp, gravity. These are passed in to the task as doubles at the moment
+--Contants from config: config_epssm: default = 0.1. Passed in as double at the moment.
+--dts is passed in as double now - in code, passed in as rk_sub_timestep(rk_step)
+--1.0_RKIND translated as just 1.0
+--Tendency variables: tend_rw, tend_rt, tend_rho (added to CR), tend_ru (added to ER). Not in registry
+--Other variables not in registry: rs, ts: added to CR as part of vertical grid, ru_Avg (added to ER)
+
+task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), rgas : double, cp : double, gravity : double, dts : double, config_epssm: double, edgeStart : int, edgeEnd : int, cellStart : int, cellEnd : int, cellSolveStart : int, cellSolveEnd : int, small_step : int, nCellsSolve : int)
+where reads writes (er, cr) do
+  var epssm = config_epssm
+  var rcv = rgas / (cp - rgas)
+  var c2 = cp * rcv
+  var resm = (1.0 - epssm) / (1.0 + epssm)
+  var rdts = 1./dts
+  cio.printf("advancing acoustic step\n")
+
+  if (small_step == 1) then
+    for iEdge = edgeStart-1, edgeEnd do
+      var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+
+      if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+
+        for k = 0, nVertLevels do
+          var pgrad = ((cr[{cell2, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp) * er[{iEdge, 0}].invDcEdge) / (0.5 * (cr[{cell2, k}].zz +cr[{cell1, k}].zz))
+          pgrad = er[{iEdge, k}].cqu * 0.5 * c2 * (cr[{cell1, k}].exner + cr[{cell2, k}].exner) * pgrad
+          pgrad = pgrad + 0.5 * er[{iEdge, k}].zxu * gravity * (cr[{cell1, k}].rho_pp + cr[{cell2, k}].rho_pp)
+          er[{iEdge, k}].ru_p = er[{iEdge, k}].ru_p + dts * (er[{iEdge, k}].tend_ru - (1.0 - er[{iEdge, 0}].specZoneMaskEdge) * pgrad)  --NEEDS FIXING
+        end
+        for k = 0, nVertLevels do
+          er[{iEdge, k}].ruAvg = er[{iEdge, k}].ruAvg + er[{iEdge, k}].ru_p
+        end
+      end
+    end
+
+  else
+    for iEdge = edgeStart-1, edgeEnd do
+      var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+
+      if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+
+        for k = 0, nVertLevels do
+          er[{iEdge, k}].ru_p = dts * er[{iEdge, k}].tend_ru
+        end
+
+        for k = 0, nVertLevels do
+          er[{iEdge, k}].ruAvg = er[{iEdge, k}].ru_p
+        end
+
+      end
+    end
+  end
+
+  if (small_step == 1) then
+    for iCell = cellStart - 1, cellEnd do
+      for j = 0, nVertLevels do
+        cr[{iCell, j}].rtheta_pp_old = 0
+      end
+    end
+  else
+    for iCell = cellStart, cellEnd do
+      for j = 0, nVertLevels do
+        cr[{iCell, j}].rtheta_pp_old = cr[{iCell, j}].rtheta_pp
+      end
+    end
+  end
+
+  for iCell = cellSolveStart, cellSolveEnd do
+    if(small_step == 1) then
+      for j = 0, nVertLevels do
+        cr[{iCell, j}].wwAvg = 0
+        cr[{iCell, j}].rho_pp = 0
+        cr[{iCell, j}].rtheta_pp = 0
+        cr[{iCell, j}].rw_p = 0
+      end
+      cr[{iCell, nVertLevels}].wwAvg = 0
+      cr[{iCell, nVertLevels}].rw_p = 0
+    end
+
+    if(cr[{iCell, 0}].specZoneMaskCell == 0.0) then
+      for i = 0, nVertLevels do
+        cr[{0, i}].ts = 0
+        cr[{0, i}].rs = 0
+      end
+
+      for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+        var iEdge = cr[{iCell, 0}].edgesOnCell[i]    --edgesOnCell(i,iCell)
+        var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+        var cell2 = er[{iEdge, 0}].cellsOnEdge[1]    --cell2 = cellsOnEdge(2,iEdge)
+
+        for k = 0, nVertLevels do
+          var flux = cr[{iCell, 0}].edgesOnCell_sign[i] * dts * er[{iEdge, 0}].dvEdge * er[{iEdge, k}].ru_p * cr[{iCell, 0}].invAreaCell
+          cr[{0, k}].rs = cr[{0, k}].rs - flux
+          cr[{0, k}].ts = cr[{0, k}].ts - flux * 0.5 * (cr[{cell2, k}].theta_m + cr[{cell1, k}].theta_m)
+        end
+      end
+
+      for k = 0, nVertLevels do
+         cr[{0, k}].rs = cr[{iCell, k}].rho_pp + dts * cr[{iCell, k}].tend_rho + cr[{0, k}].rs - cr[{0, k}].cofrz * resm * (cr[{iCell, k+1}].rw_p - cr[{iCell, k}].rw_p)
+         cr[{0, k}].ts = cr[{iCell, k}].rtheta_pp + dts * cr[{iCell, k}].tend_rt + cr[{0, k}].ts - resm * cr[{0, k}].rdzw * (cr[{iCell, k+1}].coftz * cr[{iCell, k+1}].rw_p  - cr[{iCell, k}].coftz * cr[{iCell, k}].rw_p )
+      end
+
+      for k = 1, nVertLevels do
+        cr[{iCell, k}].wwAvg = cr[{iCell, k}].wwAvg + 0.5 * (1.0 - epssm) * cr[{iCell, k}].rw_p
+      end
+
+      for k = 1, nVertLevels do
+         cr[{iCell, k}].rw_p = cr[{iCell, k}].rw_p +  dts * cr[{iCell, k}].tend_rw - cr[{iCell, k}].cofwz * ((cr[{iCell, k}].zz * cr[{0, k}].ts - cr[{iCell, k-1}].zz * cr[{0, k-1}].ts) + resm * (cr[{iCell, k}].zz * cr[{iCell, k}].rtheta_pp - cr[{iCell, k-1}].zz * cr[{iCell, k-1}].rtheta_pp)) - cr[{iCell, k}].cofwr * ((cr[{0, k}].rs + cr[{0, k-1}].rs) + resm * (cr[{iCell, k}].rho_pp + cr[{iCell, k-1}].rho_pp))  + cr[{iCell, k}].cofwt * (cr[{0, k}].ts + resm * cr[{iCell, k}].rtheta_pp) + cr[{iCell, k-1}].cofwt * (cr[{0, k-1}].ts +resm * cr[{iCell, k-1}].rtheta_pp)
+      end
+
+      for k = 1, nVertLevels do
+         cr[{iCell, k}].rw_p = (cr[{iCell, k}].rw_p - cr[{iCell, k}].a_tri * cr[{iCell, k-1}].rw_p) * cr[{iCell, k}].alpha_tri
+      end
+
+      for k = nVertLevels, 1, -1 do
+        cr[{iCell, k}].rw_p = cr[{iCell, k}].rw_p - cr[{iCell, k}].gamma_tri * cr[{iCell, k+1}].rw_p
+      end
+
+      for k = 1, nVertLevels do
+        cr[{iCell, k}].rw_p = (cr[{iCell, k}].rw_p + (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw) - dts * cr[{iCell, k}].dss * (cr[{0, k}].fzm * cr[{iCell, k}].zz + cr[{0, k}].fzp * cr[{iCell, k-1}].zz)*(cr[{0, k}].fzm * cr[{iCell, k}].rho_zz + cr[{0, k}].fzp * cr[{iCell, k-1}].rho_zz) * cr[{iCell, k}].w)/(1.0 + dts * cr[{iCell, k}].dss)  - (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw)
+      end
+
+      for k = 1, nVertLevels do
+        cr[{iCell, k}].wwAvg = cr[{iCell, k}].wwAvg + 0.5 * (1.0 + epssm) * cr[{iCell, k}].rw_p
+      end
+
+      for k=0, nVertLevels do
+         cr[{iCell, k}].rho_pp  = cr[{0, k}].rs - cr[{0, k}].cofrz *(cr[{iCell, k+1}].rw_p - cr[{iCell, k}].rw_p)
+         cr[{iCell, k}].rtheta_pp = cr[{0, k}].ts  - cr[{0, k}].rdzw * (cr[{iCell, k+1}].coftz * cr[{iCell, k+1}].rw_p - cr[{iCell, k}].coftz * cr[{iCell, k}].rw_p)
+      end
+
+    else
+      for k=0, nVertLevels do
+         cr[{iCell, k}].rho_pp  = cr[{iCell, k}].rho_pp + dts * cr[{iCell, k}].tend_rho
+         cr[{iCell, k}].rtheta_pp = cr[{iCell, k}].rtheta_pp + dts * cr[{iCell, k}].tend_rt
+         cr[{iCell, k}].rw_p = cr[{iCell, k}].rw_p + dts * cr[{iCell, k}].tend_rw
+         cr[{iCell, k}].wwAvg = cr[{iCell, k}].wwAvg + 0.5 * (1.0+epssm) * cr[{iCell, k}].rw_p
+      end
+    end
+  end
+end
+
+
 
 task atm_compute_moist_coefficients()
   cio.printf("computing moist coefficients\n")
