@@ -165,14 +165,48 @@ fspace cell_fs {
     fzp : double, -- level dependent
 
     zz : double, -- cell + level dependent
+    dss : double, -- cell + level dependent: "w-damping coefficient"
 
     zb_cell : double[maxEdges], -- cell + level dependent
     zb3_cell : double[maxEdges], -- cell + level dependent
 
-    -----------begin dynamics fields--------------
-    kiteForCell : int[maxEdges], --Index of kite in kiteAreasOnVertex that lies within a cell for eac    h of verticesOnCell
-    edgesOnCellSign : double[maxEdges], --Sign for edges surrounding a cell: positive for positive outwa    rd normal velocity
+    rs : double, --level dependent
+    ts : double, --level dependent
 
+    -----------begin dynamics fields--------------
+    kiteForCell : int[maxEdges], --Index of kite in kiteAreasOnVertex that lies within a cell for each of verticesOnCell
+    edgesOnCellSign : double[maxEdges], --Sign for edges surrounding a cell: positive for positive outward normal velocity
+
+    rtheta_pp : double,  --rho*theta_m/zz perturbation from rtheta_p. dimensions="nVertLevels nCells Time". units="kg K m^{-3}"
+    rtheta_pp_old : double,  --"old time level values of rho*theta_m/zz perturbation from rtheta_p, used in 3D divergence damping". "nVertLevels nCells Time"
+    rho_pp : double, --"rho/zz perturbation from rho_pp, advanced over acoustic steps" "nVertLevels nCells Time"
+    rho_zz : double, --"Dry air density divided by d(zeta)/dz". dimensions="nVertLevels nCells Time" units="kg m^{-3}"
+
+    rw : double,  --"rho*omega/zz carried at w points". dimensions="nVertLevelsP1 nCells Time"
+    rw_p : double, --"acoustic perturbation rho*omega/zz carried at w points" "nVertLevelsP1 nCells Time"
+    rw_save: double, --"predicted value of rho*omega/zz, saved before acoustic steps" dimensions="nVertLevelsP1 nCells Time" units="kg m^{-2} s^{-1}"
+    wwAvg : double, --"time-averaged rho*omega/zz used in scalar transport" "nVertLevelsP1 nCells Time"
+    invAreaCell : double, --"Inverse of Voronoi cell area"
+    theta_m : double, --"Moist potential temperature: theta*(1+q_v*R_v/R_d)" --nVertLevels nCells Time"
+
+    tend_rho : double, --name_in_code="rho_zz" "Tendency of dry density from dynamics" dimensions="nVertLevels nCells Time" units="kg m^{-3} s^{-1}" description=
+    tend_rt : double, --NOT IN REGISTRY: TO FIGURE OUT
+    tend_rw : double, --NOT IN REGISTRY: TO FIGURE OUT
+
+    cofrz : double, --type="real" dimensions="nVertLevels Time" units="s m^{-1}" description="coefficient for implicit contribution of Omega to density update"
+    coftz : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="s K" description="coefficient for implicit contribution of omega vertical derivative to the theta_m update"
+    cofwz : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1} K^{-1}" description="coefficient for implicit contribution of density to the vertical velocity update"
+    cofwr : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="coefficient for implicit contribution of density to the vertical velocity update"
+    cofwt : double, -- type="real" dimensions="nVertLevels nCells Time" units="m s^{-1} K^{-1}" description="coefficient for implicit contribution of density to the vertical velocity update"
+
+    a_tri : double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="implicit tridiagonal solve coefficients"
+    alpha_tri : double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="implicit tridiagonal solve coefficients"
+    gamma_tri : double,  --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="implicit tridiagonal solve coefficients"
+
+    exner: double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="Exner function"
+    w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-1}" description="Vertical velocity at vertical cell faces"
+    specZoneMaskCell: double, --type="real" dimensions="nCells" default_value="0.0" units="-" description="0/1 mask on cells, defined as 1 for cells in the limited-area specified zone"/>
+    edgesOnCell_sign: double[maxEdges], --type="real" dimensions="maxEdges nCells" units="-" description="Sign for edges surrounding a cell: positive for positive outward normal velocity"
 }
 
 -- A triangluar/dual cell (aka vertex)
@@ -223,5 +257,12 @@ fspace edge_fs {
     adv_coefs_3rd : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
 
     deriv_two : double[FIFTEEN][TWO], --weights for cell-centered second derivative, normal to edge, for transport scheme, TODO: where is it initialized?
+
+    invDcEdge : double, --"Inverse distance between cells separated by an edge"
+    ru_p : double, --"acoustic perturbation horizontal momentum at cell edge  (rho*u/zz)" "nVertLevels nEdges Time"
+    cqu: double, --"rho_d/rho_m at cell edge (u points) dimensions="nVertLevels nEdges Time" units="unitless"
+    specZoneMaskEdge: double, --"0/1 mask on edges, defined as 1 for edges in the limited-area specified zone" dimensions="nEdges" default_value="0.0"
+    tend_ru : double, -- NOT IN REGISTRY
+    ruAvg : double, -- NOT IN REGISTRY
 
 }
