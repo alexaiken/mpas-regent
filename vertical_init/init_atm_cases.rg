@@ -1,34 +1,57 @@
 import "regent"
+require "data_structures"
 
---TODO: port over init_atm_case_jw
+local nCells = 2562
+local nEdges = 7680
+local nVertices = 5120
+local maxEdges = 10
+local maxEdges2 = 20
+local TWO = 2
+local FIFTEEN = 15
+local vertexDegree = 3
+local nVertLevels = 1
 
---subroutine init_atm_case_jw(mesh, nCells, nVertLevels, state, diag, configs, test_case)
---   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
---   ! Setup baroclinic wave test case from Jablonowski and Williamson 2008 (QJRMS)
---   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
---
---      implicit none
---
---      type (mpas_pool_type), intent(inout) :: mesh
---      integer, intent(in) :: nCells
---      integer, intent(in) :: nVertLevels
---      type (mpas_pool_type), intent(inout) :: state
---      type (mpas_pool_type), intent(inout) :: diag
---      type (mpas_pool_type), intent(in) :: configs
---      integer, intent(in) :: test_case
---
---      real (kind=RKIND), parameter :: u0 = 35.0
---      real (kind=RKIND), parameter :: alpha_grid = 0.  ! no grid rotation
---
---!      real (kind=RKIND), parameter :: omega_e = 7.29212e-05
---      real (kind=RKIND) :: omega_e
---
---      real (kind=RKIND), parameter :: t0b = 250., t0 = 288., delta_t = 4.8e+05, dtdz = 0.005, eta_t = 0.2
---      real (kind=RKIND), parameter :: u_perturbation = 1., pert_radius = 0.1, latitude_pert = 40., longitude_pert = 20.
---      real (kind=RKIND), parameter :: theta_c = pii/4.0
---      real (kind=RKIND), parameter :: lambda_c = 3.0*pii/2.0
---      real (kind=RKIND), parameter :: k_x = 9.           ! Normal mode wave number
---
+
+local cio = terralib.includec("stdio.h")
+local cmath = terralib.includec("math.h")
+
+
+
+task init_atm_case_jw(cr : region(ispace(int2d), cell_fs))
+where reads writes(cr) do 
+-- constants from constants.F --- TODO: combine constants in one place so you don't redefine every time you need
+
+  var pii = 3.141592653589793
+
+
+-- local vars/constants defined at beginning of subroutine
+  var u0 = 35.0
+  var alpha_grid = 0.0 -- no grid rotation
+  var omega_e : double
+ 
+  var t0b = 250.0
+  var t0 = 288.0
+  var delta_t = 4.8e+05 -- TODO: scientific notation in regent?
+  var dtdz = 0.005
+  var eta_t = 0.2
+  var u_perturbation = 1.0
+  var pert_radius = 0.1
+  var latitude_pert = 40.0
+  var longitude_pert = 20.0
+  var theta_c = pii/4.0
+  var lambda_c = 3.0*pii/2.0
+  var k_x = 9.0           -- Normal mode wave number
+
+--initialization of moisture:
+  var rh_max = 0.40 -- Maximum relative humidity
+  -- scalars, index_qv, qsat, relhum
+--end initialization
+
+  var rebalance = true
+  var nlat = 721
+  var moisture = false
+
+
 --      real (kind=RKIND), dimension(:), pointer :: rdzw, dzu, rdzu, fzm, fzp
 --      real (kind=RKIND), dimension(:), pointer :: surface_pressure
 --      real (kind=RKIND), dimension(:,:), pointer :: zgrid, zxu, zz, hx
