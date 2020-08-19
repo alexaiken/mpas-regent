@@ -204,10 +204,20 @@ fspace cell_fs {
     gamma_tri : double,  --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="implicit tridiagonal solve coefficients"
 
     exner: double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="Exner function"
+    exner_base: double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="Base-state Exner function"
+    
     w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-1}" description="Vertical velocity at vertical cell faces"
     specZoneMaskCell: double, --type="real" dimensions="nCells" default_value="0.0" units="-" description="0/1 mask on cells, defined as 1 for cells in the limited-area specified zone"/>
-    edgesOnCell_sign: double[maxEdges], --type="real" dimensions="maxEdges nCells" units="-" description="Sign for edges surrounding a cell: positive for positive outward normal velocity"
+    edgesOnCell_sign: double[maxEdges], --TODO: duplicate of edgesOnCellSign; type="real" dimensions="maxEdges nCells" units="-" description="Sign for edges surrounding a cell: positive for positive outward normal velocity"
+    cqw : double, -- type = "reel" dimensions="nVertLevels nCells Time" units="unitless" description="rho_d/rho_m at w points"
+    qtot : double, -- defined in timestep for use in compute_dyn_tend and other subroutines
+    rho_base : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Base state dry air density"
+    rtheta_base : double, -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="reference state rho*theta/zz"
+    rtheta_p : double -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="rho*theta_m/zz perturbation from the reference state value"
+
+
 }
+
 
 -- A triangluar/dual cell (aka vertex)
 fspace vertex_fs {

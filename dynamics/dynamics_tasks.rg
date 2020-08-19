@@ -26,6 +26,7 @@ local nVertLevels = 1
 
 
 local cio = terralib.includec("stdio.h")
+local cmath = terralib.includec("math.h")
 
 task atm_compute_signs(vr : region(ispace(int1d), vertex_fs),
                        er : region(ispace(int2d), edge_fs),
@@ -187,9 +188,9 @@ where reads writes(er), reads(cr) do
             end 
   
             for j = 1,n do
-              -- TODO: how to calculate exponent? how to cast calculation as negative?
-              -- er[{iEdge, 0}].adv_coefs[j] =  - er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs[j] / 12 -- this should be a negative number
-              -- er[{iEdge, 0}].adv_coefs_3rd[j] =  - er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs_3rd[j] / 12 
+              -- TODO: how to calculate exponent?
+              -- er[{iEdge, 0}].adv_coefs[j] =  -1.0 * er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs[j] / 12 -- this should be a negative number
+              -- er[{iEdge, 0}].adv_coefs_3rd[j] =  -1.0 * er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs_3rd[j] / 12 
 --               adv_coefs    (j,iEdge) = - (dcEdge(iEdge) **2) * adv_coefs    (j,iEdge) / 12.
 --               adv_coefs_3rd(j,iEdge) = - (dcEdge(iEdge) **2) * adv_coefs_3rd(j,iEdge) / 12.
             end 
@@ -227,7 +228,7 @@ end
 task atm_compute_damping_coefs(config_zd : double, config_xnutr : double, cr : region(ispace(int2d), cell_fs))
 where reads writes (cr) do
   var m1 = -1.0
-  var pii = cmath.acos(m1) -- find equivelent transformation in Regent for acos()
+  var pii = cmath.acos(m1) -- find equivelelt transformation in Regent for acos()
   --cio.printf("pii = %f\n", pii)
   
   var dx_scale_power = 1.0
@@ -417,8 +418,81 @@ task atm_compute_moist_coefficients()
   cio.printf("computing moist coefficients\n")
 end  
 
-task atm_compute_vert_imp_coefs()  
-  cio.printf("computing vertical coefficients\n")
+--Comments for atm_compute_vert_imp_coefs
+--Combined this and atm_compute_vert_imp_coefs_work (one was just a helper)
+--purpose: "Compute coefficients for vertically implicit gravity-wave/acoustic computations"
+--Constants declared in task: 
+--Constants from mpas_constants.F : . These are passed in to the task as doubles at the moment
+--Contants from config: config_epssm: default = 0.1. Passed in as double at the moment.
+--dts is passed in as double now - in code, passed in as rk_sub_timestep(rk_step)
+--1.0_RKIND translated as just 1.0
+--mpas used cellSolveStart, cellSolveEnd; we believe those deal with how mpas uses parallelization (a start and end for which cell pool is currently being worked on). We will just loop thru the entire cell region instead.
+--mpas renames some fields; we will just use the original name --- p : exner, t : theta_m, rb : rho_base, rtb : rtheta_base, pb : exner_base, rt : rtheta_p
+
+task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
+                                dts : double,
+                                epssm : double,
+                                rgas : double,
+                                cp : double,
+                                gravity : double)  
+where reads writes (cr) do
+      --  set coefficients
+      var dtseps = .5*dts*(1.+epssm)
+      var rcv = rgas/(cp-rgas)
+      var c2 = cp*rcv
+      
+      var qtotal : double
+      var b_tri : double[nVertLevels]
+      var c_tri : double[nVertLevels]
+
+
+-- MGD bad to have all threads setting this variable?
+      for k = 0, nVertLevels do
+         cr[{0, k}].cofrz = dtseps * cr[{0, k}].rdzw
+      end 
+
+      for iCell = 0, nCells do --  we only need to do cells we are solving for, not halo cells
+
+--DIR$ IVDEP
+         for k=1, nVertLevels do
+            cr[{iCell, k}].cofwr = .5 * dtseps * gravity * (cr[{0, k}].fzm * cr[{iCell, k}].zz + cr[{0, k}].fzp * cr[{iCell, k-1}].zz)
+         end 
+         cr[{iCell, 0}].coftz = 0.0 --coftz(1,iCell) = 0.0
+--DIR$ IVDEP
+         for k=1, nVertLevels do
+            cr[{iCell, k}].cofwz = dtseps * c2 * (cr[{0, k}].fzm * cr[{iCell, k}].zz + cr[{0, k}].fzp * cr[{iCell, k-1}].zz) * cr[{0, k}].rdzu * cr[{iCell, k}].cqw * (cr[{0, k}].fzm * cr[{iCell, k}].exner + cr[{0, k}].fzp * cr[{iCell, k-1}].exner)
+            cr[{iCell, k}].coftz = dtseps * (cr[{0, k}].fzm * cr[{iCell, k}].theta_m + cr[{0, k}].fzp * cr[{iCell, k-1}].theta_m)
+         end 
+         cr[{iCell, nVertLevels}].coftz = 0.0 -- coftz(nVertLevels+1,iCell) 
+--DIR$ IVDEP
+         for k=0, nVertLevels do
+
+            qtotal = cr[{iCell, k}].qtot
+
+            cr[{iCell, k}].cofwt = .5 * dtseps * rcv * cr[{iCell, k}].zz * gravity * cr[{iCell, k}].rho_base / ( 1.0 + qtotal) * cr[{iCell, k}].exner / ((cr[{iCell, k}].rtheta_base + cr[{iCell, k}].rtheta_p) * cr[{iCell, k}].exner_base)
+         end 
+
+         cr[{iCell, 0}].a_tri = 0.0 --a_tri(1,iCell) = 0.  -- note, this value is never used
+         b_tri[0] = 1.0    -- note, this value is never used
+         c_tri[0] = 0.0    -- note, this value is never used
+         cr[{iCell, 0}].gamma_tri = 0.0
+         cr[{iCell, 0}].alpha_tri = 0.0  -- note, this value is never used
+
+--DIR$ IVDEP
+         for k=1, nVertLevels do --k=2,nVertLevels
+            cr[{iCell,k}].a_tri = -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k-1}].coftz * cr[{0, k-1}].rdzw * cr[{iCell, k-1}].zz + cr[{iCell, k}].cofwr * cr[{0, k-1}].cofrz - cr[{iCell, k-1}].cofwt * cr[{iCell, k-1}].coftz * cr[{0, k-1}].rdzw
+         
+            b_tri[k] = 1.0 + cr[{iCell, k}].cofwz * (cr[{iCell, k}].coftz * cr[{0, k}].rdzw * cr[{iCell, k}].zz +  cr[{iCell, k}].coftz * cr[{0, k-1}].rdzw * cr[{iCell, k-1}].zz) -  cr[{iCell, k}].coftz * (cr[{iCell, k}].cofwt * cr[{0, k}].rdzw - cr[{iCell, k-1}].cofwt * cr[{0, k-1}].rdzw) + cr[{iCell, k}].cofwr * ((cr[{0, k}].cofrz - cr[{0, k-1}].cofrz))
+            
+            c_tri[k] =   -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k+1}].coftz * cr[{0, k}].rdzw * cr[{iCell, k}].zz - cr[{iCell, k}].cofwr * cr[{0, k}].cofrz + cr[{iCell, k}].cofwt * cr[{iCell, k+1 }].coftz * cr[{iCell, k}].rdzw
+         end 
+--MGD VECTOR DEPENDENCE
+         for k=1, nVertLevels do -- k=2, nVertLevels
+            cr[{iCell, k}].alpha_tri = 1.0/ (b_tri[k]-cr[{iCell, k}].a_tri * cr[{iCell, k-1}].gamma_tri)
+            cr[{iCell, k}].gamma_tri = c_tri[k] * cr[{iCell, k}].alpha_tri
+         end 
+
+      end -- loop over cells
 end
 
 task atm_compute_dyn_tend()
