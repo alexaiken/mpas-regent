@@ -10,15 +10,17 @@ local TWO = 2
 local FIFTEEN = 15
 local vertexDegree = 3
 local nVertLevels = 1
-
+local sphere_radius = 1.0 --from ncdump of the grid, TODO: what is "a" variable from init_atm_core.F?
 
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
 
 
-task init_atm_case_jw(cr : region(ispace(int2d), cell_fs))
-where reads writes(cr) do 
+task init_atm_case_jw(vr : region(ispace(int2d), vertex_fs),
+                      er : region(ispace(int2d), edge_fs),
+                      cr : region(ispace(int2d), cell_fs))
+where reads writes(vr, er, cr) do 
 -- constants from constants.F --- TODO: combine constants in one place so you don't redefine every time you need
 
   var pii = 3.141592653589793
@@ -31,7 +33,7 @@ where reads writes(cr) do
  
   var t0b = 250.0
   var t0 = 288.0
-  var delta_t = 4.8e+05 -- TODO: scientific notation in regent?
+  var delta_t = 4.8E+05 -- TODO: scientific notation in regent?
   var dtdz = 0.005
   var eta_t = 0.2
   var u_perturbation = 1.0
@@ -51,6 +53,30 @@ where reads writes(cr) do
   var nlat = 721
   var moisture = false
 
+---- Scale all distances and areas from a unit sphere to one with radius sphere_radius
+
+  for iCell = 0, nCells do
+    cr[{iCell, 0}].x = cr[{iCell, 0}].x * sphere_radius 
+    cr[{iCell, 0}].y = cr[{iCell, 0}].y * sphere_radius 
+    cr[{iCell, 0}].z = cr[{iCell, 0}].z * sphere_radius 
+    cr[{iCell, 0}].areaCell = cr[{iCell, 0}].areaCell * cmath.pow(sphere_radius, 2.0) 
+  end 
+  for iVert = 0, nVertices do
+    vr[iVert].x = vr[iVert].x * sphere_radius
+    vr[iVert].y = vr[iVert].y * sphere_radius
+    vr[iVert].z = vr[iVert].z * sphere_radius
+    vr[iVert].areaTriangle = vr[iVert].areaTriangle * cmath.pow(sphere_radius, 2.0)
+    vr[iVert].kiteAreasOnVertex = vr[iVert].kiteAreasOnVertex * cmath.pow(sphere_radius, 2.0)
+  end
+  for iEdge = 0, nEdges do
+
+    er[{iEdge, 0}].x = er[{iEdge, 0}].x * sphere_radius 
+    er[{iEdge, 0}].y = er[{iEdge, 0}].y * sphere_radius 
+    er[{iEdge, 0}].z = er[{iEdge, 0}].z * sphere_radius 
+    er[{iEdge, 0}].dvEdge = er[{iEdge, 0}].dvEdge * sphere_radius      
+    er[{iEdge, 0}].dcEdge = er[{iEdge, 0}].dcEdge * sphere_radius      
+
+  end
 
 --      real (kind=RKIND), dimension(:), pointer :: rdzw, dzu, rdzu, fzm, fzp
 --      real (kind=RKIND), dimension(:), pointer :: surface_pressure
