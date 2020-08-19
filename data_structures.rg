@@ -206,7 +206,11 @@ fspace cell_fs {
     exner: double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="Exner function"
     w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-1}" description="Vertical velocity at vertical cell faces"
     specZoneMaskCell: double, --type="real" dimensions="nCells" default_value="0.0" units="-" description="0/1 mask on cells, defined as 1 for cells in the limited-area specified zone"/>
-    edgesOnCell_sign: double[maxEdges], --type="real" dimensions="maxEdges nCells" units="-" description="Sign for edges surrounding a cell: positive for positive outward normal velocity"
+
+    ----vars first seen in atm_compute_solve_diagnostics_work--
+    h : double, --type="real"     dimensions="nVertLevels nCells Time"
+    ke : double, --type="real"     dimensions="nVertLevels nCells Time"
+    divergence : double, --type="real"     dimensions="nVertLevels nCells Time"
 }
 
 -- A triangluar/dual cell (aka vertex)
@@ -223,7 +227,14 @@ fspace vertex_fs {
     kiteAreasOnVertex : double[vertexDegree],
 
     -----------begin dynamics fields--------------
-    edgesOnVertexSign : double[vertexDegree] --Sign for edges incident with a vertex: positive for po    sitive inward tengential velocity
+    edgesOnVertexSign : double[vertexDegree], --Sign for edges incident with a vertex: positive for po    sitive inward tengential velocity
+
+      ----vars first seen in atm_compute_solve_diagnostics_work--
+    vorticity : double,  --type="real"     dimensions="nVertLevels nVertices Time"
+    invAreaTriangle : double, --type="real" dimensions="nVertices" units="m^{-2}" description="Inverse area of a Delaunay triangle"
+    ke_vertex : double, -- vertex and vertical levels
+    pv_vertex : double, --type="real"     dimensions="nVertLevels nVertices Time"
+    fVertex: double,   --type="real"     dimensions="nVertices"/>
 }
 
 fspace edge_fs {
@@ -262,7 +273,15 @@ fspace edge_fs {
     ru_p : double, --"acoustic perturbation horizontal momentum at cell edge  (rho*u/zz)" "nVertLevels nEdges Time"
     cqu: double, --"rho_d/rho_m at cell edge (u points) dimensions="nVertLevels nEdges Time" units="unitless"
     specZoneMaskEdge: double, --"0/1 mask on edges, defined as 1 for edges in the limited-area specified zone" dimensions="nEdges" default_value="0.0"
+    h_edge : double, --type="real"dimensions="nVertLevels nEdges Time"
+
     tend_ru : double, -- NOT IN REGISTRY
     ruAvg : double, -- NOT IN REGISTRY
 
+
+    ----vars first seen in atm_compute_solve_diagnostics_work--
+    ke_edge : double, -- parameterized by both edges and vertical levels
+    u : double, --type="real"     dimensions="nVertLevels nEdges Time"
+    v : double,  --type="real"     dimensions="nVertLevels nEdges Time"
+    pv_edge : double, --type="real"     dimensions="nVertLevels nEdges Time"
 }
