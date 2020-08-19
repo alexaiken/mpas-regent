@@ -412,6 +412,144 @@ where reads writes (er, cr) do
   end
 end
 
+task atm_compute_solve_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), hollingsworth : bool)
+where reads writes(vr, cr, er) do
+
+  cio.printf("computing solve diagnostics\n")
+
+  for iEdge = 0, nEdges do
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+
+    for k = 0, nVertLevels do
+      er[{iEdge, k}].h_edge = 0.5 * (cr[{cell1, k}].h + cr[{cell2, k}].h)
+    end
+
+    var efac = er[{iEdge, 0}].dcEdge * er[{iEdge, 0}].dvEdge
+
+    for k = 0, nVertLevels do
+      er[{iEdge, k}].ke_edge = efac * cmath.pow(er[{k, iEdge}].u, 2)
+    end
+  end
+
+  for iVertex = 0, nVertices do
+    for j = 0, nVertLevels do
+      vr[{iVertex, j}].vorticity
+    end
+    for i = 0, vertexDegree do
+      var iEdge = vr[{iVertex, 0}].edgesOnVertex[i]
+      var s = vr[{iVertex, 0}].edgesOnVertexSign[i] * er[{iEdge, 0}].dcEdge
+
+      for k = 0, nVertLevels do
+        vr[{iVertex, k}].vorticity = vr[{iVertex, k}].vorticity + s * er[{iEdge, k}].u
+      end
+    end
+
+    for k = 0, nVertLevels do
+      vr[{iVertex, k}].vorticity = vr[{iVertex, k}].vorticity * vr[{iVertex, 0}].invAreaTriangle
+    end
+  end
+
+  for iCell = 0, nCells do
+    for j = 0, nVertLevels do
+      cr[{iCell, j}].divergence = 0
+    end
+    for i = 1, cr[{iCell, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+      var s = cr[{iCell, 0}].edgesOnCellSign[i] * er[{iEdge, 0}].dvEdge
+
+      for k = 0, nVertLevels do
+        cr[{iCell, k}].divergence = cr[{iCell, k}].divergence + s + er[{iEdge, k}].u
+      end
+    end
+    var r = cr[{iCell, 0}].invAreaCell
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].divergence = cr[{iCell, k}].divergence * r
+    end
+  end
+
+  for iCell = 0, nCells do
+    for j = 1, nVertLevels do
+      cr[{iCell, j}].ke = 0
+    end
+    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+      for k = 0, nVertLevels do
+        cr[{iCell, k}].ke = cr[{iCell, k}].ke + 0.25 * er[{iEdge, k}].ke_edge
+      end
+    end
+
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].ke = cr[{iCell, k}].ke * cr[{iCell,0}].invAreaCell
+    end
+  end
+
+  if (hollingsworth) then
+    for iVertex = 0, nVertices do
+      var r = 0.25 * vr[{iVertex, 0}].invAreaTriangle
+      for k = 0, nVertLevels do
+        vr[{iVertex, k}].ke_vertex = (er[{vr[{iVertex, 0}].edgesOnVertex[0], k}].ke_edge + er[{vr[{iVertex, 0}].edgesOnVertex[1], k}].ke_edge + er[{vr[{iVertex, 0}].edgesOnVertex[2], k}].ke_edge)*r
+      end
+    end
+
+    var ke_fact = 1.0 - 0.375
+
+    for iCell = 0, nCells do
+      for k = 0, nVertLevels do
+        cr[{iCell, k}].ke = ke_fact * cr[{iCell, k}].ke
+      end
+    end
+
+    for iCell = 0, nCells do
+      var r = cr[{iCell, 0}].invAreaCell
+      for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+       var iVertex = cr[{iCell, 0}].verticesOnCell[i]
+       var j = cr[{iCell, 0}].kiteForCell[i]
+
+       for k = 0, nVertLevels do
+        cr[{iCell, k}].ke = cr[{iCell, k}].ke + (1.0 - ke_fact)*vr[{iVertex, 0}].kiteAreasOnVertex[j] * vr[{iVertex, k}].ke_vertex * r
+       end
+      end
+    end
+  end
+
+  var reconstruct_v = true
+
+  ----Comment (Arjun): What to do with present(rk_step)?
+  --if(present(rk_step)) then
+  --  if(rk_step /= 3) reconstruct_v = .false.
+  --end if
+
+  if(reconstruct_v) then
+    for iEdge = 0, nEdges do
+      for j = 0, nVertLevels do
+        er[{iEdge, j}].v = 0
+      end
+      for i = 1, er[{iEdge, 0}].nEdgesOnEdge do
+        var eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i]
+
+        for k = 0, nVertLevels do
+          er[{iEdge, k}].v = er[{iEdge, k}].v + er[{iEdge, 0}].weightsOnEdge[i] * er[{eoe, k}].u
+        end
+      end
+    end
+  end
+
+  for iVertex = 0, nVertices do
+    for k = 0, nVertLevels do
+      vr[{iVertex, k}].pv_vertex = vr[{iVertex, 0}].fVertex + vr[{iVertex, k}].vorticity
+    end
+  end
+
+  for iEdge = 0, nEdges do
+    for k =0, nVertLevels do
+      er[{iEdge, k}].pv_edge =  0.5 * (vr[{er[{iEdge, 0}].verticesOnEdge[0],k}].pv_vertex + vr[{er[{iEdge, 0}].verticesOnEdge[1],k}].pv_vertex)
+    end
+  end
+
+    --SKIPPED: (config_apvm_upwinding > 0.0) then---
+end
+
 
 
 task atm_compute_moist_coefficients()
@@ -513,10 +651,6 @@ end
 
 task atm_recover_large_step_variables()
   cio.printf("recovering large step vars\n")
-end
-
-task atm_compute_solve_diagnostics()
-  cio.printf("computing solve diagnostics\n")
 end
 
 task atm_rk_dynamics_substep_finish()
