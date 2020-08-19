@@ -214,6 +214,9 @@ fspace cell_fs {
     rho_base : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Base state dry air density"
     rtheta_base : double, -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="reference state rho*theta/zz"
     rtheta_p : double -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="rho*theta_m/zz perturbation from the reference state value"
+    relhum : double -- type="real" dimensions="nVertLevels nCells Time" units="percent" description="Relative humidity"
+    qsat : double -- defined in init_atm_case_jw for use in moisture calculations dimensions="nVertLevels nCells" 
+
 
     ----vars first seen in atm_compute_solve_diagnostics_work--
     h : double, --type="real"     dimensions="nVertLevels nCells Time"

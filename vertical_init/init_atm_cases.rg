@@ -10,7 +10,8 @@ local TWO = 2
 local FIFTEEN = 15
 local vertexDegree = 3
 local nVertLevels = 1
-local sphere_radius = 1.0 --from ncdump of the grid, TODO: what is "a" variable from init_atm_core.F?
+local sphere_radius = 6371229.0 --from ncdump of the grid, default is 1.0, but set to "a" from constants.F in init_atm_core.F
+
 
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
@@ -24,7 +25,7 @@ where reads writes(vr, er, cr) do
 -- constants from constants.F --- TODO: combine constants in one place so you don't redefine every time you need
 
   var pii = 3.141592653589793
-
+  var omega = 7.29212E-5 
 
 -- local vars/constants defined at beginning of subroutine
   var u0 = 35.0
@@ -52,6 +53,9 @@ where reads writes(vr, er, cr) do
   var rebalance = true
   var nlat = 721
   var moisture = false
+  var nz1 = nVertLevels 
+  var nz = nz1 + 1
+
 
 ---- Scale all distances and areas from a unit sphere to one with radius sphere_radius
 
@@ -78,226 +82,45 @@ where reads writes(vr, er, cr) do
 
   end
 
---      real (kind=RKIND), dimension(:), pointer :: rdzw, dzu, rdzu, fzm, fzp
---      real (kind=RKIND), dimension(:), pointer :: surface_pressure
---      real (kind=RKIND), dimension(:,:), pointer :: zgrid, zxu, zz, hx
---      real (kind=RKIND), dimension(:,:), pointer :: pressure, ppb, pb, rho_zz, rb, rr, tb, rtb, p, pp, dss, t, rt
---      real (kind=RKIND), dimension(:,:), pointer :: u, ru, w, rw, v
---      real (kind=RKIND), dimension(:,:), pointer :: rho, theta
---      real (kind=RKIND), dimension(:,:,:), pointer :: zb, zb3
---      real (kind=RKIND), dimension(:,:,:), pointer :: deriv_two
---      
---!.. initialization of moisture:
---      integer, pointer :: index_qv
---      real (kind=RKIND), parameter :: rh_max = 0.40 ! Maximum relative humidity
---!      real (kind=RKIND), parameter :: rh_max = 0.70 ! Maximum relative humidity
---      real (kind=RKIND), dimension(nVertLevels, nCells) :: qsat, relhum
---      real (kind=RKIND), dimension(:,:,:), pointer :: scalars
---!.. end initialization of moisture.
---
---      integer :: iCell, iCell1, iCell2 , iEdge, vtx1, vtx2, ivtx, i, k, nz, itr, itrp, cell1, cell2
---      integer, pointer :: nz1, nCellsSolve, nEdges, maxEdges, nVertices
---
---      !This is temporary variable here. It just need when calculate tangential velocity v.
---      integer :: eoe, j
---      integer, dimension(:), pointer :: nEdgesOnEdge, nEdgesOnCell
---      integer, dimension(:,:), pointer :: edgesOnEdge, cellsOnEdge, verticesOnEdge, cellsOnCell
---      real (kind=RKIND), dimension(:,:), pointer :: weightsOnEdge
---
---      real (kind=RKIND) :: flux, fluxk, lat1, lat2, eta_v, r_pert, u_pert, lat_pert, lon_pert, r
---
---      real (kind=RKIND) :: ptop, p0, phi
---      real (kind=RKIND) :: lon_Edge
---
---      real (kind=RKIND) :: r_earth, etavs, ztemp, zd, zt, dz, gam, delt, str
---
---      real (kind=RKIND) :: es, qvs, xnutr, znut, ptemp 
---      integer :: iter
---
---      real (kind=RKIND), dimension(nVertLevels + 1 ) :: hyai, hybi, znu, znw, znwc, znwv, hyam, hybm
---      real (kind=RKIND), dimension(nVertLevels + 1 ) :: znuc, znuv, bn, divh, dpn
---
---      real (kind=RKIND), dimension(nVertLevels + 1 ) :: sh, zw, ah
---      real (kind=RKIND), dimension(nVertLevels ) :: zu, dzw, rdzwp, rdzwm
---      real (kind=RKIND), dimension(nVertLevels ) :: eta, etav, teta, ppi, tt, temperature_1d
---
---      real (kind=RKIND) :: d1, d2, d3, cof1, cof2, psurf
---      real (kind=RKIND), pointer :: cf1, cf2, cf3
---
---      !  storage for (lat,z) arrays for zonal velocity calculation
---
---      logical, parameter :: rebalance = .true.
---      integer, parameter :: nlat=721
---      real (kind=RKIND), dimension(nVertLevels) :: flux_zonal
---      real (kind=RKIND), dimension(nVertLevels + 1, nlat) :: zgrid_2d
---      real (kind=RKIND), dimension(nVertLevels, nlat) :: u_2d, pp_2d, rho_2d, qv_2d, etavs_2d, zz_2d
---      real (kind=RKIND), dimension(nVertLevels, nlat) :: p_2d, pb_2d, ppb_2d, rr_2d, rb_2d, tb_2d, rtb_2d
---      real (kind=RKIND), dimension(nVertLevels, nlat-1) :: zx_2d 
---      real (kind=RKIND), dimension(nlat) :: lat_2d
---      real (kind=RKIND) :: dlat, hx_1d
---      real (kind=RKIND) :: z_edge, z_edge3, d2fdx2_cell1, d2fdx2_cell2
---
---!      logical, parameter :: moisture = .true.
---      logical, parameter :: moisture = .false.
---
---      real (kind=RKIND), dimension(:), pointer :: xCell, yCell, zCell
---      real (kind=RKIND), dimension(:), pointer :: xEdge, yEdge, zEdge
---      real (kind=RKIND), dimension(:), pointer :: xVertex, yVertex, zVertex
---      real (kind=RKIND), dimension(:), pointer :: dcEdge, dvEdge, areaCell, areaTriangle
---      real (kind=RKIND), dimension(:,:), pointer :: kiteAreasOnVertex
---
---      real (kind=RKIND), dimension(:), pointer :: latCell, latVertex, lonVertex, latEdge, lonEdge
---      real (kind=RKIND), dimension(:), pointer :: fEdge, fVertex
---
---      real (kind=RKIND), pointer :: sphere_radius
---      logical, pointer :: on_a_sphere
---      real (kind=RKIND), pointer :: config_coef_3rd_order
---      integer, pointer :: config_theta_adv_order
---      integer, pointer :: config_init_case
---
---
---      call mpas_pool_get_config(configs, 'config_init_case', config_init_case)
---      call mpas_pool_get_config(configs, 'config_coef_3rd_order', config_coef_3rd_order)
---      call mpas_pool_get_config(configs, 'config_theta_adv_order', config_theta_adv_order)
---
---
---      !
---      ! Scale all distances and areas from a unit sphere to one with radius sphere_radius
---      !
---      call mpas_pool_get_array(mesh, 'xCell', xCell)
---      call mpas_pool_get_array(mesh, 'yCell', yCell)
---      call mpas_pool_get_array(mesh, 'zCell', zCell)
---      call mpas_pool_get_array(mesh, 'xEdge', xEdge)
---      call mpas_pool_get_array(mesh, 'yEdge', yEdge)
---      call mpas_pool_get_array(mesh, 'zEdge', zEdge)
---      call mpas_pool_get_array(mesh, 'xVertex', xVertex)
---      call mpas_pool_get_array(mesh, 'yVertex', yVertex)
---      call mpas_pool_get_array(mesh, 'zVertex', zVertex)
---      call mpas_pool_get_array(mesh, 'dvEdge', dvEdge)
---      call mpas_pool_get_array(mesh, 'dcEdge', dcEdge)
---      call mpas_pool_get_array(mesh, 'areaCell', areaCell)
---      call mpas_pool_get_array(mesh, 'areaTriangle', areaTriangle)
---      call mpas_pool_get_array(mesh, 'kiteAreasOnVertex', kiteAreasOnVertex)
---      call mpas_pool_get_config(mesh, 'on_a_sphere', on_a_sphere)
---      call mpas_pool_get_config(mesh, 'sphere_radius', sphere_radius)
---
---      xCell(:) = xCell(:) * sphere_radius
---      yCell(:) = yCell(:) * sphere_radius
---      zCell(:) = zCell(:) * sphere_radius
---      xVertex(:) = xVertex(:) * sphere_radius
---      yVertex(:) = yVertex(:) * sphere_radius
---      zVertex(:) = zVertex(:) * sphere_radius
---      xEdge(:) = xEdge(:) * sphere_radius
---      yEdge(:) = yEdge(:) * sphere_radius
---      zEdge(:) = zEdge(:) * sphere_radius
---      dvEdge(:) = dvEdge(:) * sphere_radius
---      dcEdge(:) = dcEdge(:) * sphere_radius
---      areaCell(:) = areaCell(:) * sphere_radius**2.0
---      areaTriangle(:) = areaTriangle(:) * sphere_radius**2.0
---      kiteAreasOnVertex(:,:) = kiteAreasOnVertex(:,:) * sphere_radius**2.0
---
---      call mpas_pool_get_array(mesh, 'weightsOnEdge', weightsOnEdge)
---      call mpas_pool_get_array(mesh, 'nEdgesOnEdge', nEdgesOnEdge)
---      call mpas_pool_get_array(mesh, 'nEdgesOnCell', nEdgesOnCell)
---      call mpas_pool_get_array(mesh, 'edgesOnEdge', edgesOnEdge)
---      call mpas_pool_get_array(mesh, 'cellsOnEdge', cellsOnEdge)
---      call mpas_pool_get_array(mesh, 'cellsOnCell', cellsOnCell)
---      call mpas_pool_get_array(mesh, 'verticesOnEdge', verticesOnEdge)
---      call mpas_pool_get_array(mesh, 'deriv_two', deriv_two)
---      call mpas_pool_get_array(mesh, 'zb', zb)
---      call mpas_pool_get_array(mesh, 'zb3', zb3)
---
---      call mpas_pool_get_dimension(mesh, 'nVertLevels', nz1)
---      call mpas_pool_get_dimension(mesh, 'nCellsSolve', nCellsSolve)
---      call mpas_pool_get_dimension(mesh, 'nVertices', nVertices)
---      call mpas_pool_get_dimension(mesh, 'nEdges', nEdges)
---      call mpas_pool_get_dimension(mesh, 'maxEdges', maxEdges)
---      nz = nz1 + 1
---
---      call mpas_pool_get_array(mesh, 'zgrid', zgrid)
---      call mpas_pool_get_array(mesh, 'rdzw', rdzw)
---      call mpas_pool_get_array(mesh, 'dzu', dzu)
---      call mpas_pool_get_array(mesh, 'rdzu', rdzu)
---      call mpas_pool_get_array(mesh, 'fzm', fzm)
---      call mpas_pool_get_array(mesh, 'fzp', fzp)
---      call mpas_pool_get_array(mesh, 'zxu', zxu)
---      call mpas_pool_get_array(mesh, 'zz', zz)
---      call mpas_pool_get_array(mesh, 'hx', hx)
---      call mpas_pool_get_array(mesh, 'dss', dss)
---
---      call mpas_pool_get_array(diag, 'exner_base', pb)
---      call mpas_pool_get_array(diag, 'rho_base', rb)
---      call mpas_pool_get_array(diag, 'rho_p', rr)
---      call mpas_pool_get_array(diag, 'rho', rho)
---      call mpas_pool_get_array(diag, 'theta_base', tb)
---      call mpas_pool_get_array(diag, 'theta', theta)
---      call mpas_pool_get_array(diag, 'rtheta_base', rtb)
---      call mpas_pool_get_array(diag, 'rtheta_p', rt)
---      call mpas_pool_get_array(diag, 'exner', p)
---      call mpas_pool_get_array(diag, 'pressure_base', ppb)
---      call mpas_pool_get_array(diag, 'pressure_p', pp)
---      call mpas_pool_get_array(diag, 'surface_pressure', surface_pressure)
---      call mpas_pool_get_array(diag, 'ru', ru)
---      call mpas_pool_get_array(diag, 'rw', rw)
---      call mpas_pool_get_array(diag, 'v', v)
---
---      call mpas_pool_get_array(state, 'rho_zz', rho_zz)
---      call mpas_pool_get_array(state, 'theta_m', t)
---      call mpas_pool_get_array(state, 'scalars', scalars)
---      call mpas_pool_get_array(state, 'u', u)
---      call mpas_pool_get_array(state, 'w', w)
---
---      call mpas_pool_get_array(mesh, 'latCell', latCell)
---      call mpas_pool_get_array(mesh, 'latVertex', latVertex)
---      call mpas_pool_get_array(mesh, 'lonVertex', lonVertex)
---      call mpas_pool_get_array(mesh, 'latEdge', latEdge)
---      call mpas_pool_get_array(mesh, 'lonEdge', lonEdge)
---      call mpas_pool_get_array(mesh, 'fEdge', fEdge)
---      call mpas_pool_get_array(mesh, 'fVertex', fVertex)
---
---      call mpas_pool_get_array(mesh, 'cf1', cf1)
---      call mpas_pool_get_array(mesh, 'cf2', cf2)
---      call mpas_pool_get_array(mesh, 'cf3', cf3)
---
---!.. initialization of moisture:
---      scalars(:,:,:) = 0.0
---      qsat(:,:)      = 0.0
---      relhum(:,:)    = 0.0
---      qv_2d(:,:)     = 0.0
---!.. end initialization of moisture.
---
---      surface_pressure(:) = 0.0
---
+
+
+-- initialization of moisture:
+      scalars(:,:,:) = 0.0
+      qsat(:,:)      = 0.0
+      relhum(:,:)    = 0.0
+      qv_2d(:,:)     = 0.0 -- dimensions = "nVertLevels, nlat"
+-- end initialization of moisture.
+
+
+  for iCell = 0, nCells do
+    cr[{iCell, 0}].surface_pressure = 0.0
+  end 
+
 --      call atm_initialize_advection_rk(mesh, nCells, nEdges, maxEdges, on_a_sphere, sphere_radius )
 --      call atm_initialize_deformation_weights(mesh, nCells, on_a_sphere, sphere_radius)
---
+
 --      call mpas_pool_get_dimension(state, 'index_qv', index_qv) 
---
---      xnutr = 0.0
---      zd = 12000.0
---      znut = eta_t
---
---      etavs = (1.0 - 0.252) * pii/2.
---      r_earth = sphere_radius
---      omega_e = omega
---      p0 = 1.0e+05
---
---      call mpas_log_write(' point 1 in test case setup ')
---
+
+
+  var xnutr = 0.0
+  var zd = 12000.0
+  var znut = eta_t
+  var etavs = (1.0 - 0.252) * pii/2.
+  var r_earth = sphere_radius
+  var omega_e = omega
+  var p0 = 1.0E+05
+
 --! We may pass in an hx(:,:) that has been precomputed elsewhere.
 --! For now it is independent of k
---
---      do iCell=1,nCells
---        do k=1,nz
---          phi = latCell(iCell)
---          hx(k,iCell) = u0/gravity*cos(etavs)**1.5                                   &
---                      *((-2.*sin(phi)**6                                   &
---                            *(cos(phi)**2+1./3.)+10./63.)                  &
---                            *(u0)*cos(etavs)**1.5                          &
---                       +(1.6*cos(phi)**3                                   &
---                            *(sin(phi)**2+2./3.)-pii/4.)*r_earth*omega_e)
---        end do
---      end do
+
+  for iCell=0, nCells do
+    for k = 0, nz do
+      phi = cr[{iCell, 0}].latCell
+      cr[{iCell, k}].hx = u0 / gravity * cmath.pow(cmath.cos(etavs), 1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi), 2.0) + 1.0/3.0) + 10.0/63.0) * u0*cmath.pow(cmath.cos(etavs), 1.5) + (1.6 * cmath.pow(cmath.cos(phi), 3) * (cmath.pow(cmath.sin(phi), 2) + 2.0/3.0) - pii/4.0)*r_earth*omega_e)
+    end
+  end
+
+
 --
 --      !     Metrics for hybrid coordinate and vertical stretching
 --
