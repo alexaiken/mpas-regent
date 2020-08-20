@@ -186,7 +186,6 @@ fspace cell_fs {
     tend_rt : double, --NOT IN REGISTRY: TO FIGURE OUT
     tend_rw : double, --NOT IN REGISTRY: TO FIGURE OUT
 
-    cofrz : double, --type="real" dimensions="nVertLevels Time" units="s m^{-1}" description="coefficient for implicit contribution of Omega to density update"
     coftz : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="s K" description="coefficient for implicit contribution of omega vertical derivative to the theta_m update"
     cofwz : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1} K^{-1}" description="coefficient for implicit contribution of density to the vertical velocity update"
     cofwr : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="coefficient for implicit contribution of density to the vertical velocity update"
@@ -302,4 +301,7 @@ fspace vertical_fs {
   rdzu : double, -- level dependent
   fzm : double, -- level dependent
   fzp : double, -- level dependent
+
+  cofrz : double, --type="real" dimensions="nVertLevels Time" units="s m^{-1}" description="coefficient for implicit contribution of Omega to density update"
+
 }
