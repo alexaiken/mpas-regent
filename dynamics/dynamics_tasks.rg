@@ -28,9 +28,9 @@ local nVertLevels = 1
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
-task atm_compute_signs(vr : region(ispace(int1d), vertex_fs),
-                       er : region(ispace(int2d), edge_fs),
-                       cr : region(ispace(int2d), cell_fs))
+  task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
+                        er : region(ispace(int2d), edge_fs),
+                        vr : region(ispace(int1d), vertex_fs))
 where reads writes(vr, cr), reads (er) do
 
     for iVtx = 1, nVertices do -- TODO: change bounds once you know whether vOnEdge contains ID's or indices
@@ -98,8 +98,8 @@ where reads writes(vr, cr), reads (er) do
 end
 
 
-task atm_adv_coef_compression(er : region(ispace(int2d), edge_fs),
-                              cr : region(ispace(int2d), cell_fs))
+task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
+                              er : region(ispace(int2d), edge_fs))
 where reads writes(er), reads(cr) do
 
     var cell_list : int[maxEdges]
@@ -248,8 +248,8 @@ where reads writes (cr) do
 end
 
 task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
-                               er : region(ispace(int2d), edge_fs),
-                               cr : region(ispace(int2d), cell_fs))
+                               cr : region(ispace(int2d), cell_fs),
+                               er : region(ispace(int2d), edge_fs)
 where reads writes (er, cr) do
   for iEdge = 0, nEdges do
     for i = 0, FIFTEEN do
@@ -661,4 +661,31 @@ end
 
 task atm_rk_dynamics_substep_finish()
   cio.printf("finishing substep\n")
+end
+
+task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs))
+where reads writes (cr, er, vr, vert_r) do
+
+  atm_compute_signs(cr, er, vr, vert_r)
+
+  atm_adv_coef_compression(cr, er)
+
+  atm_couple_coef_3rd_order(cr, er)
+
+  --atm_init_coupled_diagnostics()
+
+  atm_compute_solve_diagnostics(cr, er, vr, false) --last param is hollingsworth
+
+  --mpas_reconstruct()
+
+  --atm_compute_mesh_scaling()
+
+  --config_zd: default 22000.0, config_xnutr: default 0.2. From config
+  atm_compute_damping_coefs(22000, 0.2, cr)
+
+end
+
+
+
+
 end

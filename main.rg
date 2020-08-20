@@ -46,6 +46,14 @@ task main()
   --TODO: This doesn't actually return the halos yet (It creates them in the task but I haven't been able to return them). Need to return the halos.
   partition_regions(NUM_PARTITIONS, cell_region, edge_region, vertex_region)
 
+  init_atm_case_jw(vertex_region, edge_region, cell_region, vertical_region)
+
+  atm_core_init(vertex_region, edge_region, cell_region, vertical_region)
+
+  atm_timestep(dt : double, vertex_region, edge_region, cell_region, vertical_region)
+
+
+
   write_output(cell_region, edge_region, vertex_region)
 
 
