@@ -170,9 +170,6 @@ fspace cell_fs {
     zb_cell : double[maxEdges], -- cell + level dependent
     zb3_cell : double[maxEdges], -- cell + level dependent
 
-    rs : double, --level dependent
-    ts : double, --level dependent
-
     -----------begin dynamics fields--------------
     kiteForCell : int[maxEdges], --Index of kite in kiteAreasOnVertex that lies within a cell for each of verticesOnCell
     edgesOnCellSign : double[maxEdges], --Sign for edges surrounding a cell: positive for positive outward normal velocity
