@@ -158,11 +158,7 @@ fspace cell_fs {
 
     -----------begin vertical structure ----------
     zgrid : double, -- cell + level dependent
-    rdzw : double, -- level dependent
-    dzu : double, -- level dependent
-    rdzu : double, -- level dependent
-    fzm : double, -- level dependent
-    fzp : double, -- level dependent
+
 
     zz : double, -- cell + level dependent
     dss : double, -- cell + level dependent: "w-damping coefficient"
@@ -202,7 +198,7 @@ fspace cell_fs {
 
     exner: double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="Exner function"
     exner_base: double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="Base-state Exner function"
-    
+
     w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-1}" description="Vertical velocity at vertical cell faces"
     specZoneMaskCell: double, --type="real" dimensions="nCells" default_value="0.0" units="-" description="0/1 mask on cells, defined as 1 for cells in the limited-area specified zone"/>
     edgesOnCell_sign: double[maxEdges], --TODO: duplicate of edgesOnCellSign; type="real" dimensions="maxEdges nCells" units="-" description="Sign for edges surrounding a cell: positive for positive outward normal velocity"
@@ -210,11 +206,11 @@ fspace cell_fs {
     qtot : double, -- defined in timestep for use in compute_dyn_tend and other subroutines
     rho_base : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Base state dry air density"
     rtheta_base : double, -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="reference state rho*theta/zz"
-    rtheta_p : double -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="rho*theta_m/zz perturbation from the reference state value"
-    relhum : double -- type="real" dimensions="nVertLevels nCells Time" units="percent" description="Relative humidity"
-    qsat : double -- defined in init_atm_case_jw for use in moisture calculations dimensions="nVertLevels nCells" 
-    hx : double -- type="real" dimensions="nVertLevelsP1 nCells" units="m" description="terrain influence in vertical coordinate, $h_s(x,y,\zeta)$ in Klemp (MWR 2011)"
-   surface_pressure : double -- type="real" dimensions="nCells Time" units="Pa" description="Diagnosed surface pressure" 
+    rtheta_p : double, -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="rho*theta_m/zz perturbation from the reference state value"
+    relhum : double, -- type="real" dimensions="nVertLevels nCells Time" units="percent" description="Relative humidity"
+    qsat : double, -- defined in init_atm_case_jw for use in moisture calculations dimensions="nVertLevels nCells"
+    hx : double, -- type="real" dimensions="nVertLevelsP1 nCells" units="m" description="terrain influence in vertical coordinate, $h_s(x,y,\zeta)$ in Klemp (MWR 2011)"
+   surface_pressure : double, -- type="real" dimensions="nCells Time" units="Pa" description="Diagnosed surface pressure"
 
 
     ----vars first seen in atm_compute_solve_diagnostics_work--
@@ -295,4 +291,15 @@ fspace edge_fs {
     u : double, --type="real"     dimensions="nVertLevels nEdges Time"
     v : double,  --type="real"     dimensions="nVertLevels nEdges Time"
     pv_edge : double, --type="real"     dimensions="nVertLevels nEdges Time"
+}
+
+
+--Field space for variables that are only level-dependent.
+fspace vertical_fs {
+
+  rdzw : double, -- level dependent
+  dzu : double, -- level dependent
+  rdzu : double, -- level dependent
+  fzm : double, -- level dependent
+  fzp : double, -- level dependent
 }

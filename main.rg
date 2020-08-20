@@ -14,6 +14,7 @@ local netcdf = terralib.includec("/share/software/user/open/netcdf/4.4.1.1/inclu
 local nCells = 2562
 local nEdges = 7680
 local nVertices = 5120
+local nVertLevels = 1
 
 
 local FILE_NAME = "/home/users/arjunk1/regent_project_2020/mpas-regent/mesh_loading/x1.2562.grid.nc"
@@ -27,24 +28,27 @@ task main()
   -------------------------------------------
 
   -- Define index spaces for cell IDs, vertex IDs and edge IDs
-  var cell_id_space = ispace(int1d, nCells)
-  var edge_id_space = ispace(int1d, nEdges)
-  var vertex_id_space = ispace(int1d, nVertices)
+  var cell_id_space = ispace(int2d, {nCells, nVertLevels + 1})
+  var edge_id_space = ispace(int2d, {nEdges, nVertLevels + 1})
+  var vertex_id_space = ispace(int2d, {nVertices, nVertLevels + 1})
+  var vertical_id_space = ispace(int1d, nVertLevels + 1)
 
   -- Define regions
   var cell_region = region(cell_id_space, cell_fs)
   var edge_region = region(edge_id_space, edge_fs)
   var vertex_region = region(vertex_id_space, vertex_fs)
+  var vertical_region = region(vertical_id_space, vertical_fs)
 
 
   --TODO: Pass in FILE_NAME and GRAPH_FILE_NAME: how to pass strings?
   load_mesh(cell_region, edge_region, vertex_region)
-  calculate_evc(cell_region, edge_region, vertex_region)
 
-  --TODO: This doesn't actually return the halos yet. Need to return the halos.
+  --TODO: This doesn't actually return the halos yet (It creates them in the task but I haven't been able to return them). Need to return the halos.
   partition_regions(NUM_PARTITIONS, cell_region, edge_region, vertex_region)
-  
+
   write_output(cell_region, edge_region, vertex_region)
+
+
 
 end
 regentlib.start(main)
