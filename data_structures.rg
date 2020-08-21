@@ -216,6 +216,10 @@ fspace cell_fs {
     h : double, --type="real"     dimensions="nVertLevels nCells Time"
     ke : double, --type="real"     dimensions="nVertLevels nCells Time"
     divergence : double, --type="real"     dimensions="nVertLevels nCells Time"
+
+
+    ---vars first seen in atm_compute_mesh_scaling --
+    meshScalingRegionalCell : double, --type="real" dimensions="nCells" units="unitless" description="Cell-centered Scaling coefficient for relaxation zone"
 }
 
 
@@ -241,6 +245,7 @@ fspace vertex_fs {
     ke_vertex : double, -- vertex and vertical levels
     pv_vertex : double, --type="real"     dimensions="nVertLevels nVertices Time"
     fVertex: double,   --type="real"     dimensions="nVertices"/>
+
 }
 
 fspace edge_fs {
@@ -290,6 +295,12 @@ fspace edge_fs {
     u : double, --type="real"     dimensions="nVertLevels nEdges Time"
     v : double,  --type="real"     dimensions="nVertLevels nEdges Time"
     pv_edge : double, --type="real"     dimensions="nVertLevels nEdges Time"
+
+
+      ---vars first seen in atm_compute_mesh_scaling --
+    meshScalingDel2 : double, --type="real"     dimensions="nEdges"
+    meshScalingDel4 : double, --type="real"     dimensions="nEdges"
+    meshScalingRegionalEdge : double,  --type="real" dimensions="nEdges" units="unitless" description="Edge-centered Scaling coefficient for relaxation zone"/>
 }
 
 

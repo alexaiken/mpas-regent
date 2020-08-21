@@ -30,20 +30,20 @@ local cmath = terralib.includec("math.h")
 
   task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
                         er : region(ispace(int2d), edge_fs),
-                        vr : region(ispace(int1d), vertex_fs))
+                        vr : region(ispace(int2d), vertex_fs))
 where reads writes(vr, cr), reads (er) do
 
     for iVtx = 1, nVertices do -- TODO: change bounds once you know whether vOnEdge contains ID's or indices
         for i = 0, vertexDegree do
-            if (vr[iVtx].edgesOnVertex[i] <= nEdges) then
+            if (vr[{iVtx, 0}].edgesOnVertex[i] <= nEdges) then
                 --note: when MPAS calls vOnEdge(2, ...), we access vOnEdge index 1!
-                if (iVtx == er[{vr[iVtx].edgesOnVertex[i], 0}].verticesOnEdge[1]) then
-                    vr[iVtx].edgesOnVertexSign[i] = 1.0
+                if (iVtx == er[{vr[{iVtx, 0}].edgesOnVertex[i], 0}].verticesOnEdge[1]) then
+                    vr[{iVtx, 0}].edgesOnVertexSign[i] = 1.0
                 else
-                    vr[iVtx].edgesOnVertexSign[i] = -1.0
+                    vr[{iVtx, 0}].edgesOnVertexSign[i] = -1.0
                 end
             else
-                vr[iVtx].edgesOnVertexSign[i] = 0.0
+                vr[{iVtx, 0}].edgesOnVertexSign[i] = 0.0
             end
         end
     end
@@ -84,7 +84,7 @@ where reads writes(vr, cr), reads (er) do
             var iVtx = cr[{iCell, 0}].verticesOnCell[i]
             if (iVtx <= nVertices) then
                 for j=1,vertexDegree do
-                    if (iCell == vr[iVtx].cellsOnVertex[j]) then
+                    if (iCell == vr[{iVtx, 0}].cellsOnVertex[j]) then
                         cr[{iCell, 0}].kiteForCell[i] = j
                         break
                     end
@@ -249,7 +249,7 @@ end
 
 task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
                                cr : region(ispace(int2d), cell_fs),
-                               er : region(ispace(int2d), edge_fs)
+                               er : region(ispace(int2d), edge_fs))
 where reads writes (er, cr) do
   for iEdge = 0, nEdges do
     for i = 0, FIFTEEN do
@@ -628,7 +628,7 @@ where reads writes (cr, vert_r) do
 
             b_tri[k] = 1.0 + cr[{iCell, k}].cofwz * (cr[{iCell, k}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz +  cr[{iCell, k}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz) -  cr[{iCell, k}].coftz * (cr[{iCell, k}].cofwt * vert_r[k].rdzw - cr[{iCell, k-1}].cofwt * vert_r[k-1].rdzw) + cr[{iCell, k}].cofwr * ((vert_r[k].cofrz- vert_r[k-1].cofrz))
 
-            c_tri[k] =   -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k+1}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz - cr[{iCell, k}].cofwr * vert_r[k].cofrz+ cr[{iCell, k}].cofwt * cr[{iCell, k+1 }].coftz * ver_r[k].rdzw
+            c_tri[k] =   -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k+1}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz - cr[{iCell, k}].cofwr * vert_r[k].cofrz+ cr[{iCell, k}].cofwt * cr[{iCell, k+1 }].coftz * vert_r[k].rdzw
          end
 --MGD VECTOR DEPENDENCE
          for k=1, nVertLevels do -- k=2, nVertLevels
@@ -637,6 +637,45 @@ where reads writes (cr, vert_r) do
          end
 
       end -- loop over cells
+end
+
+
+task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), config_h_ScaleWithMesh : bool)
+where reads writes (cr, er) do
+
+  for iEdge = 0, nEdges do
+    er[{iEdge, 0}].meshScalingDel2 = 1.0
+    er[{iEdge, 0}].meshScalingDel4 = 1.0
+  end
+
+  if (config_h_ScaleWithMesh) then
+    for iEdge = 0, nEdges do
+      var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+      er[{iEdge, 0}].meshScalingDel2 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+      er[{iEdge, 0}].meshScalingDel4 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
+    end
+  end
+
+  for iCell = 0, nCells do
+    cr[{iCell, 0}].meshScalingRegionalCell = 1.0
+  end
+
+  for iEdge = 0, nEdges do
+    er[{iEdge, 0}].meshScalingRegionalEdge = 1.0
+  end
+
+  if (config_h_ScaleWithMesh) then
+    for iEdge = 0, nEdges do
+      var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+      er[{iEdge, 0}].meshScalingRegionalEdge = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+    end
+
+    for iCell = 0, nCells do
+      cr[{iCell, 0}].meshScalingRegionalCell = 1.0/ cmath.pow(cr[{iCell, 0}].meshDensity, 0.25)
+    end
+  end
 end
 
 task atm_compute_dyn_tend()
@@ -663,14 +702,16 @@ task atm_rk_dynamics_substep_finish()
   cio.printf("finishing substep\n")
 end
 
-task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs))
-where reads writes (cr, er, vr, vert_r) do
 
-  atm_compute_signs(cr, er, vr, vert_r)
+task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs))
+where reads writes (cr, er, vr) do
+
+  atm_compute_signs(cr, er, vr)
 
   atm_adv_coef_compression(cr, er)
 
-  atm_couple_coef_3rd_order(cr, er)
+  --config_coef_3rd_order = 0.25 in namelist
+  atm_couple_coef_3rd_order(0.25, cr, er)
 
   --atm_init_coupled_diagnostics()
 
@@ -678,14 +719,9 @@ where reads writes (cr, er, vr, vert_r) do
 
   --mpas_reconstruct()
 
-  --atm_compute_mesh_scaling()
+  atm_compute_mesh_scaling(cr, er, true)
 
   --config_zd: default 22000.0, config_xnutr: default 0.2. From config
   atm_compute_damping_coefs(22000, 0.2, cr)
-
-end
-
-
-
 
 end
