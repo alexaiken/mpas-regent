@@ -678,6 +678,86 @@ where reads writes (cr, er) do
   end
 end
 
+
+--Constants: rgas, cp, rvord (From mpas_constants.F)
+--Not sure how to translate: scalars(index_qv,k,iCell)
+--sign(1.0_RKIND,flux) translated as cmath.copysign(1.0, flux)
+
+task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, rvord : double)
+where reads writes (cr, er, vert_r) do
+
+  var rcv = rgas / (cp-rgas)
+  var p0 = 100000
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      --cr[{iCell, k}].theta_m = cr[{iCell, k}].theta * (1.0 + rvord * scalars(index_qv,k,iCell))
+      cr[{iCell, k}].rho_zz = cr[{iCell, k}].rho_zz / cr[{iCell, k}].zz
+    end
+  end
+
+  for iEdge = 0, nEdges do
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    for k = 0, nVertLevels do
+      er[{iEdge, k}].ru = 0.5 * er[{iEdge, k}].u * (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
+    end
+  end
+
+  for iCell = 0, nCells do
+    cr[{iCell, 0}].rw = 0
+    cr[{iCell, nVertLevels}].rw = 0
+    for k = 1, nVertLevels do
+      cr[{iCell, k}].rw = cr[{iCell, k}].w * (vert_r[k].fzp * cr[{iCell, k-1}].rho_zz + vert_r[k].fzm * cr[{iCell, k}].rho_zz) * (vert_r[k].fzp * cr[{iCell, k-1}].zz + vert_r[k].fzm * cr[{iCell, k}].zz)
+    end
+  end
+
+  for iCell = 0, nCells do
+    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+      for k = 1, nVertLevels do
+        var flux = vert_r[k].fzm * er[{iEdge, k}].ru + vert_r[k].fzp * er[{iEdge, k-1}].ru
+        cr[{iCell, k}].rw = cr[{iCell, k}].rw - cr[{iCell, 0}].edgesOnCellSign[i] * (cr[{iCell, k}].zb_cell[i] + cmath.copysign(1.0, flux) * cr[{iCell, k}].zb3_cell[i]) * flux * (vert_r[k].fzp * cr[{iCell, k-1}].zz + vert_r[k].fzm * cr[{iCell, k}].zz)
+      end
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].rho_p = cr[{iCell, k}].rho_zz - cr[{iCell, k}].rho_base
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].rtheta_base = cr[{iCell, k}].theta_base * cr[{iCell, k}].rho_base
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].rtheta_p = cr[{iCell, k}].theta_m * cr[{iCell, k}].rho_p + cr[{iCell, k}].rho_base * (cr[{iCell, k}].theta_m - cr[{iCell, k}].theta_base)
+    end
+  end
+
+
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].exner = cmath.pow(cr[{iCell, k}].zz * (rgas/p0) * (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base), rcv)
+      cr[{iCell, k}].exner_base = cmath.pow(cr[{iCell, k}].zz * (rgas/p0) * (cr[{iCell, k}].rtheta_base), rcv)
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz * rgas * (cr[{iCell, k}].exner * cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
+      cr[{iCell, k}].pressure_base = cr[{iCell, k}].zz * rgas * cr[{iCell, k}].exner_base * cr[{iCell, k}].rtheta_base
+    end
+  end
+
+end
+
 task atm_compute_dyn_tend()
   cio.printf("computing dynamic tendencies\n")
 end
@@ -703,8 +783,8 @@ task atm_rk_dynamics_substep_finish()
 end
 
 
-task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs))
-where reads writes (cr, er, vr) do
+task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, rvord : double)
+where reads writes (cr, er, vr, vert_r) do
 
   atm_compute_signs(cr, er, vr)
 
@@ -713,7 +793,7 @@ where reads writes (cr, er, vr) do
   --config_coef_3rd_order = 0.25 in namelist
   atm_couple_coef_3rd_order(0.25, cr, er)
 
-  --atm_init_coupled_diagnostics()
+  atm_init_coupled_diagnostics(cr, er, vert_r, rgas, cp, rvord)
 
   atm_compute_solve_diagnostics(cr, er, vr, false) --last param is hollingsworth
 

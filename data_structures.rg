@@ -220,6 +220,13 @@ fspace cell_fs {
 
     ---vars first seen in atm_compute_mesh_scaling --
     meshScalingRegionalCell : double, --type="real" dimensions="nCells" units="unitless" description="Cell-centered Scaling coefficient for relaxation zone"
+
+    ---vars first seen in atm_init_coupled_diagnostics --
+    pressure_base : double,  --type="real" dimensions="nVertLevels nCells Time" units="Pa"  description="Base state pressure"/>
+    pressure_p : double,  --type="real" dimensions="nVertLevels nCells Time" units="Pa"  description="Base state pressure"/>
+    theta : double, --type="real" dimensions="nVertLevels nCells Time" units="K" description="Potential temperature"/>
+    rho_p : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="rho/zz perturbation from the reference state value, advanced over acoustic steps"/>
+    theta_base : double, --type="real" dimensions="nVertLevels nCells Time" units="K" description="Base state potential temperature"/>
 }
 
 
@@ -245,7 +252,6 @@ fspace vertex_fs {
     ke_vertex : double, -- vertex and vertical levels
     pv_vertex : double, --type="real"     dimensions="nVertLevels nVertices Time"
     fVertex: double,   --type="real"     dimensions="nVertices"/>
-
 }
 
 fspace edge_fs {
@@ -290,17 +296,20 @@ fspace edge_fs {
     ruAvg : double, -- NOT IN REGISTRY
 
 
-    ----vars first seen in atm_compute_solve_diagnostics_work--
+    -- vars first seen in atm_compute_solve_diagnostics_work --
     ke_edge : double, -- parameterized by both edges and vertical levels
     u : double, --type="real"     dimensions="nVertLevels nEdges Time"
     v : double,  --type="real"     dimensions="nVertLevels nEdges Time"
     pv_edge : double, --type="real"     dimensions="nVertLevels nEdges Time"
 
 
-      ---vars first seen in atm_compute_mesh_scaling --
+    -- vars first seen in atm_compute_mesh_scaling --
     meshScalingDel2 : double, --type="real"     dimensions="nEdges"
     meshScalingDel4 : double, --type="real"     dimensions="nEdges"
     meshScalingRegionalEdge : double,  --type="real" dimensions="nEdges" units="unitless" description="Edge-centered Scaling coefficient for relaxation zone"/>
+
+    -- vars first seen in atm_init_coupled_diagnostics --
+    ru : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-2} s^{-1}" description="horizontal momentum at cell edge (rho*u/zz)"/>
 }
 
 
@@ -312,7 +321,6 @@ fspace vertical_fs {
   rdzu : double, -- level dependent
   fzm : double, -- level dependent
   fzp : double, -- level dependent
-
   cofrz : double, --type="real" dimensions="nVertLevels Time" units="s m^{-1}" description="coefficient for implicit contribution of Omega to density update"
 
 }
