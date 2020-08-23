@@ -20,7 +20,10 @@ local cmath = terralib.includec("math.h")
 
 task init_atm_case_jw(vr : region(ispace(int2d), vertex_fs),
                       er : region(ispace(int2d), edge_fs),
-                      cr : region(ispace(int2d), cell_fs))
+                      cr : region(ispace(int2d), cell_fs),
+                      cp : double,
+                      rgas : double,
+                      gravity : double)
 where reads writes(vr, er, cr) do 
 -- constants from constants.F --- TODO: combine constants in one place so you don't redefine every time you need
 
@@ -32,6 +35,8 @@ where reads writes(vr, er, cr) do
   var alpha_grid = 0.0 -- no grid rotation
   var omega_e : double
   var z_edge3 : double
+  var phi : double
+  var ztemp : double
   var t0b = 250.0
   var t0 = 288.0
   var delta_t = 4.8E+05 -- TODO: scientific notation in regent?
@@ -115,7 +120,7 @@ where reads writes(vr, er, cr) do
   var znut = eta_t
   var etavs = (1.0 - 0.252) * pii/2.
   var r_earth = sphere_radius
-  var omega_e = omega
+  omega_e = omega
   var p0 = 1.0E+05
 
 --! We may pass in an hx(:,:) that has been precomputed elsewhere.
@@ -202,8 +207,8 @@ where reads writes(vr, er, cr) do
   end 
 
   for i=0, nEdges do
-    iCell1 = er.[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
-    iCell2 = er.[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
+    var iCell1 = er[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
+    var iCell2 = er[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
     for k=1,nz1 do
       er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid-cr[{iCell1, k}] + cr[{iCell2, k+1}].zgrid-cr[{iCell1, k+1}].zgrid) / er[{i, 0}].dcEdge
     end 
@@ -232,6 +237,8 @@ where reads writes(vr, er, cr) do
   var pb_2d : double[nVertLevels][nlat]
   var rb_2d : double[nVertLevels][nlat]
   var tb_2d : double[nVertLevels][nlat]
+  var etavs_2d : double[nVertLevels][nlat]
+  var u_2d : double[nVertLevels][nlat]
   var rho_2d : double[nVertLevels][nlat]
   var p_2d : double[nVertLevels][nlat]
   var pp_2d : double[nVertLevels][nlat]
@@ -248,12 +255,12 @@ where reads writes(vr, er, cr) do
 
     lat_2d[i] = float(i-1)*dlat
     phi = lat_2d[i]
-    var hx_1d = u0 / gravity*cmath.pow(cmath.cos(etavs),1.5) *((-2.0*cmath.pow(cmath.sin(phi), 6)  *(cmath.cos(phi)**2+1.0/3.0)+10.0/63.0) *(u0)*cmath.pow(cmath.cos(etavs),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2./3.)-pii/4.)*r_earth*omega_e)
+    var hx_1d = u0 / gravity * cmath.pow(cmath.cos(etavs),1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *(u0)*cmath.pow(cmath.cos(etavs),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)
     for k=0, nz do
       zgrid_2d[k][i] = (1.-ah[k])*(sh[k]*(zt-hx_1d)+hx_1d) + ah[k] * sh[k]* zt
     end
     for k=0, nz1 do
-      zz[k][i] = (zw[k+1]-zw[k])/(zgrid_2d[k+1][i]-zgrid_2d[k][i])
+      zz_2d[k][i] = (zw[k+1]-zw[k])/(zgrid_2d[k+1][i]-zgrid_2d[k][i])
     end
 
     for k=1,nz1 do
@@ -317,9 +324,12 @@ where reads writes(vr, er, cr) do
       end   -- end inner iteration loop itrp
 
     end   -- end outer iteration loop itr
+    
+
+    for k = 0, nz1 do
       rho_2d[k][i] = rr_2d[k][i]+rb_2d[k][i]
       etavs_2d[k][i] = ((ppb_2d[k][i]+pp_2d[k][i])/p0 - 0.252)*pii/2.0
-      u_2d[k][i] = u0*(cmath.pow(cmath.sin(2.*lat_2d[i]),2)) * (cmath.pow(cmath.cos(etavs_2d(k,i)),1.5))
+      u_2d[k][i] = u0*(cmath.pow(cmath.sin(2.*lat_2d[i]),2)) * (cmath.pow(cmath.cos(etavs_2d[k][i]),1.5))
     end 
 
   end   -- end loop over latitudes for 2D zonal wind field calc
@@ -377,12 +387,12 @@ where reads writes(vr, er, cr) do
         eta[k] = (cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0
         etav[k] = (eta[k]-.252)*pii/2.
         if(eta[k] >= znut)  then
-          teta[k] = t0*eta[k]**(rgas*dtdz/gravity)
+          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity))
         else
-          teta[k] = t0*eta[k]**(rgas*dtdz/gravity) + delta_t*(znut-eta[k])**5
+          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
         end 
       end 
-      phi = latCell[i]
+      phi = cr[{i, 0}].lat
       for k=0,nz1 do
         temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.+0.61*cr[{i, k}].qv)
 
@@ -451,20 +461,20 @@ where reads writes(vr, er, cr) do
 
 
     for k=0,nz1 do
-      cr[{i, k}].exner = ((cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0)**(rgas/cp)
+      cr[{i, k}].exner = cmath.pow(((cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0),(rgas/cp))
       cr[{i, k}].theta_m = tt[k]/cr[{i, k}].exner
       cr[{i, k}].rtheta_p = cr[{i, k}].theta_m * cr[{i,k}].rho_p+cr[{i, k}].rho_base*(cr[{i, k}].theta_m-cr[{i, k}].theta_base)
       cr[{i, k}].rho_zz = cr[{i, k}].rho_base + cr[{i,k}].rho_p
     end 
 
     --calculation of surface pressure:
-    cr[{i, 0}].surface_pressure = 0.5*dzw[1]*gravity * (1.25*(cr[{i, 1}].rho_pr + cr[{i, 1}].rho_base) * (1.0 + cr[i, 0].qv) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
+    cr[{i, 0}].surface_pressure = 0.5*dzw[1]*gravity * (1.25*(cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 0}].qv) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
     cr[{i, 0}].surface_pressure = cr[{i, 0}].surface_pressure + cr[{i, 1}].pressure_p + cr[{i, 1}].pressure_base
 
   end   -- end loop over cells
 
-  var lat_pert = latitude_pert*pii/180.
-  var lon_pert = longitude_pert*pii/180.
+  var lat_pert = latitude_pert*pii/180.0
+  var lon_pert = longitude_pert*pii/180.0
 
 
 

@@ -205,15 +205,13 @@ fspace cell_fs {
     qtot : double, -- defined in timestep for use in compute_dyn_tend and other subroutines
     rho_base : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Base state dry air density"
     rtheta_base : double, -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="reference state rho*theta/zz"
-    dss : double, --type="real" dimensions="nVertLevels nCells" units="unitless" description="w-damping coefficient"
-    pressure_base : double, --type="real" dimensions="nVertLevels nCells Time" units="Pa" description="Base state pressure"
     rtheta_p : double, -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="rho*theta_m/zz perturbation from the reference state value"
     relhum : double, -- type="real" dimensions="nVertLevels nCells Time" units="percent" description="Relative humidity"
     qsat : double, -- defined in init_atm_case_jw for use in moisture calculations dimensions="nVertLevels nCells"
     hx : double, -- type="real" dimensions="nVertLevelsP1 nCells" units="m" description="terrain influence in vertical coordinate, $h_s(x,y,\zeta)$ in Klemp (MWR 2011)"
    surface_pressure : double, -- type="real" dimensions="nCells Time" units="Pa" description="Diagnosed surface pressure"
 
-    qv : doubl, -- member of scalars superarray 
+    qv : double, -- member of scalars superarray 
     ----vars first seen in atm_compute_solve_diagnostics_work--
     h : double, --type="real"     dimensions="nVertLevels nCells Time"
     ke : double, --type="real"     dimensions="nVertLevels nCells Time"
