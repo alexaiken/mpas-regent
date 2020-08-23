@@ -34,8 +34,10 @@ where reads writes(vr, er, cr) do
   var u0 = 35.0
   var alpha_grid = 0.0 -- no grid rotation
   var omega_e : double
-  var z_edge3 : double
+  var flux : double
+  var u_pert : double
   var phi : double
+  var eoe : int
   var ztemp : double
   var t0b = 250.0
   var t0 = 288.0
@@ -534,8 +536,8 @@ where reads writes(vr, er, cr) do
 
 ------end conditional else---------
 
-     cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-     cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
      for k=0,nz1 do
         er[{iEdge, k}].ru  = 0.5*(cr[{cell1, k}].rho_zz+cr[{cell2, k}].rho_zz)*er[{iEdge, k}].u
      end 
@@ -549,7 +551,7 @@ where reads writes(vr, er, cr) do
 
 
   for iVtx=0,nVertices do
-     fVertex(iVtx) = 2.0 * omega_e *  (-1.0*cmath.cos(vr[iVtx].lon) * cmath.cos(vr[iVtx].lat) * cmath.sin(alpha_grid) +  cmath.sin(vr[iVtx].lat) * cmath.cos(alpha_grid))
+     vr[iVtx].fVertex = 2.0 * omega_e *  (-1.0*cmath.cos(vr[iVtx].lon) * cmath.cos(vr[iVtx].lat) * cmath.sin(alpha_grid) +  cmath.sin(vr[iVtx].lat) * cmath.cos(alpha_grid))
   end 
 
 
@@ -565,8 +567,8 @@ where reads writes(vr, er, cr) do
 
   var z_edge, z_edge3 : double
   for iEdge = 0,nEdges do
-     cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-     cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
     --Below conditional is unnecessary because we use regions, not pools/threads 
      --! Avoid a potential divide by zero below if areaCell(nCells+1) is used in the denominator
@@ -616,12 +618,10 @@ where reads writes(vr, er, cr) do
   end 
 
   --! for including terrain
-  rw = 0.0
-  w = 0.0
   for iEdge = 0,nEdges do
 
-     cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-     cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
 
 
@@ -633,8 +633,8 @@ where reads writes(vr, er, cr) do
 
      for k = 1, nVertLevels do
         flux =  (cr[{0, k}].fzm*er[{iEdge, k}].ru+cr[{0, k}].fzp*er[{iEdge, k-1}].ru)
-        cr[{cell2, k}].rw = cr[{cell2, k}].rw + (cr[{0, k}].fzm*zz(k,cell2)+cr[{0, k}].fzp*zz(k-1,cell2))*er[{iEdge, k}].zb[1]*flux
-        cr[{cell1, k}].rw = cr[{cell1, k}].rw - (cr[{0, k}].fzm*zz(k,cell1)+cr[{0, k}].fzp*zz(k-1,cell1))*er[{iEdge, k}].zb[0]*flux
+        cr[{cell2, k}].rw = cr[{cell2, k}].rw + (cr[{0, k}].fzm*cr[{cell2, k}].zz+cr[{0, k}].fzp*cr[{cell2, k-1}].zz)*er[{iEdge, k}].zb[1]*flux
+        cr[{cell1, k}].rw = cr[{cell1, k}].rw - (cr[{0, k}].fzm*cr[{cell1, k}].zz+cr[{0, k}].fzp*cr[{cell1, k-1}].zz)*er[{iEdge, k}].zb[0]*flux
 
 --        if (config_theta_adv_order ==3) then 
 --           cr[{cell2, k}].rw = cr[{cell2, k}].rw    &
@@ -668,7 +668,7 @@ where reads writes(vr, er, cr) do
 
   for iEdge = 0, nEdges do
      for i=0, er[{iEdge, 0}].nEdgesOnEdge do
-        eoe = er[{iEdge, 0}],edgesOnEdge_ECP[i] 
+        eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i] 
         for k = 0, nVertLevels do
            er[{iEdge, k}].v = er[{iEdge, k}].v + er[{iEdge, 0}].weightsOnEdge[i] * er[{eoe, k}].u
         end 
