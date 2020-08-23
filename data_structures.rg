@@ -215,6 +215,8 @@ fspace cell_fs {
     qsat : double -- defined in init_atm_case_jw for use in moisture calculations dimensions="nVertLevels nCells" 
     hx : double -- type="real" dimensions="nVertLevelsP1 nCells" units="m" description="terrain influence in vertical coordinate, $h_s(x,y,\zeta)$ in Klemp (MWR 2011)"
    surface_pressure : double -- type="real" dimensions="nCells Time" units="Pa" description="Diagnosed surface pressure" 
+    dss : double --type="real" dimensions="nVertLevels nCells" units="unitless" description="w-damping coefficient"
+    pressure_base : double --type="real" dimensions="nVertLevels nCells Time" units="Pa" description="Base state pressure"
 
 
     ----vars first seen in atm_compute_solve_diagnostics_work--
