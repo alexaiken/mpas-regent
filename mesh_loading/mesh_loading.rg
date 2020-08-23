@@ -19,10 +19,9 @@ local TWO = 2
 local vertexDegree = 3
 local nVertLevels = 1
 
-local FILE_NAME = "x1.2562.grid.nc"
-local GRAPH_FILE_NAME = "x1.2562.graph.info.part.16"
+local FILE_NAME = "mesh_loading/x1.2562.grid.nc"
+local GRAPH_FILE_NAME = "mesh_loading/x1.2562.graph.info.part.16"
 local MAXCHAR = 5
-local NUM_PARTITIONS = 16
 
 
 --Terra function to read the cell partitions from graph.info file. Returns an array where each element is the partition number of that cell index.
@@ -40,7 +39,10 @@ terra read_file(file_name: &int8) : int[nCells]
 end
 
 
-task main()
+--FILE_NAME, GRAPH_FILE_NAME
+--return: cell_region, edge_region, vertex_region
+task load_mesh(cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
+where reads writes(cell_region, edge_region, vertex_region) do
 
     -------------------------------------------
     ----- READ VARIABLES FROM NETCDF FILE -----
@@ -213,19 +215,6 @@ task main()
     get_var_int(ncid, cellsOnVertex_varid, cellsOnVertex_in)
     get_var_double(ncid, kiteAreasOnVertex_varid, kiteAreasOnVertex_in)
 
-    -------------------------------------------
-    ----- DEFINE INDEX SPACES AND REGIONS -----
-    -------------------------------------------
-
-    -- Define index spaces for cell IDs, vertex IDs and edge IDs
-    var cell_id_space = ispace(int2d, {nCells, nVertLevels + 1})
-    var edge_id_space = ispace(int2d, {nEdges, nVertLevels + 1})
-    var vertex_id_space = ispace(int1d, nVertices)
-
-    -- Define regions
-    var cell_region = region(cell_id_space, cell_fs)
-    var edge_region = region(edge_id_space, edge_fs)
-    var vertex_region = region(vertex_id_space, vertex_fs)
 
     var partition_array = read_file(GRAPH_FILE_NAME)
 
@@ -293,24 +282,24 @@ task main()
 
     -- Copy data into vertex region
     for i = 0, nVertices do
-        vertex_region[i].vertexID = indexToVertexID_in[i]
-        vertex_region[i].lat = latVertex_in[i]
-        vertex_region[i].lon = lonVertex_in[i]
-        vertex_region[i].x = xVertex_in[i]
-        vertex_region[i].y = yVertex_in[i]
-        vertex_region[i].z = zVertex_in[i]
-        vertex_region[i].areaTriangle = areaTriangle_in[i]
+        vertex_region[{i, 0}].vertexID = indexToVertexID_in[i]
+        vertex_region[{i, 0}].lat = latVertex_in[i]
+        vertex_region[{i, 0}].lon = lonVertex_in[i]
+        vertex_region[{i, 0}].x = xVertex_in[i]
+        vertex_region[{i, 0}].y = yVertex_in[i]
+        vertex_region[{i, 0}].z = zVertex_in[i]
+        vertex_region[{i, 0}].areaTriangle = areaTriangle_in[i]
 
         for j = 0, vertexDegree do
-            vertex_region[i].edgesOnVertex[j] = edgesOnVertex_in[i*vertexDegree + j]
-            vertex_region[i].cellsOnVertex[j] = cellsOnVertex_in[i*vertexDegree + j]
-            vertex_region[i].kiteAreasOnVertex[j] = kiteAreasOnVertex_in[i*vertexDegree + j]
+            vertex_region[{i, 0}].edgesOnVertex[j] = edgesOnVertex_in[i*vertexDegree + j]
+            vertex_region[{i, 0}].cellsOnVertex[j] = cellsOnVertex_in[i*vertexDegree + j]
+            vertex_region[{i, 0}].kiteAreasOnVertex[j] = kiteAreasOnVertex_in[i*vertexDegree + j]
 
-            --cio.printf("edgesOnVertex : Vertex %d, Edge %d: Edge index is %d\n", i, j, vertex_region[i].edgesOnVertex[j])
-            --cio.printf("cellsOnVertex : Vertex %d, Cell %d: Cell index is %d\n", i, j, vertex_region[i].cellsOnVertex[j])
-            --cio.printf("kiteAreasOnVertex : Vertex %d, Kite %d: Kite Area is %f\n", i, j, vertex_region[i].kiteAreasOnVertex[j])
+            --cio.printf("edgesOnVertex : Vertex %d, Edge %d: Edge index is %d\n", i, j, vertex_region[{i, 0}].edgesOnVertex[j])
+            --cio.printf("cellsOnVertex : Vertex %d, Cell %d: Cell index is %d\n", i, j, vertex_region[{i, 0}].cellsOnVertex[j])
+            --cio.printf("kiteAreasOnVertex : Vertex %d, Kite %d: Kite Area is %f\n", i, j, vertex_region[{i, 0}].kiteAreasOnVertex[j])
         end
-        --cio.printf("Vertex ID is %d, xVertex is %f, yVertex is %f, zVertex is %f \n", i, vertex_region[i].x, vertex_region[i].y, vertex_region[i].z)
+        --cio.printf("Vertex ID is %d, xVertex is %f, yVertex is %f, zVertex is %f \n", i, vertex_region[{i, 0}].x, vertex_region[{i, 0}].y, vertex_region[{i, 0}].z)
     end
 
     -------------------------
@@ -336,7 +325,7 @@ task main()
 
             --If there is a vertex, we get the edges on that vertex
             elseif currVertexID ~= 0 then
-                var curr_edgesOnVertex = vertex_region[currVertexID-1].edgesOnVertex
+                var curr_edgesOnVertex = vertex_region[{currVertexID-1, 0}].edgesOnVertex
                 var count = 1
 
                 --Then, we get overlapping edges between curr_edgesOnVertex and curr_edgesOnCell to get EVC
@@ -398,6 +387,19 @@ task main()
     c.free(kiteAreasOnVertex_in)
 
     cio.printf("Successfully read file! \n")
+end
+
+
+-----------------------------------------------
+------- TASK: PARTITION REGIONS  --------
+-----------------------------------------------
+
+--input: cell_region, edge_region, vertex_region, NUM_PARTITIONS
+--return: cell_partition_initial, partition_s_1, partition_halo_1, partition_halo_2
+task partition_regions(num_partitions : int, cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
+where reads writes(cell_region, edge_region, vertex_region) do
+
+
 
     -----------------------------------
     ----- Copy Neighbours -----
@@ -532,7 +534,7 @@ task main()
     -----------------------------------------------
 
     --Create initial partition based on METIS graph partition
-    var color_space = ispace(int1d, NUM_PARTITIONS)
+    var color_space = ispace(int1d, num_partitions)
     var cell_partition_initial = partition(complete, cell_region.partitionNumber, color_space)
 
     --Create dependent partitions based on neighbour fields
@@ -698,6 +700,16 @@ task main()
     --    end
     --    i=i+1
     --end
+
+end
+
+----------------------------------------------------
+------- TASK: TESTING CODE: WRITING NETCDF OUTPUT --------
+----------------------------------------------------
+
+--input: cell_region, edge_region, vertex_region
+task write_output(cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
+where reads writes(cell_region, edge_region, vertex_region) do
 
 
     ----------------------------------------------------
@@ -909,18 +921,18 @@ task main()
     end
 
     for i = 0, nVertices do
-        latVertex_in_copy[i] = vertex_region[i].lat
-        lonVertex_in_copy[i] = vertex_region[i].lon
-        xVertex_in_copy[i] = vertex_region[i].x
-        yVertex_in_copy[i] = vertex_region[i].y
-        zVertex_in_copy[i] = vertex_region[i].z
-        indexToVertexID_in_copy[i] = vertex_region[i].vertexID
-        areaTriangle_in_copy[i] = vertex_region[i].areaTriangle
+        latVertex_in_copy[i] = vertex_region[{i, 0}].lat
+        lonVertex_in_copy[i] = vertex_region[{i, 0}].lon
+        xVertex_in_copy[i] = vertex_region[{i, 0}].x
+        yVertex_in_copy[i] = vertex_region[{i, 0}].y
+        zVertex_in_copy[i] = vertex_region[{i, 0}].z
+        indexToVertexID_in_copy[i] = vertex_region[{i, 0}].vertexID
+        areaTriangle_in_copy[i] = vertex_region[{i, 0}].areaTriangle
 
         for j = 0, vertexDegree do
-            edgesOnVertex_in_copy[i*vertexDegree + j] = vertex_region[i].edgesOnVertex[j]
-            cellsOnVertex_in_copy[i*vertexDegree + j] = vertex_region[i].cellsOnVertex[j]
-            kiteAreasOnVertex_in_copy[i*vertexDegree + j] = vertex_region[i].kiteAreasOnVertex[j]
+            edgesOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].edgesOnVertex[j]
+            cellsOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].cellsOnVertex[j]
+            kiteAreasOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].kiteAreasOnVertex[j]
         end
     end
 
@@ -1012,4 +1024,3 @@ task main()
     cio.printf("Successfully written netcdf file!\n")
 
 end
-regentlib.start(main)

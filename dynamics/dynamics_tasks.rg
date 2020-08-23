@@ -28,22 +28,22 @@ local nVertLevels = 1
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
-task atm_compute_signs(vr : region(ispace(int1d), vertex_fs),
-                       er : region(ispace(int2d), edge_fs),
-                       cr : region(ispace(int2d), cell_fs))
-where reads writes(vr, cr), reads (er) do 
+  task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
+                        er : region(ispace(int2d), edge_fs),
+                        vr : region(ispace(int2d), vertex_fs))
+where reads writes(vr, cr), reads (er) do
 
     for iVtx = 1, nVertices do -- TODO: change bounds once you know whether vOnEdge contains ID's or indices
         for i = 0, vertexDegree do
-            if (vr[iVtx].edgesOnVertex[i] <= nEdges) then
+            if (vr[{iVtx, 0}].edgesOnVertex[i] <= nEdges) then
                 --note: when MPAS calls vOnEdge(2, ...), we access vOnEdge index 1!
-                if (iVtx == er[{vr[iVtx].edgesOnVertex[i], 0}].verticesOnEdge[1]) then
-                    vr[iVtx].edgesOnVertexSign[i] = 1.0
+                if (iVtx == er[{vr[{iVtx, 0}].edgesOnVertex[i], 0}].verticesOnEdge[1]) then
+                    vr[{iVtx, 0}].edgesOnVertexSign[i] = 1.0
                 else
-                    vr[iVtx].edgesOnVertexSign[i] = -1.0
+                    vr[{iVtx, 0}].edgesOnVertexSign[i] = -1.0
                 end
             else
-                vr[iVtx].edgesOnVertexSign[i] = 0.0
+                vr[{iVtx, 0}].edgesOnVertexSign[i] = 0.0
             end
         end
     end
@@ -56,27 +56,27 @@ where reads writes(vr, cr), reads (er) do
                   cr[{iCell, 0}].edgesOnCellSign[i] = 1.0
                   --VERTICAL STRUCTURE ACCESSED--
                   for vLevel = 0, nVertLevels + 1 do
-                  
+
                     cr[{iCell, vLevel}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb[0]
                     cr[{iCell, vLevel}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb3[0]
 
-                  end 
+                  end
 
                else
                   cr[{iCell, 0}].edgesOnCellSign[i] = -1.0
                   --VERTICAL--
                   for vLevel = 0, nVertLevels + 1 do
-                  
+
                     cr[{iCell, vLevel}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb[1]
                     cr[{iCell, vLevel}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb3[1]
 
-                  end 
-               end 
+                  end
+               end
             else
                cr[{iCell, 0}].edgesOnCellSign[i] = 0.0
-            end 
-         end 
-      end 
+            end
+         end
+      end
 
 
     for iCell=1, nCells do
@@ -84,81 +84,81 @@ where reads writes(vr, cr), reads (er) do
             var iVtx = cr[{iCell, 0}].verticesOnCell[i]
             if (iVtx <= nVertices) then
                 for j=1,vertexDegree do
-                    if (iCell == vr[iVtx].cellsOnVertex[j]) then
+                    if (iCell == vr[{iVtx, 0}].cellsOnVertex[j]) then
                         cr[{iCell, 0}].kiteForCell[i] = j
                         break
                     end
-                end 
+                end
                 -- trimmed a log statement here
             else
                 cr[{iCell, 0}].kiteForCell[i] = 1
-            end 
-        end 
-    end 
+            end
+        end
+    end
 end
 
 
-task atm_adv_coef_compression(er : region(ispace(int2d), edge_fs),
-                              cr : region(ispace(int2d), cell_fs))
+task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
+                              er : region(ispace(int2d), edge_fs))
 where reads writes(er), reads(cr) do
-    
+
     var cell_list : int[maxEdges]
 
     for iEdge = 1, nEdges do
         er[{iEdge, 0}].nAdvCellsForEdge = 0
-        var cell1 = er[{iEdge, 0}].cellsOnEdge[0] 
-        var cell2 = er[{iEdge, 0}].cellsOnEdge[1] 
-        
+        var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+        var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+
          --
          -- do only if this edge flux is needed to update owned cells
          --
         if (cell1 <= nCells or cell2 <= nCells) then
             cell_list[1] = cell1
             cell_list[2] = cell2
-            var n = 2 -- n is number of cells currently in list 
-  
+            var n = 2 -- n is number of cells currently in list
+
           --  add cells surrounding cell 1.  n is number of cells currently in list
             for i = 1, cr[{cell1, 0}].nEdgesOnCell do
                if (cr[{cell1, 0}].cellsOnCell[i] ~= cell2) then
                   n = n + 1
                   cell_list[n] = cr[{cell1, 0}].cellsOnCell[i]
-               end 
-            end 
-  
+               end
+            end
+
           --  add cells surrounding cell 2 (brute force approach)
             for iCell = 1, cr[{cell2, 0}].nEdgesOnCell do
                var addcell = true
                for i=1, n do
                   if (cell_list[i] == cr[{cell2, 0}].cellsOnCell[iCell]) then addcell = false end
-               end 
+               end
                if (addcell) then
                   n = n+1
                   cell_list[n] = cr[{cell2, 0}].cellsOnCell[iCell]
-               end 
-            end 
-  
-  
+               end
+            end
+
+
             er[{iEdge, 0}].nAdvCellsForEdge = n
             for iCell = 1, er[{iEdge, 0}].nAdvCellsForEdge do
                er[{iEdge, 0}].advCellsForEdge[iCell] = cell_list[iCell]
-            end 
-  
+            end
+
           -- we have the ordered list, now construct coefficients
             for coef = 0, FIFTEEN do
                 er[{iEdge, 0}].adv_coefs[coef] = 0.0
                 er[{iEdge, 0}].adv_coefs_3rd[coef] = 0.0
             end -- initialize list to 0
-          
+
           -- pull together third and fourth order contributions to the flux
           -- first from cell1
-  
+
             var j_in = 0
             for j=1, n do
                if (cell_list[j] == cell1 ) then j_in = j end
-            end 
+            end
             er[{iEdge, 0}].adv_coefs[j_in]= er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[0][0]
             er[{iEdge, 0}].adv_coefs_3rd[j_in]= er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[0][0]
-  
+
             for iCell = 1, cr[{cell1, 0}].nEdgesOnCell do
                j_in = 0
                for j=1, n do
@@ -166,59 +166,59 @@ where reads writes(er), reads(cr) do
                end
                er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[iCell][0]
                er[{iEdge, 0}].adv_coefs_3rd[j_in] = er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[iCell][0]
-            end 
-  
+            end
+
           -- pull together third and fourth order contributions to the flux
           -- now from cell2
-  
+
             j_in = 0
             for j=1, n do
                if( cell_list[j] == cell2 ) then j_in = j end
-            end 
+            end
               er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[0][1]
               er[{iEdge, 0}].adv_coefs_3rd[j_in] = er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[0][1]
-  
+
             for iCell = 1, cr[{cell2, 0}].nEdgesOnCell do
                j_in = 0
                for j=1, n do
                   if( cell_list[j] == cr[{cell2, 0}].cellsOnCell[iCell] ) then j_in = j end
-               end 
+               end
                er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[iCell][1]
                er[{iEdge, 0}].adv_coefs_3rd[j_in] = er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[iCell][1]
-            end 
-  
+            end
+
             for j = 1,n do
               -- TODO: how to calculate exponent?
               -- er[{iEdge, 0}].adv_coefs[j] =  -1.0 * er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs[j] / 12 -- this should be a negative number
-              -- er[{iEdge, 0}].adv_coefs_3rd[j] =  -1.0 * er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs_3rd[j] / 12 
+              -- er[{iEdge, 0}].adv_coefs_3rd[j] =  -1.0 * er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs_3rd[j] / 12
 --               adv_coefs    (j,iEdge) = - (dcEdge(iEdge) **2) * adv_coefs    (j,iEdge) / 12.
 --               adv_coefs_3rd(j,iEdge) = - (dcEdge(iEdge) **2) * adv_coefs_3rd(j,iEdge) / 12.
-            end 
-  
+            end
+
           -- 2nd order centered contribution - place this in the main flux weights
-  
+
             j_in = 0
             for j=1, n do
                if( cell_list[j] == cell1 ) then j_in = j end
             end
             er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + 0.5
-  
+
             j_in = 0
             for j=1, n do
                if( cell_list[j] == cell2 ) then j_in = j end
             end
             er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + 0.5
-  
+
           --  multiply by edge length - thus the flux is just dt*ru times the results of the vector-vector multiply
-  
+
             for j=1,n do
                er[{iEdge, 0}].adv_coefs[j] = er[{iEdge, 0}].dvEdge * er[{iEdge, 0}].adv_coefs[j]
                er[{iEdge, 0}].adv_coefs_3rd[j] = er[{iEdge, 0}].dvEdge * er[{iEdge, 0}].adv_coefs_3rd[j]
-            end 
- 
+            end
+
          end  -- only do for edges of owned-cells
-         
-    end -- end loop over edges 
+
+    end -- end loop over edges
 
 
 end
@@ -230,7 +230,7 @@ where reads writes (cr) do
   var m1 = -1.0
   var pii = cmath.acos(m1) -- find equivelelt transformation in Regent for acos()
   --cio.printf("pii = %f\n", pii)
-  
+
   var dx_scale_power = 1.0
   fill(cr.dss, 0)
   --cio.printf("cr[{%d, %d}].dss is %f\n", 10, 3, cr[{10, 3}].dss)
@@ -248,8 +248,8 @@ where reads writes (cr) do
 end
 
 task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
-                               er : region(ispace(int2d), edge_fs),
-                               cr : region(ispace(int2d), cell_fs))
+                               cr : region(ispace(int2d), cell_fs),
+                               er : region(ispace(int2d), edge_fs))
 where reads writes (er, cr) do
   for iEdge = 0, nEdges do
     for i = 0, FIFTEEN do
@@ -257,7 +257,7 @@ where reads writes (er, cr) do
     end
   end
 
-  
+
   for iCell = 0, nCells do
     for vLevel = 0, nVertLevels + 1 do
       for i = 0, maxEdges do
@@ -276,8 +276,8 @@ end
 --Tendency variables: tend_rw, tend_rt, tend_rho (added to CR), tend_ru (added to ER). Not in registry
 --Other variables not in registry: rs, ts: added to CR as part of vertical grid, ru_Avg (added to ER)
 
-task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), rgas : double, cp : double, gravity : double, dts : double, config_epssm: double, small_step : int, nCellsSolve : int)
-where reads writes (er, cr) do
+task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, gravity : double, dts : double, config_epssm: double, small_step : int, nCellsSolve : int)
+where reads writes (er, cr, vert_r) do
   var epssm = config_epssm
   var rcv = rgas / (cp - rgas)
   var c2 = cp * rcv
@@ -372,8 +372,8 @@ where reads writes (er, cr) do
       end
 
       for k = 0, nVertLevels do
-         rs[k] = cr[{iCell, k}].rho_pp + dts * cr[{iCell, k}].tend_rho + rs[k] - cr[{0, k}].cofrz * resm * (cr[{iCell, k+1}].rw_p - cr[{iCell, k}].rw_p)
-         ts[k] = cr[{iCell, k}].rtheta_pp + dts * cr[{iCell, k}].tend_rt + ts[k] - resm * cr[{0, k}].rdzw * (cr[{iCell, k+1}].coftz * cr[{iCell, k+1}].rw_p  - cr[{iCell, k}].coftz * cr[{iCell, k}].rw_p )
+         rs[k] = cr[{iCell, k}].rho_pp + dts * cr[{iCell, k}].tend_rho + rs[k] - vert_r[k].cofrz* resm * (cr[{iCell, k+1}].rw_p - cr[{iCell, k}].rw_p)
+         ts[k] = cr[{iCell, k}].rtheta_pp + dts * cr[{iCell, k}].tend_rt + ts[k] - resm * vert_r[k].rdzw * (cr[{iCell, k+1}].coftz * cr[{iCell, k+1}].rw_p  - cr[{iCell, k}].coftz * cr[{iCell, k}].rw_p )
       end
 
       for k = 1, nVertLevels do
@@ -394,7 +394,7 @@ where reads writes (er, cr) do
       end
 
       for k = 1, nVertLevels do
-        cr[{iCell, k}].rw_p = (cr[{iCell, k}].rw_p + (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw) - dts * cr[{iCell, k}].dss * (cr[{0, k}].fzm * cr[{iCell, k}].zz + cr[{0, k}].fzp * cr[{iCell, k-1}].zz)*(cr[{0, k}].fzm * cr[{iCell, k}].rho_zz + cr[{0, k}].fzp * cr[{iCell, k-1}].rho_zz) * cr[{iCell, k}].w)/(1.0 + dts * cr[{iCell, k}].dss)  - (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw)
+        cr[{iCell, k}].rw_p = (cr[{iCell, k}].rw_p + (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw) - dts * cr[{iCell, k}].dss * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz)*(vert_r[k].fzm * cr[{iCell, k}].rho_zz + vert_r[k].fzp * cr[{iCell, k-1}].rho_zz) * cr[{iCell, k}].w)/(1.0 + dts * cr[{iCell, k}].dss)  - (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw)
       end
 
       for k = 1, nVertLevels do
@@ -402,8 +402,8 @@ where reads writes (er, cr) do
       end
 
       for k=0, nVertLevels do
-         cr[{iCell, k}].rho_pp  = rs[k] - cr[{0, k}].cofrz *(cr[{iCell, k+1}].rw_p - cr[{iCell, k}].rw_p)
-         cr[{iCell, k}].rtheta_pp = ts[k]  - cr[{0, k}].rdzw * (cr[{iCell, k+1}].coftz * cr[{iCell, k+1}].rw_p - cr[{iCell, k}].coftz * cr[{iCell, k}].rw_p)
+         cr[{iCell, k}].rho_pp  = rs[k] - vert_r[k].cofrz*(cr[{iCell, k+1}].rw_p - cr[{iCell, k}].rw_p)
+         cr[{iCell, k}].rtheta_pp = ts[k]  - vert_r[k].rdzw * (cr[{iCell, k+1}].coftz * cr[{iCell, k+1}].rw_p - cr[{iCell, k}].coftz * cr[{iCell, k}].rw_p)
       end
 
     else
@@ -559,12 +559,12 @@ end
 
 task atm_compute_moist_coefficients()
   cio.printf("computing moist coefficients\n")
-end  
+end
 
 --Comments for atm_compute_vert_imp_coefs
 --Combined this and atm_compute_vert_imp_coefs_work (one was just a helper)
 --purpose: "Compute coefficients for vertically implicit gravity-wave/acoustic computations"
---Constants declared in task: 
+--Constants declared in task:
 --Constants from mpas_constants.F : . These are passed in to the task as doubles at the moment
 --Contants from config: config_epssm: default = 0.1. Passed in as double at the moment.
 --dts is passed in as double now - in code, passed in as rk_sub_timestep(rk_step)
@@ -573,17 +573,18 @@ end
 --mpas renames some fields; we will just use the original name --- p : exner, t : theta_m, rb : rho_base, rtb : rtheta_base, pb : exner_base, rt : rtheta_p
 
 task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
+                                vert_r : region(ispace(int1d), vertical_fs),
                                 dts : double,
                                 epssm : double,
                                 rgas : double,
                                 cp : double,
-                                gravity : double)  
-where reads writes (cr) do
+                                gravity : double)
+where reads writes (cr, vert_r) do
       --  set coefficients
       var dtseps = .5*dts*(1.+epssm)
       var rcv = rgas/(cp-rgas)
       var c2 = cp*rcv
-      
+
       var qtotal : double
       var b_tri : double[nVertLevels]
       var c_tri : double[nVertLevels]
@@ -591,29 +592,29 @@ where reads writes (cr) do
 
 -- MGD bad to have all threads setting this variable?
       for k = 0, nVertLevels do
-         cr[{0, k}].cofrz = dtseps * cr[{0, k}].rdzw
-      end 
+         vert_r[k].cofrz= dtseps * vert_r[k].rdzw
+      end
 
       for iCell = 0, nCells do --  we only need to do cells we are solving for, not halo cells
 
 --DIR$ IVDEP
          for k=1, nVertLevels do
-            cr[{iCell, k}].cofwr = .5 * dtseps * gravity * (cr[{0, k}].fzm * cr[{iCell, k}].zz + cr[{0, k}].fzp * cr[{iCell, k-1}].zz)
-         end 
+            cr[{iCell, k}].cofwr = .5 * dtseps * gravity * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz)
+         end
          cr[{iCell, 0}].coftz = 0.0 --coftz(1,iCell) = 0.0
 --DIR$ IVDEP
          for k=1, nVertLevels do
-            cr[{iCell, k}].cofwz = dtseps * c2 * (cr[{0, k}].fzm * cr[{iCell, k}].zz + cr[{0, k}].fzp * cr[{iCell, k-1}].zz) * cr[{0, k}].rdzu * cr[{iCell, k}].cqw * (cr[{0, k}].fzm * cr[{iCell, k}].exner + cr[{0, k}].fzp * cr[{iCell, k-1}].exner)
-            cr[{iCell, k}].coftz = dtseps * (cr[{0, k}].fzm * cr[{iCell, k}].theta_m + cr[{0, k}].fzp * cr[{iCell, k-1}].theta_m)
-         end 
-         cr[{iCell, nVertLevels}].coftz = 0.0 -- coftz(nVertLevels+1,iCell) 
+            cr[{iCell, k}].cofwz = dtseps * c2 * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz) * vert_r[k].rdzu * cr[{iCell, k}].cqw * (vert_r[k].fzm * cr[{iCell, k}].exner + vert_r[k].fzp * cr[{iCell, k-1}].exner)
+            cr[{iCell, k}].coftz = dtseps * (vert_r[k].fzm * cr[{iCell, k}].theta_m + vert_r[k].fzp * cr[{iCell, k-1}].theta_m)
+         end
+         cr[{iCell, nVertLevels}].coftz = 0.0 -- coftz(nVertLevels+1,iCell)
 --DIR$ IVDEP
          for k=0, nVertLevels do
 
             qtotal = cr[{iCell, k}].qtot
 
             cr[{iCell, k}].cofwt = .5 * dtseps * rcv * cr[{iCell, k}].zz * gravity * cr[{iCell, k}].rho_base / ( 1.0 + qtotal) * cr[{iCell, k}].exner / ((cr[{iCell, k}].rtheta_base + cr[{iCell, k}].rtheta_p) * cr[{iCell, k}].exner_base)
-         end 
+         end
 
          cr[{iCell, 0}].a_tri = 0.0 --a_tri(1,iCell) = 0.  -- note, this value is never used
          b_tri[0] = 1.0    -- note, this value is never used
@@ -623,19 +624,138 @@ where reads writes (cr) do
 
 --DIR$ IVDEP
          for k=1, nVertLevels do --k=2,nVertLevels
-            cr[{iCell,k}].a_tri = -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k-1}].coftz * cr[{0, k-1}].rdzw * cr[{iCell, k-1}].zz + cr[{iCell, k}].cofwr * cr[{0, k-1}].cofrz - cr[{iCell, k-1}].cofwt * cr[{iCell, k-1}].coftz * cr[{0, k-1}].rdzw
-         
-            b_tri[k] = 1.0 + cr[{iCell, k}].cofwz * (cr[{iCell, k}].coftz * cr[{0, k}].rdzw * cr[{iCell, k}].zz +  cr[{iCell, k}].coftz * cr[{0, k-1}].rdzw * cr[{iCell, k-1}].zz) -  cr[{iCell, k}].coftz * (cr[{iCell, k}].cofwt * cr[{0, k}].rdzw - cr[{iCell, k-1}].cofwt * cr[{0, k-1}].rdzw) + cr[{iCell, k}].cofwr * ((cr[{0, k}].cofrz - cr[{0, k-1}].cofrz))
-            
-            c_tri[k] =   -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k+1}].coftz * cr[{0, k}].rdzw * cr[{iCell, k}].zz - cr[{iCell, k}].cofwr * cr[{0, k}].cofrz + cr[{iCell, k}].cofwt * cr[{iCell, k+1 }].coftz * cr[{iCell, k}].rdzw
-         end 
+            cr[{iCell,k}].a_tri = -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k-1}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz + cr[{iCell, k}].cofwr * vert_r[k-1].cofrz - cr[{iCell, k-1}].cofwt * cr[{iCell, k-1}].coftz * vert_r[k-1].rdzw
+
+            b_tri[k] = 1.0 + cr[{iCell, k}].cofwz * (cr[{iCell, k}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz +  cr[{iCell, k}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz) -  cr[{iCell, k}].coftz * (cr[{iCell, k}].cofwt * vert_r[k].rdzw - cr[{iCell, k-1}].cofwt * vert_r[k-1].rdzw) + cr[{iCell, k}].cofwr * ((vert_r[k].cofrz- vert_r[k-1].cofrz))
+
+            c_tri[k] =   -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k+1}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz - cr[{iCell, k}].cofwr * vert_r[k].cofrz+ cr[{iCell, k}].cofwt * cr[{iCell, k+1 }].coftz * vert_r[k].rdzw
+         end
 --MGD VECTOR DEPENDENCE
          for k=1, nVertLevels do -- k=2, nVertLevels
             cr[{iCell, k}].alpha_tri = 1.0/ (b_tri[k]-cr[{iCell, k}].a_tri * cr[{iCell, k-1}].gamma_tri)
             cr[{iCell, k}].gamma_tri = c_tri[k] * cr[{iCell, k}].alpha_tri
-         end 
+         end
 
       end -- loop over cells
+end
+
+
+task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), config_h_ScaleWithMesh : bool)
+where reads writes (cr, er) do
+
+  for iEdge = 0, nEdges do
+    er[{iEdge, 0}].meshScalingDel2 = 1.0
+    er[{iEdge, 0}].meshScalingDel4 = 1.0
+  end
+
+  if (config_h_ScaleWithMesh) then
+    for iEdge = 0, nEdges do
+      var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+      er[{iEdge, 0}].meshScalingDel2 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+      er[{iEdge, 0}].meshScalingDel4 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
+    end
+  end
+
+  for iCell = 0, nCells do
+    cr[{iCell, 0}].meshScalingRegionalCell = 1.0
+  end
+
+  for iEdge = 0, nEdges do
+    er[{iEdge, 0}].meshScalingRegionalEdge = 1.0
+  end
+
+  if (config_h_ScaleWithMesh) then
+    for iEdge = 0, nEdges do
+      var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+      er[{iEdge, 0}].meshScalingRegionalEdge = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+    end
+
+    for iCell = 0, nCells do
+      cr[{iCell, 0}].meshScalingRegionalCell = 1.0/ cmath.pow(cr[{iCell, 0}].meshDensity, 0.25)
+    end
+  end
+end
+
+
+--Constants: rgas, cp, rvord (From mpas_constants.F)
+--Not sure how to translate: scalars(index_qv,k,iCell)
+--sign(1.0_RKIND,flux) translated as cmath.copysign(1.0, flux)
+
+task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, rvord : double)
+where reads writes (cr, er, vert_r) do
+
+  var rcv = rgas / (cp-rgas)
+  var p0 = 100000
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      --cr[{iCell, k}].theta_m = cr[{iCell, k}].theta * (1.0 + rvord * scalars(index_qv,k,iCell))
+      cr[{iCell, k}].rho_zz = cr[{iCell, k}].rho_zz / cr[{iCell, k}].zz
+    end
+  end
+
+  for iEdge = 0, nEdges do
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    for k = 0, nVertLevels do
+      er[{iEdge, k}].ru = 0.5 * er[{iEdge, k}].u * (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
+    end
+  end
+
+  for iCell = 0, nCells do
+    cr[{iCell, 0}].rw = 0
+    cr[{iCell, nVertLevels}].rw = 0
+    for k = 1, nVertLevels do
+      cr[{iCell, k}].rw = cr[{iCell, k}].w * (vert_r[k].fzp * cr[{iCell, k-1}].rho_zz + vert_r[k].fzm * cr[{iCell, k}].rho_zz) * (vert_r[k].fzp * cr[{iCell, k-1}].zz + vert_r[k].fzm * cr[{iCell, k}].zz)
+    end
+  end
+
+  for iCell = 0, nCells do
+    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+      for k = 1, nVertLevels do
+        var flux = vert_r[k].fzm * er[{iEdge, k}].ru + vert_r[k].fzp * er[{iEdge, k-1}].ru
+        cr[{iCell, k}].rw = cr[{iCell, k}].rw - cr[{iCell, 0}].edgesOnCellSign[i] * (cr[{iCell, k}].zb_cell[i] + cmath.copysign(1.0, flux) * cr[{iCell, k}].zb3_cell[i]) * flux * (vert_r[k].fzp * cr[{iCell, k-1}].zz + vert_r[k].fzm * cr[{iCell, k}].zz)
+      end
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].rho_p = cr[{iCell, k}].rho_zz - cr[{iCell, k}].rho_base
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].rtheta_base = cr[{iCell, k}].theta_base * cr[{iCell, k}].rho_base
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].rtheta_p = cr[{iCell, k}].theta_m * cr[{iCell, k}].rho_p + cr[{iCell, k}].rho_base * (cr[{iCell, k}].theta_m - cr[{iCell, k}].theta_base)
+    end
+  end
+
+
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].exner = cmath.pow(cr[{iCell, k}].zz * (rgas/p0) * (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base), rcv)
+      cr[{iCell, k}].exner_base = cmath.pow(cr[{iCell, k}].zz * (rgas/p0) * (cr[{iCell, k}].rtheta_base), rcv)
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz * rgas * (cr[{iCell, k}].exner * cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
+      cr[{iCell, k}].pressure_base = cr[{iCell, k}].zz * rgas * cr[{iCell, k}].exner_base * cr[{iCell, k}].rtheta_base
+    end
+  end
+
 end
 
 task atm_compute_dyn_tend()
@@ -660,4 +780,28 @@ end
 
 task atm_rk_dynamics_substep_finish()
   cio.printf("finishing substep\n")
+end
+
+
+task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, rvord : double)
+where reads writes (cr, er, vr, vert_r) do
+
+  atm_compute_signs(cr, er, vr)
+
+  atm_adv_coef_compression(cr, er)
+
+  --config_coef_3rd_order = 0.25 in namelist
+  atm_couple_coef_3rd_order(0.25, cr, er)
+
+  atm_init_coupled_diagnostics(cr, er, vert_r, rgas, cp, rvord)
+
+  atm_compute_solve_diagnostics(cr, er, vr, false) --last param is hollingsworth
+
+  --mpas_reconstruct()
+
+  atm_compute_mesh_scaling(cr, er, true)
+
+  --config_zd: default 22000.0, config_xnutr: default 0.2. From config
+  atm_compute_damping_coefs(22000, 0.2, cr)
+
 end
