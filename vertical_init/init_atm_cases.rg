@@ -84,11 +84,19 @@ where reads writes(vr, er, cr) do
 
 
 
+  var qv_2d : double[nVertLevels][nlat]
 -- initialization of moisture:
-      scalars(:,:,:) = 0.0
-      qsat(:,:)      = 0.0
-      relhum(:,:)    = 0.0
-      qv_2d(:,:)     = 0.0 -- dimensions = "nVertLevels, nlat"
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].qv = 0.0
+      cr[{iCell, k}].qsat = 0.0
+      cr[{iCell, k}].relhum = 0.0
+    end
+    for k = 0, nlat do
+      qv_2d[iCell][nlat] = 0.0
+    end
+  end
+  
 -- end initialization of moisture.
 
 
@@ -223,7 +231,6 @@ where reads writes(vr, er, cr) do
   var ppb_2d : double[nVertLevels][nlat]
   var pb_2d : double[nVertLevels][nlat]
   var rb_2d : double[nVertLevels][nlat]
-  var qv_2d : double[nVertLevels][nlat]
   var tb_2d : double[nVertLevels][nlat]
   var rho_2d : double[nVertLevels][nlat]
   var p_2d : double[nVertLevels][nlat]
@@ -377,7 +384,7 @@ where reads writes(vr, er, cr) do
       end 
       phi = latCell[i]
       for k=0,nz1 do
-        temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.+0.61*scalars(index_qv,k,i))
+        temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.+0.61*cr[{i, k}].qv)
 
         ztemp   = .5*(cr[{k,i}].zgrid+cr[{i, k+1}].zgrid)
         ptemp   = cr[{i, k}].pressure_base + cr[{i, k}].pressure_p
@@ -409,7 +416,7 @@ where reads writes(vr, er, cr) do
 --           scalars(index_qv,k,i) = relhum(k,i)*qsat(k,i)
 --        end 
 
-        tt[k] = temperature_1d[k]*(1.+1.61*scalars(index_qv,k,i))
+        tt[k] = temperature_1d[k]*(1.+1.61*cr[{i, k}].qv)
 
       end 
 
@@ -421,13 +428,13 @@ where reads writes(vr, er, cr) do
           cr[{i,k}].rho_p  = (cr[{i, k}].pressure_p/(rgas*cr[{i, k}].zz) - cr[{i, k}].rho_base*(tt[k]-t0b))/tt[k]
         end 
 
-        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+scalars(index_qv,1,i)) -.25*(cr[{i, 2}].rho_p+cr[{i, 2}].rho_base)*(1.+scalars(index_qv,2,i)))
+        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+cr[{i, 0}].qv ) -.25*(cr[{i, 2}].rho_p+cr[{i, 2}].rho_base)*(1.+cr[{i, 1}].qv))
 
         ppi[1] = ppi[1]-cr[{i, 1}].pressure_base
         for k=0,nz1-1 do
 
 
-           ppi[k+1] = ppi[k]-cr[{0, k+1}].dzu*gravity* ( (cr[{i,k}].rho_p+(cr[{i,k}].rho_p+cr[{i, k}].rho_base)*scalars(index_qv,k  ,i))*cr[{0, k+1}].fzp   + (cr[{i, k+1}].rho_p+(cr[{i, k+1}].rho_p+cr[{i, k+1}].rho_base)*scalars(index_qv,k+1,i))*cr[{0, k+1}].fzm)
+           ppi[k+1] = ppi[k]-cr[{0, k+1}].dzu*gravity* ( (cr[{i,k}].rho_p+(cr[{i,k}].rho_p+cr[{i, k}].rho_base)*cr[{i, k}].qv)*cr[{0, k+1}].fzp   + (cr[{i, k+1}].rho_p+(cr[{i, k+1}].rho_p+cr[{i, k+1}].rho_base)*cr[{i, k+1}].qv)*cr[{0, k+1}].fzm)
 
         end
 
@@ -451,7 +458,7 @@ where reads writes(vr, er, cr) do
     end 
 
     --calculation of surface pressure:
-    cr[{i, 0}].surface_pressure = 0.5*dzw[1]*gravity * (1.25*(cr[{i, 1}].rho_pr + cr[{i, 1}].rho_base) * (1.0 + scalars(index_qv,1,i)) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + scalars(index_qv,2,i)))
+    cr[{i, 0}].surface_pressure = 0.5*dzw[1]*gravity * (1.25*(cr[{i, 1}].rho_pr + cr[{i, 1}].rho_base) * (1.0 + cr[i, 0].qv) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
     cr[{i, 0}].surface_pressure = cr[{i, 0}].surface_pressure + cr[{i, 1}].pressure_p + cr[{i, 1}].pressure_base
 
   end   -- end loop over cells
@@ -672,7 +679,7 @@ where reads writes(vr, er, cr) do
   for iCell=0,nCells do
      for k=0,nVertLevels do
         cr[{iCell, k}].rho = cr[{iCell, k}].rho_zz * cr[{iCell, k}].zz
-        cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1.0 + 1.61 * scalars(index_qv,k,iCell))
+        cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1.0 + 1.61 * cr[{iCell, k}].qv)
      end 
   end 
 

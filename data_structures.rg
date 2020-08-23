@@ -213,7 +213,7 @@ fspace cell_fs {
     hx : double, -- type="real" dimensions="nVertLevelsP1 nCells" units="m" description="terrain influence in vertical coordinate, $h_s(x,y,\zeta)$ in Klemp (MWR 2011)"
    surface_pressure : double, -- type="real" dimensions="nCells Time" units="Pa" description="Diagnosed surface pressure"
 
-
+    qv : doubl, -- member of scalars superarray 
     ----vars first seen in atm_compute_solve_diagnostics_work--
     h : double, --type="real"     dimensions="nVertLevels nCells Time"
     ke : double, --type="real"     dimensions="nVertLevels nCells Time"
