@@ -11,7 +11,7 @@ local FIFTEEN = 15
 local vertexDegree = 3
 local nVertLevels = 1
 local sphere_radius = 6371229.0 --from ncdump of the grid, default is 1.0, but set to "a" from constants.F in init_atm_core.F
-
+local nlat = 721
 
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
@@ -59,11 +59,11 @@ where reads writes(vr, er, cr, vertr) do
 --end initialization
 
   var rebalance = true
-  var nlat = 721
+  --var nlat = 721
   var moisture = false
   var nz1 = nVertLevels 
   var nz = nz1 + 1
-
+  var arr : double[2][3]
   
   var qv_2d : double[nVertLevels][nlat]
 ---- Scale all distances and areas from a unit sphere to one with radius sphere_radius
@@ -104,7 +104,7 @@ where reads writes(vr, er, cr, vertr) do
       cr[{iCell, k}].relhum = 0.0
     end
     for k = 0, nlat do
-      qv_2d[iCell][nlat] = 0.0
+      qv_2d[iCell][k] = 0.0
     end
   end
   
@@ -134,7 +134,7 @@ where reads writes(vr, er, cr, vertr) do
 
   for iCell=0, nCells do
     for k = 0, nz do
-      phi = cr[{iCell, 0}].latCell
+      phi = cr[{iCell, 0}].lat
       cr[{iCell, k}].hx = u0 / gravity * cmath.pow(cmath.cos(etavs), 1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi), 2.0) + 1.0/3.0) + 10.0/63.0) * u0*cmath.pow(cmath.cos(etavs), 1.5) + (1.6 * cmath.pow(cmath.cos(phi), 3) * (cmath.pow(cmath.sin(phi), 2) + 2.0/3.0) - pii/4.0)*r_earth*omega_e)
     end
   end
@@ -180,24 +180,25 @@ where reads writes(vr, er, cr, vertr) do
   end 
   for k=0, nz1 do -- nz1 is just nVertLevels, idk why mpas renamed it
     dzw[k] = zw[k+1]-zw[k]
-    cr[{0, k}].rdzw = 1.0/dzw[k]
+    vertr[k].rdzw = 1.0/dzw[k]
     zu[k] = .5*(zw[k]+zw[k+1])
   end
   for k=1, nz1 do -- k=2,nz1 in mpas
-    cr[{0, k}].dzu = .5*(dzw[k]+dzw[k-1])
-    cr[{0, k}].rdzu  =  1.0/cr[{0, k}].dzu
-    cr[{0, k}].fzp = .5* dzw[k]/cr[{0, k}].dzu
-    cr[{0, k}].fzm =.5* dzw[k-1]/cr[{0, k}].dzu
+    vertr[k].dzu = .5*(dzw[k]+dzw[k-1])
+    vertr[k].rdzu  =  1.0/vertr[k].dzu
+    vertr[k].fzp = .5* dzw[k]/vertr[k].dzu
+    vertr[k].fzm =.5* dzw[k-1]/vertr[k].dzu
     rdzwp[k] = dzw[k-1]/(dzw[k]*(dzw[k]+dzw[k-1]))
     rdzwm[k] = dzw[k]/(dzw[k-1]*(dzw[k]+dzw[k-1]))
   end
 
+
 --!**********  how are we storing cf1, cf2 and cf3?
 
-  var COF1 = (2.*cr[{0, 1}].dzu+cr[{0, 2}].dzu)/(cr[{0, 1}].dzu + cr[{0, 2}].dzu) * dzw[0]/ cr[{0, 1}].dzu 
-  var COF2 = cr[{0, 1}].dzu / (cr[{0, 1}].dzu + cr[{0, 2}].dzu)*dzw[0]/ cr[{0, 2}].dzu 
-  var CF1  = cr[{0, 1}].fzp + COF1
-  var CF2  = cr[{0, 1}].fzm - COF1 - COF2
+  var COF1 = (2.*vertr[1].dzu+vertr[2].dzu)/(vertr[1].dzu + vertr[2].dzu) * dzw[0]/ vertr[1].dzu 
+  var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu)*dzw[0]/ vertr[2].dzu 
+  var CF1  = vertr[1].fzp + COF1
+  var CF2  = vertr[1].fzm - COF1 - COF2
   var CF3  = COF2       
 
 
@@ -216,7 +217,7 @@ where reads writes(vr, er, cr, vertr) do
     var iCell1 = er[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
     var iCell2 = er[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
     for k=1,nz1 do
-      er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid-cr[{iCell1, k}] + cr[{iCell2, k+1}].zgrid-cr[{iCell1, k+1}].zgrid) / er[{i, 0}].dcEdge
+      er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid-cr[{iCell1, k}].zgrid + cr[{iCell2, k+1}].zgrid-cr[{iCell1, k+1}].zgrid) / er[{i, 0}].dcEdge
     end 
   end 
   for i=0, nCells do
@@ -320,7 +321,7 @@ where reads writes(vr, er, cr, vertr) do
         ppi[1] = ppi[1]-ppb_2d[1][i]
         for k=0, nz1-1 do
 
-          ppi[k+1] = ppi[k]-cr[{0, k+1}].dzu*gravity*  ( (rr_2d[k][i]+(rr_2d[k][i]+rb_2d[k][i])*qv_2d[k][i])*cr[{0, k+1}].fzp  + (rr_2d[k+1][i]+(rr_2d[k+1][i]+rb_2d[k+1][i])*qv_2d[k+1][i])*cr[{0, k+1}].fzm )
+          ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity*  ( (rr_2d[k][i]+(rr_2d[k][i]+rb_2d[k][i])*qv_2d[k][i])*vertr[k+1].fzp  + (rr_2d[k+1][i]+(rr_2d[k+1][i]+rb_2d[k+1][i])*qv_2d[k+1][i])*vertr[k+1].fzm )
         end 
 
         for k=0, nz1 do
@@ -450,7 +451,7 @@ where reads writes(vr, er, cr, vertr) do
         for k=0,nz1-1 do
 
 
-           ppi[k+1] = ppi[k]-cr[{0, k+1}].dzu*gravity* ( (cr[{i,k}].rho_p+(cr[{i,k}].rho_p+cr[{i, k}].rho_base)*cr[{i, k}].qv)*cr[{0, k+1}].fzp   + (cr[{i, k+1}].rho_p+(cr[{i, k+1}].rho_p+cr[{i, k+1}].rho_base)*cr[{i, k+1}].qv)*cr[{0, k+1}].fzm)
+           ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity* ( (cr[{i,k}].rho_p+(cr[{i,k}].rho_p+cr[{i, k}].rho_base)*cr[{i, k}].qv)*vertr[k+1].fzp   + (cr[{i, k+1}].rho_p+(cr[{i, k+1}].rho_p+cr[{i, k+1}].rho_base)*cr[{i, k+1}].qv)*vertr[k+1].fzm)
 
         end
 
@@ -569,7 +570,8 @@ where reads writes(vr, er, cr, vertr) do
 --  !
 
 
-  var z_edge, z_edge3 : double
+  var z_edge : double
+  var z_edge3 : double
   for iEdge = 0,nEdges do
      var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
@@ -636,17 +638,17 @@ where reads writes(vr, er, cr, vertr) do
 
 
      for k = 1, nVertLevels do
-        flux =  (cr[{0, k}].fzm*er[{iEdge, k}].ru+cr[{0, k}].fzp*er[{iEdge, k-1}].ru)
-        cr[{cell2, k}].rw = cr[{cell2, k}].rw + (cr[{0, k}].fzm*cr[{cell2, k}].zz+cr[{0, k}].fzp*cr[{cell2, k-1}].zz)*er[{iEdge, k}].zb[1]*flux
-        cr[{cell1, k}].rw = cr[{cell1, k}].rw - (cr[{0, k}].fzm*cr[{cell1, k}].zz+cr[{0, k}].fzp*cr[{cell1, k-1}].zz)*er[{iEdge, k}].zb[0]*flux
+        flux =  (vertr[k].fzm*er[{iEdge, k}].ru+vertr[k].fzp*er[{iEdge, k-1}].ru)
+        cr[{cell2, k}].rw = cr[{cell2, k}].rw + (vertr[k].fzm*cr[{cell2, k}].zz+vertr[k].fzp*cr[{cell2, k-1}].zz)*er[{iEdge, k}].zb[1]*flux
+        cr[{cell1, k}].rw = cr[{cell1, k}].rw - (vertr[k].fzm*cr[{cell1, k}].zz+vertr[k].fzp*cr[{cell1, k-1}].zz)*er[{iEdge, k}].zb[0]*flux
 
 --        if (config_theta_adv_order ==3) then 
 --           cr[{cell2, k}].rw = cr[{cell2, k}].rw    &
 --                                        - sign(1.0_RKIND,er[{iEdge, k}].ru)*config_coef_3rd_order* &
---                                          (cr[{0, k}].fzm*zz(k,cell2)+cr[{0, k}].fzp*zz(k-1,cell2))*zb3(k,2,iEdge)*flux
+--                                          (vertr[k].fzm*zz(k,cell2)+vertr[k].fzp*zz(k-1,cell2))*zb3(k,2,iEdge)*flux
 --           cr[{cell1, k}].rw = cr[{cell1, k}].rw    &
 --                                        + sign(1.0_RKIND,er[{iEdge, k}].ru)*config_coef_3rd_order* &
---                                          (cr[{0, k}].fzm*zz(k,cell1)+cr[{0, k}].fzp*zz(k-1,cell1))*zb3(k,1,iEdge)*flux
+--                                          (vertr[k].fzm*zz(k,cell1)+vertr[k].fzp*zz(k-1,cell1))*zb3(k,1,iEdge)*flux
 --        end 
 
      end 
@@ -656,7 +658,7 @@ where reads writes(vr, er, cr, vertr) do
   --! Compute w from rho_zz and rw
   for iCell=0,nCells do
      for k=1,nVertLevels do
-        cr[{iCell, k}].w = cr[{iCell, k}].rw / (cr[{0, k}].fzp * cr[{iCell, k-1}].rho_zz + cr[{0, k}].fzm * cr[{iCell, k}].rho_zz)
+        cr[{iCell, k}].w = cr[{iCell, k}].rw / (vertr[k].fzp * cr[{iCell, k-1}].rho_zz + vertr[k].fzm * cr[{iCell, k}].rho_zz)
      end 
   end 
 

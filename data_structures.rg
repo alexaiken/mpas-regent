@@ -167,6 +167,7 @@ fspace cell_fs {
     zb3_cell : double[maxEdges], -- cell + level dependent
 
     -----------begin dynamics fields--------------
+    rho : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Dry air density"
     kiteForCell : int[maxEdges], --Index of kite in kiteAreasOnVertex that lies within a cell for each of verticesOnCell
     edgesOnCellSign : double[maxEdges], --Sign for edges surrounding a cell: positive for positive outward normal velocity
 
@@ -245,13 +246,12 @@ fspace vertex_fs {
 
     -----------begin dynamics fields--------------
     edgesOnVertexSign : double[vertexDegree], --Sign for edges incident with a vertex: positive for po    sitive inward tengential velocity
-
+    fVertex : double, --type="real" dimensions="nVertices" units="unitless" description="Coriolis parameter at a vertex"
       ----vars first seen in atm_compute_solve_diagnostics_work--
     vorticity : double,  --type="real"     dimensions="nVertLevels nVertices Time"
     invAreaTriangle : double, --type="real" dimensions="nVertices" units="m^{-2}" description="Inverse area of a Delaunay triangle"
     ke_vertex : double, -- vertex and vertical levels
     pv_vertex : double, --type="real"     dimensions="nVertLevels nVertices Time"
-    fVertex: double,   --type="real"     dimensions="nVertices"/>
 }
 
 fspace edge_fs {
@@ -294,7 +294,8 @@ fspace edge_fs {
 
     tend_ru : double, -- NOT IN REGISTRY
     ruAvg : double, -- NOT IN REGISTRY
-
+    
+    fEdge : double, --type="real" dimensions="nEdges" units="unitless" description="Coriolis parameter at an edge"
 
     -- vars first seen in atm_compute_solve_diagnostics_work --
     ke_edge : double, -- parameterized by both edges and vertical levels
