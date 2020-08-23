@@ -21,10 +21,11 @@ local cmath = terralib.includec("math.h")
 task init_atm_case_jw(vr : region(ispace(int2d), vertex_fs),
                       er : region(ispace(int2d), edge_fs),
                       cr : region(ispace(int2d), cell_fs),
+                      vertr : region(ispace(int1d), vertical_fs),
                       cp : double,
                       rgas : double,
                       gravity : double)
-where reads writes(vr, er, cr) do 
+where reads writes(vr, er, cr, vertr) do 
 -- constants from constants.F --- TODO: combine constants in one place so you don't redefine every time you need
 
   var pii = 3.141592653589793
@@ -63,7 +64,8 @@ where reads writes(vr, er, cr) do
   var nz1 = nVertLevels 
   var nz = nz1 + 1
 
-
+  
+  var qv_2d : double[nVertLevels][nlat]
 ---- Scale all distances and areas from a unit sphere to one with radius sphere_radius
 
   for iCell = 0, nCells do
@@ -73,11 +75,13 @@ where reads writes(vr, er, cr) do
     cr[{iCell, 0}].areaCell = cr[{iCell, 0}].areaCell * cmath.pow(sphere_radius, 2.0) 
   end 
   for iVert = 0, nVertices do
-    vr[iVert].x = vr[iVert].x * sphere_radius
-    vr[iVert].y = vr[iVert].y * sphere_radius
-    vr[iVert].z = vr[iVert].z * sphere_radius
-    vr[iVert].areaTriangle = vr[iVert].areaTriangle * cmath.pow(sphere_radius, 2.0)
-    vr[iVert].kiteAreasOnVertex = vr[iVert].kiteAreasOnVertex * cmath.pow(sphere_radius, 2.0)
+    vr[{iVert, 0}].x = vr[{iVert, 0}].x * sphere_radius
+    vr[{iVert, 0}].y = vr[{iVert, 0}].y * sphere_radius
+    vr[{iVert, 0}].z = vr[{iVert, 0}].z * sphere_radius
+    vr[{iVert, 0}].areaTriangle = vr[{iVert, 0}].areaTriangle * cmath.pow(sphere_radius, 2.0)
+    for vDeg = 0, vertexDegree do
+      vr[{iVert, 0}].kiteAreasOnVertex[vertexDegree] = vr[{iVert, 0}].kiteAreasOnVertex[vertexDegree] * cmath.pow(sphere_radius, 2.0)
+    end
   end
   for iEdge = 0, nEdges do
 
@@ -91,7 +95,7 @@ where reads writes(vr, er, cr) do
 
 
 
-  var qv_2d : double[nVertLevels][nlat]
+
 -- initialization of moisture:
   for iCell = 0, nCells do
     for k = 0, nVertLevels do
@@ -485,8 +489,8 @@ where reads writes(vr, er, cr) do
 
      var vtx1 = er[{iEdge, 0}].verticesOnEdge[0] --verticesOnEdge(1,iEdge)
      var vtx2 = er[{iEdge, 0}].verticesOnEdge[1]
-     var lat1 = vr[vtx1].lat
-     var lat2 = vr[vtx2].lat
+     var lat1 = vr[{vtx1, 0}].lat
+     var lat2 = vr[{vtx2, 0}].lat
      var iCell1 = er[{iEdge, 0}].cellsOnEdge[0]
      var iCell2 = er[{iEdge, 0}].cellsOnEdge[1]
      var flux = (0.5*(lat2-lat1) - 0.125*(cmath.sin(4.*lat2) - cmath.sin(4.*lat1))) * sphere_radius / er[{iEdge, 0}].dvEdge
@@ -551,7 +555,7 @@ where reads writes(vr, er, cr) do
 
 
   for iVtx=0,nVertices do
-     vr[iVtx].fVertex = 2.0 * omega_e *  (-1.0*cmath.cos(vr[iVtx].lon) * cmath.cos(vr[iVtx].lat) * cmath.sin(alpha_grid) +  cmath.sin(vr[iVtx].lat) * cmath.cos(alpha_grid))
+     vr[{iVtx, 0}].fVertex = 2.0 * omega_e *  (-1.0*cmath.cos(vr[{iVtx, 0}].lon) * cmath.cos(vr[{iVtx, 0}].lat) * cmath.sin(alpha_grid) +  cmath.sin(vr[{iVtx, 0}].lat) * cmath.cos(alpha_grid))
   end 
 
 
