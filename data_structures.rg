@@ -287,7 +287,7 @@ fspace edge_fs {
     adv_coefs : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
     adv_coefs_3rd : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
 
-    deriv_two : double[FIFTEEN][TWO], --weights for cell-centered second derivative, normal to edge, for transport scheme, TODO: where is it initialized?
+    deriv_two : double[FIFTEEN * TWO], --weights for cell-centered second derivative, normal to edge, for transport scheme, TODO: where is it initialized?
 
     invDcEdge : double, --"Inverse distance between cells separated by an edge"
     ru_p : double, --"acoustic perturbation horizontal momentum at cell edge  (rho*u/zz)" "nVertLevels nEdges Time"
