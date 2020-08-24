@@ -803,20 +803,20 @@ where reads writes (cr, er, vr, vert_r) do
 
   atm_compute_signs(cr, er, vr)
 
-  atm_adv_coef_compression(cr, er)
+  --atm_adv_coef_compression(cr, er)
 
   --config_coef_3rd_order = 0.25 in namelist
-  atm_couple_coef_3rd_order(0.25, cr, er)
+  --atm_couple_coef_3rd_order(0.25, cr, er)
 
-  atm_init_coupled_diagnostics(cr, er, vert_r, rgas, cp, rvord)
+  --atm_init_coupled_diagnostics(cr, er, vert_r, rgas, cp, rvord)
 
-  atm_compute_solve_diagnostics(cr, er, vr, false) --last param is hollingsworth
+  --atm_compute_solve_diagnostics(cr, er, vr, false) --last param is hollingsworth
 
   --mpas_reconstruct()
 
-  atm_compute_mesh_scaling(cr, er, true)
+  --atm_compute_mesh_scaling(cr, er, true)
 
   --config_zd: default 22000.0, config_xnutr: default 0.2. From config
-  atm_compute_damping_coefs(22000, 0.2, cr)
+  --atm_compute_damping_coefs(22000, 0.2, cr)
 
 end
