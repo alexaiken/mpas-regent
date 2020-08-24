@@ -1024,3 +1024,321 @@ where reads writes(cell_region, edge_region, vertex_region) do
     cio.printf("Successfully written netcdf file!\n")
 
 end
+
+--input: cell_region, edge_region, vertex_region
+task write_output_plotting(cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
+where reads writes(cell_region, edge_region, vertex_region) do
+
+
+    ----------------------------------------------------
+    ------- TESTING CODE: WRITING NETCDF OUTPUT --------
+    ----------------------------------------------------
+
+    -- We create a netcdf file using the data in the regions, to test whether the data was written correctly.
+    cio.printf("Starting to write netcdf file..\n")
+    var ncid_copy = 65538
+
+    --Create a netcdf file
+    file_create("timestep_output.nc", &ncid_copy)
+
+    --Initialize the file's dimension variables
+    var nCells_dimid_copy : int
+    var nEdges_dimid_copy : int
+    var nVertices_dimid_copy : int
+    var maxEdges_dimid_copy : int
+    var maxEdges2_dimid_copy : int
+    var TWO_dimid_copy : int
+    var vertexDegree_dimid_copy : int
+    var nVertLevels_dimid_copy : int
+    var time_dimid_copy : int
+
+    --Define the dimension variables
+    --define_dim(ncid: int, dim_name: &int, dim_size: int, dim_id_ptr: &int)
+    define_dim(ncid_copy, "nCells", nCells, &nCells_dimid_copy)
+    define_dim(ncid_copy, "nEdges", nEdges, &nEdges_dimid_copy)
+    define_dim(ncid_copy, "nVertices", nVertices, &nVertices_dimid_copy)
+    define_dim(ncid_copy, "maxEdges", maxEdges, &maxEdges_dimid_copy)
+    define_dim(ncid_copy, "maxEdges2", maxEdges2, &maxEdges2_dimid_copy)
+    define_dim(ncid_copy, "TWO", TWO, &TWO_dimid_copy)
+    define_dim(ncid_copy, "vertexDegree", vertexDegree, &vertexDegree_dimid_copy)
+    define_dim(ncid_copy, "nVertLevels", nVertLevels, &nVertLevels_dimid_copy)
+    define_dim(ncid_copy, "Time", netcdf.NC_UNLIMITED, &time_dimid_copy)
+
+    --For the 2D variables, the dimIDs need to be put in arrays
+    var nEdges_TWO_dimids = array(nEdges_dimid_copy, TWO_dimid_copy)
+    var nCells_maxEdges_dimids = array(nCells_dimid_copy, maxEdges_dimid_copy)
+    var nEdges_maxEdges2_dimids = array(nEdges_dimid_copy, maxEdges2_dimid_copy)
+    var nVertices_vertexDegree_dimids = array(nVertices_dimid_copy, vertexDegree_dimid_copy)
+
+    --Initialize the variable IDs
+    var latCell_varid_copy : int
+    var lonCell_varid_copy : int
+    var meshDensity_varid_copy : int
+    var xCell_varid_copy : int
+    var yCell_varid_copy : int
+    var zCell_varid_copy : int
+    var indexToCellID_varid_copy : int
+    var latEdge_varid_copy : int
+    var lonEdge_varid_copy : int
+    var xEdge_varid_copy : int
+    var yEdge_varid_copy : int
+    var zEdge_varid_copy : int
+    var indexToEdgeID_varid_copy : int
+    var latVertex_varid_copy : int
+    var lonVertex_varid_copy : int
+    var xVertex_varid_copy : int
+    var yVertex_varid_copy : int
+    var zVertex_varid_copy : int
+    var indexToVertexID_varid_copy : int
+    var cellsOnEdge_varid_copy : int
+    var nEdgesOnCell_varid_copy : int
+    var nEdgesOnEdge_varid_copy : int
+    var edgesOnCell_varid_copy : int
+    var edgesOnEdge_varid_copy : int
+    var weightsOnEdge_varid_copy : int
+    var dvEdge_varid_copy : int
+    var dv1Edge_varid_copy : int
+    var dv2Edge_varid_copy : int
+    var dcEdge_varid_copy : int
+    var angleEdge_varid_copy : int
+    var areaCell_varid_copy : int
+    var areaTriangle_varid_copy : int
+    var cellsOnCell_varid_copy : int
+    var verticesOnCell_varid_copy : int
+    var verticesOnEdge_varid_copy : int
+    var edgesOnVertex_varid_copy : int
+    var cellsOnVertex_varid_copy : int
+    var kiteAreasOnVertex_varid_copy : int
+
+    --Define the variable IDs
+    define_var(ncid_copy, "latCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &latCell_varid_copy)
+    define_var(ncid_copy, "lonCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &lonCell_varid_copy)
+    define_var(ncid_copy, "meshDensity", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &meshDensity_varid_copy)
+    define_var(ncid_copy, "xCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &xCell_varid_copy)
+    define_var(ncid_copy, "yCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &yCell_varid_copy)
+    define_var(ncid_copy, "zCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &zCell_varid_copy)
+    define_var(ncid_copy, "indexToCellID", netcdf.NC_INT, 1, &nCells_dimid_copy, &indexToCellID_varid_copy)
+    define_var(ncid_copy, "latEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &latEdge_varid_copy)
+    define_var(ncid_copy, "lonEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &lonEdge_varid_copy)
+    define_var(ncid_copy, "xEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &xEdge_varid_copy)
+    define_var(ncid_copy, "yEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &yEdge_varid_copy)
+    define_var(ncid_copy, "zEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &zEdge_varid_copy)
+    define_var(ncid_copy, "indexToEdgeID", netcdf.NC_INT, 1, &nEdges_dimid_copy, &indexToEdgeID_varid_copy)
+    define_var(ncid_copy, "latVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &latVertex_varid_copy)
+    define_var(ncid_copy, "lonVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &lonVertex_varid_copy)
+    define_var(ncid_copy, "xVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &xVertex_varid_copy)
+    define_var(ncid_copy, "yVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &yVertex_varid_copy)
+    define_var(ncid_copy, "zVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &zVertex_varid_copy)
+    define_var(ncid_copy, "indexToVertexID", netcdf.NC_INT, 1, &nVertices_dimid_copy, &indexToVertexID_varid_copy)
+    define_var(ncid_copy, "cellsOnEdge", netcdf.NC_INT, 2, nEdges_TWO_dimids, &cellsOnEdge_varid_copy)
+    define_var(ncid_copy, "nEdgesOnCell", netcdf.NC_INT, 1, &nCells_dimid_copy, &nEdgesOnCell_varid_copy)
+    define_var(ncid_copy, "nEdgesOnEdge", netcdf.NC_INT, 1, &nEdges_dimid_copy, &nEdgesOnEdge_varid_copy)
+    define_var(ncid_copy, "edgesOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &edgesOnCell_varid_copy)
+    define_var(ncid_copy, "edgesOnEdge", netcdf.NC_INT, 2, nEdges_maxEdges2_dimids, &edgesOnEdge_varid_copy)
+    define_var(ncid_copy, "weightsOnEdge", netcdf.NC_DOUBLE, 2, nEdges_maxEdges2_dimids, &weightsOnEdge_varid_copy)
+    define_var(ncid_copy, "dvEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dvEdge_varid_copy)
+    define_var(ncid_copy, "dv1Edge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv1Edge_varid_copy)
+    define_var(ncid_copy, "dv2Edge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv2Edge_varid_copy)
+    define_var(ncid_copy, "dcEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dcEdge_varid_copy)
+    define_var(ncid_copy, "angleEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &angleEdge_varid_copy)
+    define_var(ncid_copy, "areaCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &areaCell_varid_copy)
+    define_var(ncid_copy, "areaTriangle", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &areaTriangle_varid_copy)
+    define_var(ncid_copy, "cellsOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &cellsOnCell_varid_copy)
+    define_var(ncid_copy, "verticesOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &verticesOnCell_varid_copy)
+    define_var(ncid_copy, "verticesOnEdge", netcdf.NC_INT, 2, nEdges_TWO_dimids, &verticesOnEdge_varid_copy)
+    define_var(ncid_copy, "edgesOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &edgesOnVertex_varid_copy)
+    define_var(ncid_copy, "cellsOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &cellsOnVertex_varid_copy)
+    define_var(ncid_copy, "kiteAreasOnVertex", netcdf.NC_DOUBLE, 2, nVertices_vertexDegree_dimids, &kiteAreasOnVertex_varid_copy)
+
+    --This function signals that we're done writing the metadata.
+    end_def(ncid_copy)
+
+    --Now define the new arrays to hold the data that will be put in the netcdf files
+    var latCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var lonCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var meshDensity_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var xCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var yCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var zCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var indexToCellID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells))
+    var latEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var lonEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var xEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var yEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var zEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var indexToEdgeID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges))
+    var latVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
+    var lonVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
+    var xVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
+    var yVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
+    var zVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
+    var indexToVertexID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices))
+    var cellsOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
+    var nEdgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells))
+    var nEdgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges))
+    var edgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
+    var edgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*maxEdges2))
+    var weightsOnEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges*maxEdges2))
+    var dvEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var dv1Edge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var dv2Edge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var dcEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var angleEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var areaCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var areaTriangle_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
+    var cellsOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
+    var verticesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
+    var verticesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
+    var edgesOnVertex_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
+    var cellsOnVertex_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
+    var kiteAreasOnVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices*vertexDegree))
+
+    --Now we copy the data into the arrays so they can be read into the netcdf files
+    for i = 0, nCells do
+        latCell_in_copy[i] = cell_region[{i, 0}].lat
+        lonCell_in_copy[i] = cell_region[{i, 0}].lon
+        xCell_in_copy[i] = cell_region[{i, 0}].x
+        yCell_in_copy[i] = cell_region[{i, 0}].y
+        zCell_in_copy[i] = cell_region[{i, 0}].z
+        indexToCellID_in_copy[i] = cell_region[{i, 0}].cellID
+        meshDensity_in_copy[i] = cell_region[{i, 0}].meshDensity
+        nEdgesOnCell_in_copy[i] = cell_region[{i, 0}].nEdgesOnCell
+        areaCell_in_copy[i] = cell_region[{i, 0}].areaCell
+
+        for j = 0, maxEdges do
+            edgesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].edgesOnCell[j]
+            verticesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].verticesOnCell[j]
+            cellsOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].cellsOnCell[j]
+        end
+        --cio.printf("Cell COPY : Cell ID %d, nEdgesOnCell is %d\n", indexToCellID_in_copy[i], nEdgesOnCell_in_copy[i])
+    end
+
+    for i = 0, nEdges do
+        latEdge_in_copy[i] = edge_region[{i, 0}].lat
+        lonEdge_in_copy[i] = edge_region[{i, 0}].lon
+        xEdge_in_copy[i] = edge_region[{i, 0}].x
+        yEdge_in_copy[i] = edge_region[{i, 0}].y
+        zEdge_in_copy[i] = edge_region[{i, 0}].z
+        indexToEdgeID_in_copy[i] = edge_region[{i, 0}].edgeID
+        nEdgesOnEdge_in_copy[i] = edge_region[{i, 0}].nEdgesOnEdge
+        dvEdge_in_copy[i] = edge_region[{i, 0}].dvEdge
+        dv1Edge_in_copy[i] = edge_region[{i, 0}].dv1Edge
+        dv2Edge_in_copy[i] = edge_region[{i, 0}].dv2Edge
+        dcEdge_in_copy[i] = edge_region[{i, 0}].dcEdge
+        angleEdge_in_copy[i] = edge_region[{i, 0}].angleEdge
+
+        for j = 0, TWO do
+            cellsOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].cellsOnEdge[j]
+            verticesOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].verticesOnEdge[j]
+        end
+
+        for j = 0, maxEdges2 do
+            edgesOnEdge_in_copy[i*maxEdges2 + j] = edge_region[{i, 0}].edgesOnEdge_ECP[j]
+            weightsOnEdge_in_copy[i*maxEdges2 + j] = edge_region[{i, 0}].weightsOnEdge[j]
+        end
+    end
+
+    for i = 0, nVertices do
+        latVertex_in_copy[i] = vertex_region[{i, 0}].lat
+        lonVertex_in_copy[i] = vertex_region[{i, 0}].lon
+        xVertex_in_copy[i] = vertex_region[{i, 0}].x
+        yVertex_in_copy[i] = vertex_region[{i, 0}].y
+        zVertex_in_copy[i] = vertex_region[{i, 0}].z
+        indexToVertexID_in_copy[i] = vertex_region[{i, 0}].vertexID
+        areaTriangle_in_copy[i] = vertex_region[{i, 0}].areaTriangle
+
+        for j = 0, vertexDegree do
+            edgesOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].edgesOnVertex[j]
+            cellsOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].cellsOnVertex[j]
+            kiteAreasOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].kiteAreasOnVertex[j]
+        end
+    end
+
+
+    --Now we put the data into the netcdf file.
+    put_var_double(ncid_copy, latCell_varid_copy, latCell_in_copy)
+    put_var_double(ncid_copy, lonCell_varid_copy, lonCell_in_copy)
+    put_var_double(ncid_copy, meshDensity_varid_copy, meshDensity_in_copy)
+    put_var_double(ncid_copy, xCell_varid_copy, xCell_in_copy)
+    put_var_double(ncid_copy, yCell_varid_copy, yCell_in_copy)
+    put_var_double(ncid_copy, zCell_varid_copy, zCell_in_copy)
+    put_var_int(ncid_copy, indexToCellID_varid_copy, indexToCellID_in_copy)
+    put_var_int(ncid_copy, nEdgesOnCell_varid_copy, nEdgesOnCell_in_copy)
+    put_var_double(ncid_copy, areaCell_varid_copy, areaCell_in_copy)
+    put_var_int(ncid_copy, edgesOnCell_varid_copy, edgesOnCell_in_copy)
+    put_var_int(ncid_copy, verticesOnCell_varid_copy, verticesOnCell_in_copy)
+    put_var_int(ncid_copy, cellsOnCell_varid_copy, cellsOnCell_in_copy)
+
+    put_var_double(ncid_copy, latEdge_varid_copy, latEdge_in_copy)
+    put_var_double(ncid_copy, lonEdge_varid_copy, lonEdge_in_copy)
+    put_var_double(ncid_copy, xEdge_varid_copy, xEdge_in_copy)
+    put_var_double(ncid_copy, yEdge_varid_copy, yEdge_in_copy)
+    put_var_double(ncid_copy, zEdge_varid_copy, zEdge_in_copy)
+    put_var_int(ncid_copy, indexToEdgeID_varid_copy, indexToEdgeID_in_copy)
+    put_var_int(ncid_copy, nEdgesOnEdge_varid_copy, nEdgesOnEdge_in_copy)
+    put_var_double(ncid_copy, dvEdge_varid_copy, dvEdge_in_copy)
+    put_var_double(ncid_copy, dv1Edge_varid_copy, dv1Edge_in_copy)
+    put_var_double(ncid_copy, dv2Edge_varid_copy, dv2Edge_in_copy)
+    put_var_double(ncid_copy, dcEdge_varid_copy, dcEdge_in_copy)
+    put_var_double(ncid_copy, angleEdge_varid_copy, angleEdge_in_copy)
+    put_var_int(ncid_copy, cellsOnEdge_varid_copy, cellsOnEdge_in_copy)
+    put_var_int(ncid_copy, verticesOnEdge_varid_copy, verticesOnEdge_in_copy)
+    put_var_int(ncid_copy, edgesOnEdge_varid_copy, edgesOnEdge_in_copy)
+    put_var_double(ncid_copy, weightsOnEdge_varid_copy, weightsOnEdge_in_copy)
+
+    put_var_double(ncid_copy, latVertex_varid_copy, latVertex_in_copy)
+    put_var_double(ncid_copy, lonVertex_varid_copy, lonVertex_in_copy)
+    put_var_double(ncid_copy, xVertex_varid_copy, xVertex_in_copy)
+    put_var_double(ncid_copy, yVertex_varid_copy, yVertex_in_copy)
+    put_var_double(ncid_copy, zVertex_varid_copy, zVertex_in_copy)
+    put_var_int(ncid_copy, indexToVertexID_varid_copy, indexToVertexID_in_copy)
+    put_var_double(ncid_copy, areaTriangle_varid_copy, areaTriangle_in_copy)
+    put_var_int(ncid_copy, edgesOnVertex_varid_copy, edgesOnVertex_in_copy)
+    put_var_int(ncid_copy, cellsOnVertex_varid_copy, cellsOnVertex_in_copy)
+    put_var_double(ncid_copy, kiteAreasOnVertex_varid_copy, kiteAreasOnVertex_in_copy)
+
+    -- Lastly, we free the allocated memory for the 'copy' arrays
+    c.free(latCell_in_copy)
+    c.free(lonCell_in_copy)
+    c.free(meshDensity_in_copy)
+    c.free(xCell_in_copy)
+    c.free(yCell_in_copy)
+    c.free(zCell_in_copy)
+    c.free(indexToCellID_in_copy)
+    c.free(latEdge_in_copy)
+    c.free(lonEdge_in_copy)
+    c.free(xEdge_in_copy)
+    c.free(yEdge_in_copy)
+    c.free(zEdge_in_copy)
+    c.free(indexToEdgeID_in_copy)
+    c.free(latVertex_in_copy)
+    c.free(lonVertex_in_copy)
+    c.free(xVertex_in_copy)
+    c.free(yVertex_in_copy)
+    c.free(zVertex_in_copy)
+    c.free(indexToVertexID_in_copy)
+    c.free(cellsOnEdge_in_copy)
+    c.free(nEdgesOnCell_in_copy)
+    c.free(nEdgesOnEdge_in_copy)
+    c.free(edgesOnCell_in_copy)
+    c.free(edgesOnEdge_in_copy)
+    c.free(weightsOnEdge_in_copy)
+    c.free(dvEdge_in_copy)
+    c.free(dv1Edge_in_copy)
+    c.free(dv2Edge_in_copy)
+    c.free(dcEdge_in_copy)
+    c.free(angleEdge_in_copy)
+    c.free(areaCell_in_copy)
+    c.free(areaTriangle_in_copy)
+    c.free(cellsOnCell_in_copy)
+    c.free(verticesOnCell_in_copy)
+    c.free(verticesOnEdge_in_copy)
+    c.free(edgesOnVertex_in_copy)
+    c.free(cellsOnVertex_in_copy)
+    c.free(kiteAreasOnVertex_in_copy)
+
+    -- Close the file
+    file_close(ncid_copy)
+    cio.printf("Successfully written netcdf file!\n")
+
+end

@@ -276,7 +276,7 @@ end
 --Tendency variables: tend_rw, tend_rt, tend_rho (added to CR), tend_ru (added to ER). Not in registry
 --Other variables not in registry: rs, ts: added to CR as part of vertical grid, ru_Avg (added to ER)
 
-task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, gravity : double, dts : double, config_epssm: double, small_step : int, nCellsSolve : int)
+task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, gravity : double, dts : double, config_epssm: double, small_step : int) -- nCellsSolve : int)
 where reads writes (er, cr, vert_r) do
   var epssm = config_epssm
   var rcv = rgas / (cp - rgas)
@@ -294,18 +294,18 @@ where reads writes (er, cr, vert_r) do
       var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
       var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
-      if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+      --if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
 
-        for k = 0, nVertLevels do
-          var pgrad = ((cr[{cell2, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp) * er[{iEdge, 0}].invDcEdge) / (0.5 * (cr[{cell2, k}].zz +cr[{cell1, k}].zz))
-          pgrad = er[{iEdge, k}].cqu * 0.5 * c2 * (cr[{cell1, k}].exner + cr[{cell2, k}].exner) * pgrad
-          pgrad = pgrad + 0.5 * er[{iEdge, k}].zxu * gravity * (cr[{cell1, k}].rho_pp + cr[{cell2, k}].rho_pp)
-          er[{iEdge, k}].ru_p = er[{iEdge, k}].ru_p + dts * (er[{iEdge, k}].tend_ru - (1.0 - er[{iEdge, 0}].specZoneMaskEdge) * pgrad)  --NEEDS FIXING
-        end
-        for k = 0, nVertLevels do
-          er[{iEdge, k}].ruAvg = er[{iEdge, k}].ruAvg + er[{iEdge, k}].ru_p
-        end
-      end
+        --for k = 0, nVertLevels do
+          --var pgrad = ((cr[{cell2, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp) * er[{iEdge, 0}].invDcEdge) / (0.5 * (cr[{cell2, k}].zz +cr[{cell1, k}].zz))
+          --pgrad = er[{iEdge, k}].cqu * 0.5 * c2 * (cr[{cell1, k}].exner + cr[{cell2, k}].exner) * pgrad
+          --pgrad = pgrad + 0.5 * er[{iEdge, k}].zxu * gravity * (cr[{cell1, k}].rho_pp + cr[{cell2, k}].rho_pp)
+          --er[{iEdge, k}].ru_p = er[{iEdge, k}].ru_p + dts * (er[{iEdge, k}].tend_ru - (1.0 - er[{iEdge, 0}].specZoneMaskEdge) * pgrad)  --NEEDS FIXING
+        --end
+        --for k = 0, nVertLevels do
+          --er[{iEdge, k}].ruAvg = er[{iEdge, k}].ruAvg + er[{iEdge, k}].ru_p
+        --end
+      --end
     end
 
   else
@@ -313,17 +313,17 @@ where reads writes (er, cr, vert_r) do
       var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
       var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
-      if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+      --if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
 
-        for k = 0, nVertLevels do
-          er[{iEdge, k}].ru_p = dts * er[{iEdge, k}].tend_ru
-        end
+        --for k = 0, nVertLevels do
+          --er[{iEdge, k}].ru_p = dts * er[{iEdge, k}].tend_ru
+        --end
 
-        for k = 0, nVertLevels do
-          er[{iEdge, k}].ruAvg = er[{iEdge, k}].ru_p
-        end
+        --for k = 0, nVertLevels do
+          --er[{iEdge, k}].ruAvg = er[{iEdge, k}].ru_p
+        --end
 
-      end
+      --end
     end
   end
 

@@ -5,6 +5,7 @@ require "netcdf_tasks"
 require "mesh_loading"
 require "init_atm_cases"
 require "dynamics_tasks"
+require "rk_timestep"
 
 local c = regentlib.c
 local cio = terralib.includec("stdio.h")
@@ -29,6 +30,8 @@ local rv = 461.6
 local cp = 7.0*rgas/2.0
 local gravity = 9.80616
 local rvord = rv/rgas
+--local config_dt = 720.0 --registry.xml
+local config_epssm = 0.1
 
 task main()
   -------------------------------------------
@@ -58,7 +61,9 @@ task main()
 
   atm_core_init(cell_region, edge_region, vertex_region, vertical_region, rgas, cp, rvord)
 
-  --atm_timestep(dt : double, vertex_region, edge_region, cell_region, vertical_region)
+  atm_timestep(1, vertex_region, edge_region, cell_region, vertical_region, config_epssm, rgas, cp, gravity)
+
+  atm_compute_output_diagnostics(cell_region, rvord)
 
   write_output(cell_region, edge_region, vertex_region)
 
