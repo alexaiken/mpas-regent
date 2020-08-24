@@ -212,7 +212,7 @@ fspace cell_fs {
     hx : double, -- type="real" dimensions="nVertLevelsP1 nCells" units="m" description="terrain influence in vertical coordinate, $h_s(x,y,\zeta)$ in Klemp (MWR 2011)"
    surface_pressure : double, -- type="real" dimensions="nCells Time" units="Pa" description="Diagnosed surface pressure"
 
-    qv : double, -- member of scalars superarray 
+    qv : double, -- member of scalars superarray
     ----vars first seen in atm_compute_solve_diagnostics_work--
     h : double, --type="real"     dimensions="nVertLevels nCells Time"
     ke : double, --type="real"     dimensions="nVertLevels nCells Time"
@@ -228,6 +228,9 @@ fspace cell_fs {
     theta : double, --type="real" dimensions="nVertLevels nCells Time" units="K" description="Potential temperature"/>
     rho_p : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="rho/zz perturbation from the reference state value, advanced over acoustic steps"/>
     theta_base : double, --type="real" dimensions="nVertLevels nCells Time" units="K" description="Base state potential temperature"/>
+
+    --vars first seen in atm_compute_output_diagnostics --
+    pressure : double --type="real" dimensions="nVertLevels nCells Time" units="Pa" description="Pressure"/>
 }
 
 
@@ -294,7 +297,7 @@ fspace edge_fs {
 
     tend_ru : double, -- NOT IN REGISTRY
     ruAvg : double, -- NOT IN REGISTRY
-    
+
     fEdge : double, --type="real" dimensions="nEdges" units="unitless" description="Coriolis parameter at an edge"
 
     -- vars first seen in atm_compute_solve_diagnostics_work --

@@ -758,6 +758,21 @@ where reads writes (cr, er, vert_r) do
 
 end
 
+--Constants: rvord (From mpas_constants.F)
+--Not sure how to translate: scalars(index_qv,k,iCell)
+task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs), rvord : double)
+where reads writes (cr) do
+
+  for iCell = 1, nCells do
+    for k = 0, nVertLevels do
+      --cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1 + rvord * scalars(index_qv,k,iCell))
+      cr[{iCell, k}].rho = cr[{iCell, k}].rho_zz * cr[{iCell, k}].zz
+      cr[{iCell, k}].pressure = cr[{iCell, k}].pressure_base + cr[{iCell, k}].pressure_p
+    end
+  end
+
+end
+
 task atm_compute_dyn_tend()
   cio.printf("computing dynamic tendencies\n")
 end
