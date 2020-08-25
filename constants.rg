@@ -13,6 +13,7 @@ constants.FILE_NAME = "mesh_loading/x1.2562.grid.nc"
 constants.GRAPH_FILE_NAME = "mesh_loading/x1.2562.graph.info.part.16"
 constants.NUM_PARTITIONS = 16
 constants.MAXCHAR = 5
+constants.NUM_TIMESTEPS = 10
 
 constants.nCells = 2562
 constants.nEdges = 7680
@@ -30,6 +31,7 @@ constants.cp = 7.0*constants.rgas/2.0
 constants.gravity = 9.80616
 constants.rvord = constants.rv/constants.rgas
 constants.config_epssm = 0.1
+
 
 
 

@@ -154,6 +154,7 @@ where reads writes (cr, er, vr, vert_r) do
 
 end
 
+--__demand(__cuda)
 task atm_timestep(dt : double,
                   vr : region(ispace(int2d), vertex_fs),
                   er : region(ispace(int2d), edge_fs),

@@ -17,7 +17,7 @@ local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
 
-
+--__demand(__cuda)
 task init_atm_case_jw(vr : region(ispace(int2d), vertex_fs),
                       er : region(ispace(int2d), edge_fs),
                       cr : region(ispace(int2d), cell_fs),
@@ -74,6 +74,7 @@ where reads writes(vr, er, cr, vertr) do
     cr[{iCell, 0}].z = cr[{iCell, 0}].z * sphere_radius
     cr[{iCell, 0}].areaCell = cr[{iCell, 0}].areaCell * cmath.pow(sphere_radius, 2.0)
   end
+
   for iVert = 0, nVertices do
     vr[{iVert, 0}].x = vr[{iVert, 0}].x * sphere_radius
     vr[{iVert, 0}].y = vr[{iVert, 0}].y * sphere_radius
@@ -83,8 +84,8 @@ where reads writes(vr, er, cr, vertr) do
       vr[{iVert, 0}].kiteAreasOnVertex[vertexDegree] = vr[{iVert, 0}].kiteAreasOnVertex[vertexDegree] * cmath.pow(sphere_radius, 2.0)
     end
   end
-  for iEdge = 0, nEdges do
 
+  for iEdge = 0, nEdges do
     er[{iEdge, 0}].x = er[{iEdge, 0}].x * sphere_radius
     er[{iEdge, 0}].y = er[{iEdge, 0}].y * sphere_radius
     er[{iEdge, 0}].z = er[{iEdge, 0}].z * sphere_radius

@@ -775,6 +775,7 @@ end
 
 --Constants: rvord (From mpas_constants.F)
 --Not sure how to translate: scalars(index_qv,k,iCell)
+--__demand(__cuda)
 task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs), rvord : double)
 where reads writes (cr) do
 
@@ -812,7 +813,7 @@ task atm_rk_dynamics_substep_finish()
   cio.printf("finishing substep\n")
 end
 
-
+--__demand(__cuda)
 task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, rvord : double)
 where reads writes (cr, er, vr, vert_r) do
 

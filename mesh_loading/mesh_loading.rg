@@ -23,7 +23,7 @@ end
 
 --FILE_NAME, GRAPH_FILE_NAME
 --return: cell_region, edge_region, vertex_region
-task load_mesh(cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
+task load_mesh(cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs), file_name : regentlib.string, graph_file_name : regentlib.string)
 where reads writes(cell_region, edge_region, vertex_region) do
 
     -------------------------------------------
@@ -33,7 +33,7 @@ where reads writes(cell_region, edge_region, vertex_region) do
     var ncid : int
 
     -- Open the file and store the NCID
-    open_file(&ncid, constants.FILE_NAME)
+    open_file(&ncid, [rawstring](file_name))
 
     -- Define the variable IDs
     var latCell_varid : int
@@ -198,7 +198,7 @@ where reads writes(cell_region, edge_region, vertex_region) do
     get_var_double(ncid, kiteAreasOnVertex_varid, kiteAreasOnVertex_in)
 
 
-    var partition_array = read_file(constants.GRAPH_FILE_NAME)
+    var partition_array = read_file([rawstring](graph_file_name))
 
     ----------------------------------
     ----- COPY DATA INTO REGIONS -----

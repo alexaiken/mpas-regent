@@ -29,7 +29,7 @@ task main()
 
 
   --TODO: Pass in FILE_NAME and GRAPH_FILE_NAME: how to pass strings?
-  load_mesh(cell_region, edge_region, vertex_region)
+  load_mesh(cell_region, edge_region, vertex_region, constants.FILE_NAME, constants.GRAPH_FILE_NAME)
 
   --TODO: This doesn't actually return the halos yet (It creates them in the task but I haven't been able to return them). Need to return the halos.
   partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
@@ -38,7 +38,9 @@ task main()
 
   atm_core_init(cell_region, edge_region, vertex_region, vertical_region, constants.rgas, constants.cp, constants.rvord)
 
-  atm_timestep(1, vertex_region, edge_region, cell_region, vertical_region, constants.config_epssm, constants.rgas, constants.cp, constants.gravity)
+  for i = 0, constants.NUM_TIMESTEPS do
+    atm_timestep(1, vertex_region, edge_region, cell_region, vertical_region, constants.config_epssm, constants.rgas, constants.cp, constants.gravity)
+  end
 
   atm_compute_output_diagnostics(cell_region, constants.rvord)
 
