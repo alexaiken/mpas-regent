@@ -1,16 +1,6 @@
 import "regent"
 
-
-local nCells = 2562
-local nEdges = 7680
-local nVertices = 5120
-local maxEdges = 10
-local maxEdges2 = 20
-local TWO = 2
-local FIFTEEN = 15
-local vertexDegree = 3
-local nVertLevels = 1
-
+local constants = require("constants")
 
 -----------------------------------------------
 ------- FIELD SPACES FOR MESH ELEMENTS --------
@@ -28,10 +18,10 @@ fspace cell_fs {
     nEdgesOnCell : int,
     areaCell : double,
     partitionNumber: int1d,
-    edgesOnCell : int[maxEdges],
-    cellsOnCell : int[maxEdges],
-    verticesOnCell : int[maxEdges],
-    evc : int[3*maxEdges],   --edge pair associated with vertex v and mesh cell i. This is stored as (vertexID, edge1, edge2), and each cell has 10 of those triples arranged sequentially in the array
+    edgesOnCell : int[constants.maxEdges],
+    cellsOnCell : int[constants.maxEdges],
+    verticesOnCell : int[constants.maxEdges],
+    evc : int[3*constants.maxEdges],   --edge pair associated with vertex v and mesh cell i. This is stored as (vertexID, edge1, edge2), and each cell has 10 of those triples arranged sequentially in the array
 
     -----------begin halo fields------------------
     neighbor0 : int1d,
@@ -163,13 +153,13 @@ fspace cell_fs {
     zz : double, -- cell + level dependent
     dss : double, -- cell + level dependent: "w-damping coefficient"
 
-    zb_cell : double[maxEdges], -- cell + level dependent
-    zb3_cell : double[maxEdges], -- cell + level dependent
+    zb_cell : double[constants.maxEdges], -- cell + level dependent
+    zb3_cell : double[constants.maxEdges], -- cell + level dependent
 
     -----------begin dynamics fields--------------
     rho : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Dry air density"
-    kiteForCell : int[maxEdges], --Index of kite in kiteAreasOnVertex that lies within a cell for each of verticesOnCell
-    edgesOnCellSign : double[maxEdges], --Sign for edges surrounding a cell: positive for positive outward normal velocity
+    kiteForCell : int[constants.maxEdges], --Index of kite in kiteAreasOnVertex that lies within a cell for each of verticesOnCell
+    edgesOnCellSign : double[constants.maxEdges], --Sign for edges surrounding a cell: positive for positive outward normal velocity
 
     rtheta_pp : double,  --rho*theta_m/zz perturbation from rtheta_p. dimensions="nVertLevels nCells Time". units="kg K m^{-3}"
     rtheta_pp_old : double,  --"old time level values of rho*theta_m/zz perturbation from rtheta_p, used in 3D divergence damping". "nVertLevels nCells Time"
@@ -201,7 +191,7 @@ fspace cell_fs {
 
     w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-1}" description="Vertical velocity at vertical cell faces"
     specZoneMaskCell: double, --type="real" dimensions="nCells" default_value="0.0" units="-" description="0/1 mask on cells, defined as 1 for cells in the limited-area specified zone"/>
-    edgesOnCell_sign: double[maxEdges], --TODO: duplicate of edgesOnCellSign; type="real" dimensions="maxEdges nCells" units="-" description="Sign for edges surrounding a cell: positive for positive outward normal velocity"
+    edgesOnCell_sign: double[constants.maxEdges], --TODO: duplicate of edgesOnCellSign; type="real" dimensions="maxEdges nCells" units="-" description="Sign for edges surrounding a cell: positive for positive outward normal velocity"
     cqw : double, -- type = "reel" dimensions="nVertLevels nCells Time" units="unitless" description="rho_d/rho_m at w points"
     qtot : double, -- defined in timestep for use in compute_dyn_tend and other subroutines
     rho_base : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Base state dry air density"
@@ -230,7 +220,9 @@ fspace cell_fs {
     theta_base : double, --type="real" dimensions="nVertLevels nCells Time" units="K" description="Base state potential temperature"/>
 
     --vars first seen in atm_compute_output_diagnostics --
-    pressure : double --type="real" dimensions="nVertLevels nCells Time" units="Pa" description="Pressure"/>
+    pressure : double --type="real" dimensions="nVertLevels nCells Time" units="Pa" description="Pressure"
+
+
 }
 
 
@@ -243,12 +235,12 @@ fspace vertex_fs {
     y : double,
     z : double,
     areaTriangle : double,
-    edgesOnVertex : int[vertexDegree],
-    cellsOnVertex : int[vertexDegree],
-    kiteAreasOnVertex : double[vertexDegree],
+    edgesOnVertex : int[constants.vertexDegree],
+    cellsOnVertex : int[constants.vertexDegree],
+    kiteAreasOnVertex : double[constants.vertexDegree],
 
     -----------begin dynamics fields--------------
-    edgesOnVertexSign : double[vertexDegree], --Sign for edges incident with a vertex: positive for po    sitive inward tengential velocity
+    edgesOnVertexSign : double[constants.vertexDegree], --Sign for edges incident with a vertex: positive for po    sitive inward tengential velocity
     fVertex : double, --type="real" dimensions="nVertices" units="unitless" description="Coriolis parameter at a vertex"
       ----vars first seen in atm_compute_solve_diagnostics_work--
     vorticity : double,  --type="real"     dimensions="nVertLevels nVertices Time"
@@ -270,24 +262,24 @@ fspace edge_fs {
     dv2Edge : double,
     dcEdge : double,
     angleEdge : double,
-    cellsOnEdge : int[TWO],
-    verticesOnEdge : int[TWO],
-    edgesOnEdge_ECP : int[maxEdges2],
-    weightsOnEdge : double[maxEdges2],
+    cellsOnEdge : int[constants.TWO],
+    verticesOnEdge : int[constants.TWO],
+    edgesOnEdge_ECP : int[constants.maxEdges2],
+    weightsOnEdge : double[constants.maxEdges2],
 
     -----------begin vertical structure ---------
 
     zxu : double, -- EDGE DEPENDENT
-    zb : double[TWO], -- EDGE DEPENDENT
-    zb3 : double[TWO], -- EDGE DEPENDENT
+    zb : double[constants.TWO], -- EDGE DEPENDENT
+    zb3 : double[constants.TWO], -- EDGE DEPENDENT
 
     -----------begin dynamics fields--------------
-    advCellsForEdge : int[FIFTEEN], --Cells used to reconstruct a cell-based field at an edge
+    advCellsForEdge : int[constants.FIFTEEN], --Cells used to reconstruct a cell-based field at an edge
     nAdvCellsForEdge : int, --Number of cells used to reconstruct a cell-based field at an edge
-    adv_coefs : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
-    adv_coefs_3rd : double[FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
+    adv_coefs : double[constants.FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
+    adv_coefs_3rd : double[constants.FIFTEEN], --Weighting coefficents used for reconstructing cell-based fields at edges
 
-    deriv_two : double[FIFTEEN * TWO], --weights for cell-centered second derivative, normal to edge, for transport scheme, TODO: where is it initialized?
+    deriv_two : double[constants.FIFTEEN * constants.TWO], --weights for cell-centered second derivative, normal to edge, for transport scheme, TODO: where is it initialized?
 
     invDcEdge : double, --"Inverse distance between cells separated by an edge"
     ru_p : double, --"acoustic perturbation horizontal momentum at cell edge  (rho*u/zz)" "nVertLevels nEdges Time"

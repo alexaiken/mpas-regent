@@ -1,6 +1,9 @@
 import "regent"
 require "data_structures"
 
+local constants = require("constants")
+
+
 --------------------------------------------------------------
 -------------NOTES ON PORTING OVER FROM MPAS FORTRAN----------
 --------------------------------------------------------------

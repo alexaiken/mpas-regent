@@ -2,37 +2,19 @@ import "regent"
 
 require "data_structures"
 require "netcdf_tasks"
-
-local c = regentlib.c
-local cio = terralib.includec("stdio.h")
-local clib = terralib.includec("stdlib.h")
+local constants = require("constants")
 
 terralib.linklibrary("/share/software/user/open/netcdf/4.4.1.1/lib/libnetcdf.so")
-local netcdf = terralib.includec("/share/software/user/open/netcdf/4.4.1.1/include/netcdf.h")
-
-local nCells = 2562
-local nEdges = 7680
-local nVertices = 5120
-local maxEdges = 10
-local maxEdges2 = 20
-local TWO = 2
-local vertexDegree = 3
-local nVertLevels = 1
-
-local FILE_NAME = "mesh_loading/x1.2562.grid.nc"
-local GRAPH_FILE_NAME = "mesh_loading/x1.2562.graph.info.part.16"
-local MAXCHAR = 5
-
 
 --Terra function to read the cell partitions from graph.info file. Returns an array where each element is the partition number of that cell index.
-terra read_file(file_name: &int8) : int[nCells]
-    var file = c.fopen(file_name, "r")
+terra read_file(file_name: &int8) : int[constants.nCells]
+    var file = constants.c.fopen(file_name, "r")
     regentlib.assert(file ~= nil, "failed to open graph.info file")
-    var str : int8[MAXCHAR]
-    var partition_array : int[nCells]
+    var str : int8[constants.MAXCHAR]
+    var partition_array : int[constants.nCells]
     var i = 0
-    while c.fgets(str, MAXCHAR, file) ~= nil do
-        partition_array[i] = c.atoi(str)
+    while constants.c.fgets(str, constants.MAXCHAR, file) ~= nil do
+        partition_array[i] = constants.c.atoi(str)
         i = i+1
     end
     return partition_array
@@ -47,11 +29,11 @@ where reads writes(cell_region, edge_region, vertex_region) do
     -------------------------------------------
     ----- READ VARIABLES FROM NETCDF FILE -----
     -------------------------------------------
-    cio.printf("Starting to read file... \n")
+    constants.cio.printf("Starting to read file... \n")
     var ncid : int
 
     -- Open the file and store the NCID
-    open_file(&ncid, FILE_NAME)
+    open_file(&ncid, constants.FILE_NAME)
 
     -- Define the variable IDs
     var latCell_varid : int
@@ -94,44 +76,44 @@ where reads writes(cell_region, edge_region, vertex_region) do
     var kiteAreasOnVertex_varid : int
 
     -- Define and malloc the data structures to store the variable values
-    var latCell_in : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var lonCell_in : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var meshDensity_in : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var xCell_in : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var yCell_in : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var zCell_in : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var indexToCellID_in : &int = [&int](c.malloc([sizeof(int)] * nCells))
-    var latEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var lonEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var xEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var yEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var zEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var indexToEdgeID_in : &int = [&int](c.malloc([sizeof(int)] * nEdges))
-    var latVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var lonVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var xVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var yVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var zVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var indexToVertexID_in : &int = [&int](c.malloc([sizeof(int)] * nVertices))
-    var cellsOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
-    var nEdgesOnCell_in : &int = [&int](c.malloc([sizeof(int)] * nCells))
-    var nEdgesOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges))
-    var edgesOnCell_in : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var edgesOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges*maxEdges2))
-    var weightsOnEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges*maxEdges2))
-    var dvEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dv1Edge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dv2Edge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dcEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var angleEdge_in : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var areaCell_in : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var areaTriangle_in : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var cellsOnCell_in : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var verticesOnCell_in : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var verticesOnEdge_in : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
-    var edgesOnVertex_in : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
-    var cellsOnVertex_in : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
-    var kiteAreasOnVertex_in : &double = [&double](c.malloc([sizeof(double)] * nVertices*vertexDegree))
+    var latCell_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var lonCell_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var meshDensity_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var xCell_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var yCell_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var zCell_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var indexToCellID_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells))
+    var latEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var lonEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var xEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var yEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var zEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var indexToEdgeID_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges))
+    var latVertex_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var lonVertex_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var xVertex_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var yVertex_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var zVertex_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var indexToVertexID_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices))
+    var cellsOnEdge_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.TWO))
+    var nEdgesOnCell_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells))
+    var nEdgesOnEdge_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges))
+    var edgesOnCell_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var edgesOnEdge_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.maxEdges2))
+    var weightsOnEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges*constants.maxEdges2))
+    var dvEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dv1Edge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dv2Edge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dcEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var angleEdge_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var areaCell_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var areaTriangle_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var cellsOnCell_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var verticesOnCell_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var verticesOnEdge_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.TWO))
+    var edgesOnVertex_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices*constants.vertexDegree))
+    var cellsOnVertex_in : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices*constants.vertexDegree))
+    var kiteAreasOnVertex_in : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices*constants.vertexDegree))
 
 
     -- Get the variable IDs of all the variables
@@ -216,14 +198,14 @@ where reads writes(cell_region, edge_region, vertex_region) do
     get_var_double(ncid, kiteAreasOnVertex_varid, kiteAreasOnVertex_in)
 
 
-    var partition_array = read_file(GRAPH_FILE_NAME)
+    var partition_array = read_file(constants.GRAPH_FILE_NAME)
 
     ----------------------------------
     ----- COPY DATA INTO REGIONS -----
     ----------------------------------
 
     -- Copy data into cell region
-    for i = 0, nCells do
+    for i = 0, constants.nCells do
         cell_region[{i, 0}].cellID = indexToCellID_in[i]
         cell_region[{i, 0}].lat = latCell_in[i]
         cell_region[{i, 0}].lon = lonCell_in[i]
@@ -235,21 +217,21 @@ where reads writes(cell_region, edge_region, vertex_region) do
         cell_region[{i, 0}].areaCell = areaCell_in[i]
         cell_region[{i, 0}].partitionNumber = partition_array[i]
 
-        --cio.printf("Cell : Cell ID %d, partitionNumber %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].partitionNumber)
+        --constants.cio.printf("Cell : Cell ID %d, partitionNumber %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].partitionNumber)
 
-        for j = 0, maxEdges do
-            cell_region[{i, 0}].edgesOnCell[j] = edgesOnCell_in[i*maxEdges + j] --cell_region[{i, 0}].edgesOnCell is a int[maxEdges]
-            cell_region[{i, 0}].verticesOnCell[j] = verticesOnCell_in[i*maxEdges + j] --cell_region[{i, 0}].verticesOnCell is a int[maxEdges]
-            cell_region[{i, 0}].cellsOnCell[j] = cellsOnCell_in[i*maxEdges + j] --cell_region[{i, 0}].cellsOnCell is a int[maxEdges]
-            --cio.printf("edgesOnCell : Cell %d, Edge %d: edge index is %d\n", i, j, cell_region[{i, 0}].edgesOnCell[j])
-            --cio.printf("verticesOnCell : Cell %d, Vertex %d: Vertex index is %d\n", i, j, cell_region[{i, 0}].verticesOnCell[j])
-            --cio.printf("cellsOnCell : InnerCell %d, OuterCell %d: Cell index is %d\n", i, j, cell_region[{i, 0}].cellsOnCell[j])
+        for j = 0, constants.maxEdges do
+            cell_region[{i, 0}].edgesOnCell[j] = edgesOnCell_in[i*constants.maxEdges + j] --cell_region[{i, 0}].edgesOnCell is a int[constants.maxEdges]
+            cell_region[{i, 0}].verticesOnCell[j] = verticesOnCell_in[i*constants.maxEdges + j] --cell_region[{i, 0}].verticesOnCell is a int[constants.maxEdges]
+            cell_region[{i, 0}].cellsOnCell[j] = cellsOnCell_in[i*constants.maxEdges + j] --cell_region[{i, 0}].cellsOnCell is a int[constants.maxEdges]
+            --constants.cio.printf("edgesOnCell : Cell %d, Edge %d: edge index is %d\n", i, j, cell_region[{i, 0}].edgesOnCell[j])
+            --constants.cio.printf("verticesOnCell : Cell %d, Vertex %d: Vertex index is %d\n", i, j, cell_region[{i, 0}].verticesOnCell[j])
+            --constants.cio.printf("cellsOnCell : InnerCell %d, OuterCell %d: Cell index is %d\n", i, j, cell_region[{i, 0}].cellsOnCell[j])
         end
-        --cio.printf("Cell : Cell ID %d, nEdgesOnCell is %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].nEdgesOnCell)
+        --constants.cio.printf("Cell : Cell ID %d, nEdgesOnCell is %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].nEdgesOnCell)
     end
 
     -- Copy data into edge region
-    for i = 0, nEdges do
+    for i = 0, constants.nEdges do
         edge_region[{i, 0}].edgeID = indexToEdgeID_in[i]
         edge_region[{i, 0}].lat = latEdge_in[i]
         edge_region[{i, 0}].lon = lonEdge_in[i]
@@ -264,24 +246,24 @@ where reads writes(cell_region, edge_region, vertex_region) do
         edge_region[{i, 0}].dcEdge = dcEdge_in[i]
 
 
-        for j = 0, TWO do
-            edge_region[{i, 0}].cellsOnEdge[j] = cellsOnEdge_in[i*TWO + j]
-            edge_region[{i, 0}].verticesOnEdge[j] = verticesOnEdge_in[i*TWO + j]
-            --cio.printf("cellsOnEdge : Edge %d, Cell %d is %d\n", i, j, edge_region[{i, 0}].cellsOnEdge[j])
-            --cio.printf("VerticesOnEdge : Edge %d: Vertex %d is $d\n", i, j, edge_region[{i, 0}].verticesOnEdge[j])
+        for j = 0, constants.TWO do
+            edge_region[{i, 0}].cellsOnEdge[j] = cellsOnEdge_in[i*constants.TWO + j]
+            edge_region[{i, 0}].verticesOnEdge[j] = verticesOnEdge_in[i*constants.TWO + j]
+            --constants.cio.printf("cellsOnEdge : Edge %d, Cell %d is %d\n", i, j, edge_region[{i, 0}].cellsOnEdge[j])
+            --constants.cio.printf("VerticesOnEdge : Edge %d: Vertex %d is $d\n", i, j, edge_region[{i, 0}].verticesOnEdge[j])
         end
 
-        for j = 0, maxEdges2 do
-            edge_region[{i, 0}].edgesOnEdge_ECP[j] = edgesOnEdge_in[i*maxEdges2 + j]
-            edge_region[{i, 0}].weightsOnEdge[j] = weightsOnEdge_in[i*maxEdges2 + j]
-            --cio.printf("edgesOnEdge_ECP : InnerEdge %d, OuterEdge %d is %d\n", i, j, edge_region[{i, 0}].edgesOnEdge_ECP[j])
-            --cio.printf("weightsOnEdge : Edge %d: Weight %d is $f\n", i, j, edge_region[{i, 0}].weightsOnEdge[j])
+        for j = 0, constants.maxEdges2 do
+            edge_region[{i, 0}].edgesOnEdge_ECP[j] = edgesOnEdge_in[i*constants.maxEdges2 + j]
+            edge_region[{i, 0}].weightsOnEdge[j] = weightsOnEdge_in[i*constants.maxEdges2 + j]
+            --constants.cio.printf("edgesOnEdge_ECP : InnerEdge %d, OuterEdge %d is %d\n", i, j, edge_region[{i, 0}].edgesOnEdge_ECP[j])
+            --constants.cio.printf("weightsOnEdge : Edge %d: Weight %d is $f\n", i, j, edge_region[{i, 0}].weightsOnEdge[j])
         end
-        --cio.printf("Edge: ID is %d, xEdge is %f, yEdge is %f, zEdge is %f \n", i, edge_region[{i, 0}].x, edge_region[{i, 0}].y, edge_region[{i, 0}].z)
+        --constants.cio.printf("Edge: ID is %d, xEdge is %f, yEdge is %f, zEdge is %f \n", i, edge_region[{i, 0}].x, edge_region[{i, 0}].y, edge_region[{i, 0}].z)
     end
 
     -- Copy data into vertex region
-    for i = 0, nVertices do
+    for i = 0, constants.nVertices do
         vertex_region[{i, 0}].vertexID = indexToVertexID_in[i]
         vertex_region[{i, 0}].lat = latVertex_in[i]
         vertex_region[{i, 0}].lon = lonVertex_in[i]
@@ -290,16 +272,16 @@ where reads writes(cell_region, edge_region, vertex_region) do
         vertex_region[{i, 0}].z = zVertex_in[i]
         vertex_region[{i, 0}].areaTriangle = areaTriangle_in[i]
 
-        for j = 0, vertexDegree do
-            vertex_region[{i, 0}].edgesOnVertex[j] = edgesOnVertex_in[i*vertexDegree + j]
-            vertex_region[{i, 0}].cellsOnVertex[j] = cellsOnVertex_in[i*vertexDegree + j]
-            vertex_region[{i, 0}].kiteAreasOnVertex[j] = kiteAreasOnVertex_in[i*vertexDegree + j]
+        for j = 0, constants.vertexDegree do
+            vertex_region[{i, 0}].edgesOnVertex[j] = edgesOnVertex_in[i*constants.vertexDegree + j]
+            vertex_region[{i, 0}].cellsOnVertex[j] = cellsOnVertex_in[i*constants.vertexDegree + j]
+            vertex_region[{i, 0}].kiteAreasOnVertex[j] = kiteAreasOnVertex_in[i*constants.vertexDegree + j]
 
-            --cio.printf("edgesOnVertex : Vertex %d, Edge %d: Edge index is %d\n", i, j, vertex_region[{i, 0}].edgesOnVertex[j])
-            --cio.printf("cellsOnVertex : Vertex %d, Cell %d: Cell index is %d\n", i, j, vertex_region[{i, 0}].cellsOnVertex[j])
-            --cio.printf("kiteAreasOnVertex : Vertex %d, Kite %d: Kite Area is %f\n", i, j, vertex_region[{i, 0}].kiteAreasOnVertex[j])
+            --constants.cio.printf("edgesOnVertex : Vertex %d, Edge %d: Edge index is %d\n", i, j, vertex_region[{i, 0}].edgesOnVertex[j])
+            --constants.cio.printf("cellsOnVertex : Vertex %d, Cell %d: Cell index is %d\n", i, j, vertex_region[{i, 0}].cellsOnVertex[j])
+            --constants.cio.printf("kiteAreasOnVertex : Vertex %d, Kite %d: Kite Area is %f\n", i, j, vertex_region[{i, 0}].kiteAreasOnVertex[j])
         end
-        --cio.printf("Vertex ID is %d, xVertex is %f, yVertex is %f, zVertex is %f \n", i, vertex_region[{i, 0}].x, vertex_region[{i, 0}].y, vertex_region[{i, 0}].z)
+        --constants.cio.printf("Vertex ID is %d, xVertex is %f, yVertex is %f, zVertex is %f \n", i, vertex_region[{i, 0}].x, vertex_region[{i, 0}].y, vertex_region[{i, 0}].z)
     end
 
     -------------------------
@@ -308,20 +290,20 @@ where reads writes(cell_region, edge_region, vertex_region) do
     --I know I should do something more intelligent to get the common elements: but for now we do a brute force search to get EVC
 
     --First, we iterate through the cells and get the edgesOnCell array for each cell
-    for i = 0, nCells do
+    for i = 0, constants.nCells do
         var curr_edgesOnCell = cell_region[{i, 0}].edgesOnCell
 
     --Then we iterate through the vertices of that cell
-        for j = 0, maxEdges do
+        for j = 0, constants.maxEdges do
             var currVertexID = cell_region[{i, 0}].verticesOnCell[j]
             cell_region[{i,0}].evc[j*3] = currVertexID
-            --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3, cell_region[{i, 0}].evc[j*3])
+            --constants.cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3, cell_region[{i, 0}].evc[j*3])
 
             if currVertexID == 0 then
                 cell_region[{i,0}].evc[j*3 + 1] = 0
                 cell_region[{i,0}].evc[j*3 + 2] = 0
-                --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + 1, cell_region[{i, 0}].evc[j*3 + 1])
-                --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + 2, cell_region[{i, 0}].evc[j*3 + 2])
+                --constants.cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + 1, cell_region[{i, 0}].evc[j*3 + 1])
+                --constants.cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + 2, cell_region[{i, 0}].evc[j*3 + 2])
 
             --If there is a vertex, we get the edges on that vertex
             elseif currVertexID ~= 0 then
@@ -329,12 +311,12 @@ where reads writes(cell_region, edge_region, vertex_region) do
                 var count = 1
 
                 --Then, we get overlapping edges between curr_edgesOnVertex and curr_edgesOnCell to get EVC
-                for k = 0, vertexDegree do
+                for k = 0, constants.vertexDegree do
                     var currEdgeID = curr_edgesOnVertex[k]
-                    for l = 0, maxEdges do
+                    for l = 0, constants.maxEdges do
                         if currEdgeID == curr_edgesOnCell[l] and count < 3 then
                             cell_region[{i,0}].evc[j*3 + count] = currEdgeID
-                            --cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + count, cell_region[{i, 0}].evc[j*3 + count])
+                            --constants.cio.printf("cell_region[%d].evc[%d] = %d\n", i, j*3 + count, cell_region[{i, 0}].evc[j*3 + count])
                             count = count+1
                         end
                     end
@@ -347,46 +329,46 @@ where reads writes(cell_region, edge_region, vertex_region) do
 	  file_close(ncid)
 
     -- Free allocated arrays
-    c.free(latCell_in)
-    c.free(lonCell_in)
-    c.free(meshDensity_in)
-    c.free(xCell_in)
-    c.free(yCell_in)
-    c.free(zCell_in)
-    c.free(indexToCellID_in)
-    c.free(latEdge_in)
-    c.free(lonEdge_in)
-    c.free(xEdge_in)
-    c.free(yEdge_in)
-    c.free(zEdge_in)
-    c.free(indexToEdgeID_in)
-    c.free(latVertex_in)
-    c.free(lonVertex_in)
-    c.free(xVertex_in)
-    c.free(yVertex_in)
-    c.free(zVertex_in)
-    c.free(indexToVertexID_in)
-    c.free(cellsOnEdge_in)
-    c.free(nEdgesOnCell_in)
-    c.free(nEdgesOnEdge_in)
-    c.free(edgesOnCell_in)
-    c.free(edgesOnEdge_in)
-    c.free(weightsOnEdge_in)
-    c.free(dvEdge_in)
-    c.free(dv1Edge_in)
-    c.free(dv2Edge_in)
-    c.free(dcEdge_in)
-    c.free(angleEdge_in)
-    c.free(areaCell_in)
-    c.free(areaTriangle_in)
-    c.free(cellsOnCell_in)
-    c.free(verticesOnCell_in)
-    c.free(verticesOnEdge_in)
-    c.free(edgesOnVertex_in)
-    c.free(cellsOnVertex_in)
-    c.free(kiteAreasOnVertex_in)
+    constants.c.free(latCell_in)
+    constants.c.free(lonCell_in)
+    constants.c.free(meshDensity_in)
+    constants.c.free(xCell_in)
+    constants.c.free(yCell_in)
+    constants.c.free(zCell_in)
+    constants.c.free(indexToCellID_in)
+    constants.c.free(latEdge_in)
+    constants.c.free(lonEdge_in)
+    constants.c.free(xEdge_in)
+    constants.c.free(yEdge_in)
+    constants.c.free(zEdge_in)
+    constants.c.free(indexToEdgeID_in)
+    constants.c.free(latVertex_in)
+    constants.c.free(lonVertex_in)
+    constants.c.free(xVertex_in)
+    constants.c.free(yVertex_in)
+    constants.c.free(zVertex_in)
+    constants.c.free(indexToVertexID_in)
+    constants.c.free(cellsOnEdge_in)
+    constants.c.free(nEdgesOnCell_in)
+    constants.c.free(nEdgesOnEdge_in)
+    constants.c.free(edgesOnCell_in)
+    constants.c.free(edgesOnEdge_in)
+    constants.c.free(weightsOnEdge_in)
+    constants.c.free(dvEdge_in)
+    constants.c.free(dv1Edge_in)
+    constants.c.free(dv2Edge_in)
+    constants.c.free(dcEdge_in)
+    constants.c.free(angleEdge_in)
+    constants.c.free(areaCell_in)
+    constants.c.free(areaTriangle_in)
+    constants.c.free(cellsOnCell_in)
+    constants.c.free(verticesOnCell_in)
+    constants.c.free(verticesOnEdge_in)
+    constants.c.free(edgesOnVertex_in)
+    constants.c.free(cellsOnVertex_in)
+    constants.c.free(kiteAreasOnVertex_in)
 
-    cio.printf("Successfully read file! \n")
+    constants.cio.printf("Successfully read file! \n")
 end
 
 
@@ -394,7 +376,7 @@ end
 ------- TASK: PARTITION REGIONS  --------
 -----------------------------------------------
 
---input: cell_region, edge_region, vertex_region, NUM_PARTITIONS
+--input: cell_region, edge_region, vertex_region,
 --return: cell_partition_initial, partition_s_1, partition_halo_1, partition_halo_2
 task partition_regions(num_partitions : int, cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
 where reads writes(cell_region, edge_region, vertex_region) do
@@ -404,7 +386,7 @@ where reads writes(cell_region, edge_region, vertex_region) do
     -----------------------------------
     ----- Copy Neighbours -----
     -----------------------------------
-    for i = 0, nCells do
+    for i = 0, constants.nCells do
       -- cell.cellsOnCell[0] contains an integer with the index of the cell neighbour. I would like cell.neighbour to point to that cell in the region
       -- we subtract 1 because the index spaces are 0-indexed but the cellIDs are 1-indexed
       cell_region[{i, 0}].neighbor0 = cell_region[{i, 0}].cellsOnCell[0] - 1
@@ -683,9 +665,9 @@ where reads writes(cell_region, edge_region, vertex_region) do
     --var i = 0
     --for p in color_space do
     --    var sub_region = cell_partition_initial[p]
-    --    cio.printf("Sub region %d\n", i)
+    --    constants.cio.printf("Sub region %d\n", i)
     --    for cell in sub_region do
-    --        cio.printf("%d\n", cell.cellsOnCell[0])
+    --        constants.cio.printf("%d\n", cell.cellsOnCell[0])
     --    end
     --    i=i+1
     --end
@@ -694,9 +676,9 @@ where reads writes(cell_region, edge_region, vertex_region) do
     --i = 0
     --for p in cell_partition_neighbor0.colors do
     --    var sub_region = cell_partition_neighbor0[p]
-    --    cio.printf("Sub region %d\n", i)
+    --    constants.cio.printf("Sub region %d\n", i)
     --    for cell in sub_region do
-    --        cio.printf("%d\n", cell.cellID)
+    --        constants.cio.printf("%d\n", cell.cellID)
     --    end
     --    i=i+1
     --end
@@ -717,7 +699,7 @@ where reads writes(cell_region, edge_region, vertex_region) do
     ----------------------------------------------------
 
     -- We create a netcdf file using the data in the regions, to test whether the data was written correctly.
-    cio.printf("Starting to write netcdf file..\n")
+    constants.cio.printf("Starting to write netcdf file..\n")
     var ncid_copy = 65537
 
     --Create a netcdf file
@@ -736,15 +718,15 @@ where reads writes(cell_region, edge_region, vertex_region) do
 
     --Define the dimension variables
     --define_dim(ncid: int, dim_name: &int, dim_size: int, dim_id_ptr: &int)
-    define_dim(ncid_copy, "nCells", nCells, &nCells_dimid_copy)
-    define_dim(ncid_copy, "nEdges", nEdges, &nEdges_dimid_copy)
-    define_dim(ncid_copy, "nVertices", nVertices, &nVertices_dimid_copy)
-    define_dim(ncid_copy, "maxEdges", maxEdges, &maxEdges_dimid_copy)
-    define_dim(ncid_copy, "maxEdges2", maxEdges2, &maxEdges2_dimid_copy)
-    define_dim(ncid_copy, "TWO", TWO, &TWO_dimid_copy)
-    define_dim(ncid_copy, "vertexDegree", vertexDegree, &vertexDegree_dimid_copy)
-    define_dim(ncid_copy, "nVertLevels", nVertLevels, &nVertLevels_dimid_copy)
-    define_dim(ncid_copy, "Time", netcdf.NC_UNLIMITED, &time_dimid_copy)
+    define_dim(ncid_copy, "nCells", constants.nCells, &nCells_dimid_copy)
+    define_dim(ncid_copy, "nEdges", constants.nEdges, &nEdges_dimid_copy)
+    define_dim(ncid_copy, "nVertices", constants.nVertices, &nVertices_dimid_copy)
+    define_dim(ncid_copy, "maxEdges", constants.maxEdges, &maxEdges_dimid_copy)
+    define_dim(ncid_copy, "maxEdges2", constants.maxEdges2, &maxEdges2_dimid_copy)
+    define_dim(ncid_copy, "TWO", constants.TWO, &TWO_dimid_copy)
+    define_dim(ncid_copy, "vertexDegree", constants.vertexDegree, &vertexDegree_dimid_copy)
+    define_dim(ncid_copy, "nVertLevels", constants.nVertLevels, &nVertLevels_dimid_copy)
+    define_dim(ncid_copy, "Time", constants.netcdf.NC_UNLIMITED, &time_dimid_copy)
 
     --For the 2D variables, the dimIDs need to be put in arrays
     var nEdges_TWO_dimids = array(nEdges_dimid_copy, TWO_dimid_copy)
@@ -793,90 +775,90 @@ where reads writes(cell_region, edge_region, vertex_region) do
     var kiteAreasOnVertex_varid_copy : int
 
     --Define the variable IDs
-    define_var(ncid_copy, "latCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &latCell_varid_copy)
-    define_var(ncid_copy, "lonCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &lonCell_varid_copy)
-    define_var(ncid_copy, "meshDensity", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &meshDensity_varid_copy)
-    define_var(ncid_copy, "xCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &xCell_varid_copy)
-    define_var(ncid_copy, "yCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &yCell_varid_copy)
-    define_var(ncid_copy, "zCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &zCell_varid_copy)
-    define_var(ncid_copy, "indexToCellID", netcdf.NC_INT, 1, &nCells_dimid_copy, &indexToCellID_varid_copy)
-    define_var(ncid_copy, "latEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &latEdge_varid_copy)
-    define_var(ncid_copy, "lonEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &lonEdge_varid_copy)
-    define_var(ncid_copy, "xEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &xEdge_varid_copy)
-    define_var(ncid_copy, "yEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &yEdge_varid_copy)
-    define_var(ncid_copy, "zEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &zEdge_varid_copy)
-    define_var(ncid_copy, "indexToEdgeID", netcdf.NC_INT, 1, &nEdges_dimid_copy, &indexToEdgeID_varid_copy)
-    define_var(ncid_copy, "latVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &latVertex_varid_copy)
-    define_var(ncid_copy, "lonVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &lonVertex_varid_copy)
-    define_var(ncid_copy, "xVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &xVertex_varid_copy)
-    define_var(ncid_copy, "yVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &yVertex_varid_copy)
-    define_var(ncid_copy, "zVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &zVertex_varid_copy)
-    define_var(ncid_copy, "indexToVertexID", netcdf.NC_INT, 1, &nVertices_dimid_copy, &indexToVertexID_varid_copy)
-    define_var(ncid_copy, "cellsOnEdge", netcdf.NC_INT, 2, nEdges_TWO_dimids, &cellsOnEdge_varid_copy)
-    define_var(ncid_copy, "nEdgesOnCell", netcdf.NC_INT, 1, &nCells_dimid_copy, &nEdgesOnCell_varid_copy)
-    define_var(ncid_copy, "nEdgesOnEdge", netcdf.NC_INT, 1, &nEdges_dimid_copy, &nEdgesOnEdge_varid_copy)
-    define_var(ncid_copy, "edgesOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &edgesOnCell_varid_copy)
-    define_var(ncid_copy, "edgesOnEdge", netcdf.NC_INT, 2, nEdges_maxEdges2_dimids, &edgesOnEdge_varid_copy)
-    define_var(ncid_copy, "weightsOnEdge", netcdf.NC_DOUBLE, 2, nEdges_maxEdges2_dimids, &weightsOnEdge_varid_copy)
-    define_var(ncid_copy, "dvEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dvEdge_varid_copy)
-    define_var(ncid_copy, "dv1Edge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv1Edge_varid_copy)
-    define_var(ncid_copy, "dv2Edge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv2Edge_varid_copy)
-    define_var(ncid_copy, "dcEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dcEdge_varid_copy)
-    define_var(ncid_copy, "angleEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &angleEdge_varid_copy)
-    define_var(ncid_copy, "areaCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &areaCell_varid_copy)
-    define_var(ncid_copy, "areaTriangle", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &areaTriangle_varid_copy)
-    define_var(ncid_copy, "cellsOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &cellsOnCell_varid_copy)
-    define_var(ncid_copy, "verticesOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &verticesOnCell_varid_copy)
-    define_var(ncid_copy, "verticesOnEdge", netcdf.NC_INT, 2, nEdges_TWO_dimids, &verticesOnEdge_varid_copy)
-    define_var(ncid_copy, "edgesOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &edgesOnVertex_varid_copy)
-    define_var(ncid_copy, "cellsOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &cellsOnVertex_varid_copy)
-    define_var(ncid_copy, "kiteAreasOnVertex", netcdf.NC_DOUBLE, 2, nVertices_vertexDegree_dimids, &kiteAreasOnVertex_varid_copy)
+    define_var(ncid_copy, "latCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &latCell_varid_copy)
+    define_var(ncid_copy, "lonCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &lonCell_varid_copy)
+    define_var(ncid_copy, "meshDensity", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &meshDensity_varid_copy)
+    define_var(ncid_copy, "xCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &xCell_varid_copy)
+    define_var(ncid_copy, "yCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &yCell_varid_copy)
+    define_var(ncid_copy, "zCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &zCell_varid_copy)
+    define_var(ncid_copy, "indexToCellID", constants.netcdf.NC_INT, 1, &nCells_dimid_copy, &indexToCellID_varid_copy)
+    define_var(ncid_copy, "latEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &latEdge_varid_copy)
+    define_var(ncid_copy, "lonEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &lonEdge_varid_copy)
+    define_var(ncid_copy, "xEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &xEdge_varid_copy)
+    define_var(ncid_copy, "yEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &yEdge_varid_copy)
+    define_var(ncid_copy, "zEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &zEdge_varid_copy)
+    define_var(ncid_copy, "indexToEdgeID", constants.netcdf.NC_INT, 1, &nEdges_dimid_copy, &indexToEdgeID_varid_copy)
+    define_var(ncid_copy, "latVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &latVertex_varid_copy)
+    define_var(ncid_copy, "lonVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &lonVertex_varid_copy)
+    define_var(ncid_copy, "xVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &xVertex_varid_copy)
+    define_var(ncid_copy, "yVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &yVertex_varid_copy)
+    define_var(ncid_copy, "zVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &zVertex_varid_copy)
+    define_var(ncid_copy, "indexToVertexID", constants.netcdf.NC_INT, 1, &nVertices_dimid_copy, &indexToVertexID_varid_copy)
+    define_var(ncid_copy, "cellsOnEdge", constants.netcdf.NC_INT, 2, nEdges_TWO_dimids, &cellsOnEdge_varid_copy)
+    define_var(ncid_copy, "nEdgesOnCell", constants.netcdf.NC_INT, 1, &nCells_dimid_copy, &nEdgesOnCell_varid_copy)
+    define_var(ncid_copy, "nEdgesOnEdge", constants.netcdf.NC_INT, 1, &nEdges_dimid_copy, &nEdgesOnEdge_varid_copy)
+    define_var(ncid_copy, "edgesOnCell", constants.netcdf.NC_INT, 2, nCells_maxEdges_dimids, &edgesOnCell_varid_copy)
+    define_var(ncid_copy, "edgesOnEdge", constants.netcdf.NC_INT, 2, nEdges_maxEdges2_dimids, &edgesOnEdge_varid_copy)
+    define_var(ncid_copy, "weightsOnEdge", constants.netcdf.NC_DOUBLE, 2, nEdges_maxEdges2_dimids, &weightsOnEdge_varid_copy)
+    define_var(ncid_copy, "dvEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dvEdge_varid_copy)
+    define_var(ncid_copy, "dv1Edge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv1Edge_varid_copy)
+    define_var(ncid_copy, "dv2Edge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv2Edge_varid_copy)
+    define_var(ncid_copy, "dcEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dcEdge_varid_copy)
+    define_var(ncid_copy, "angleEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &angleEdge_varid_copy)
+    define_var(ncid_copy, "areaCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &areaCell_varid_copy)
+    define_var(ncid_copy, "areaTriangle", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &areaTriangle_varid_copy)
+    define_var(ncid_copy, "cellsOnCell", constants.netcdf.NC_INT, 2, nCells_maxEdges_dimids, &cellsOnCell_varid_copy)
+    define_var(ncid_copy, "verticesOnCell", constants.netcdf.NC_INT, 2, nCells_maxEdges_dimids, &verticesOnCell_varid_copy)
+    define_var(ncid_copy, "verticesOnEdge", constants.netcdf.NC_INT, 2, nEdges_TWO_dimids, &verticesOnEdge_varid_copy)
+    define_var(ncid_copy, "edgesOnVertex", constants.netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &edgesOnVertex_varid_copy)
+    define_var(ncid_copy, "cellsOnVertex", constants.netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &cellsOnVertex_varid_copy)
+    define_var(ncid_copy, "kiteAreasOnVertex", constants.netcdf.NC_DOUBLE, 2, nVertices_vertexDegree_dimids, &kiteAreasOnVertex_varid_copy)
 
     --This function signals that we're done writing the metadata.
     end_def(ncid_copy)
 
     --Now define the new arrays to hold the data that will be put in the netcdf files
-    var latCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var lonCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var meshDensity_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var xCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var yCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var zCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var indexToCellID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells))
-    var latEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var lonEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var xEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var yEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var zEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var indexToEdgeID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges))
-    var latVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var lonVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var xVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var yVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var zVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var indexToVertexID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices))
-    var cellsOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
-    var nEdgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells))
-    var nEdgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges))
-    var edgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var edgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*maxEdges2))
-    var weightsOnEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges*maxEdges2))
-    var dvEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dv1Edge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dv2Edge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dcEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var angleEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var areaCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var areaTriangle_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var cellsOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var verticesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var verticesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
-    var edgesOnVertex_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
-    var cellsOnVertex_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
-    var kiteAreasOnVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices*vertexDegree))
+    var latCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var lonCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var meshDensity_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var xCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var yCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var zCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var indexToCellID_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells))
+    var latEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var lonEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var xEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var yEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var zEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var indexToEdgeID_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges))
+    var latVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var lonVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var xVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var yVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var zVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var indexToVertexID_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices))
+    var cellsOnEdge_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.TWO))
+    var nEdgesOnCell_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells))
+    var nEdgesOnEdge_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges))
+    var edgesOnCell_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var edgesOnEdge_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.maxEdges2))
+    var weightsOnEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges*constants.maxEdges2))
+    var dvEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dv1Edge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dv2Edge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dcEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var angleEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var areaCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var areaTriangle_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var cellsOnCell_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var verticesOnCell_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var verticesOnEdge_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.TWO))
+    var edgesOnVertex_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices*constants.vertexDegree))
+    var cellsOnVertex_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices*constants.vertexDegree))
+    var kiteAreasOnVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices*constants.vertexDegree))
 
     --Now we copy the data into the arrays so they can be read into the netcdf files
-    for i = 0, nCells do
+    for i = 0, constants.nCells do
         latCell_in_copy[i] = cell_region[{i, 0}].lat
         lonCell_in_copy[i] = cell_region[{i, 0}].lon
         xCell_in_copy[i] = cell_region[{i, 0}].x
@@ -887,15 +869,15 @@ where reads writes(cell_region, edge_region, vertex_region) do
         nEdgesOnCell_in_copy[i] = cell_region[{i, 0}].nEdgesOnCell
         areaCell_in_copy[i] = cell_region[{i, 0}].areaCell
 
-        for j = 0, maxEdges do
-            edgesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].edgesOnCell[j]
-            verticesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].verticesOnCell[j]
-            cellsOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].cellsOnCell[j]
+        for j = 0, constants.maxEdges do
+            edgesOnCell_in_copy[i*constants.maxEdges + j] = cell_region[{i, 0}].edgesOnCell[j]
+            verticesOnCell_in_copy[i*constants.maxEdges + j] = cell_region[{i, 0}].verticesOnCell[j]
+            cellsOnCell_in_copy[i*constants.maxEdges + j] = cell_region[{i, 0}].cellsOnCell[j]
         end
-        --cio.printf("Cell COPY : Cell ID %d, nEdgesOnCell is %d\n", indexToCellID_in_copy[i], nEdgesOnCell_in_copy[i])
+        --constants.cio.printf("Cell COPY : Cell ID %d, nEdgesOnCell is %d\n", indexToCellID_in_copy[i], nEdgesOnCell_in_copy[i])
     end
 
-    for i = 0, nEdges do
+    for i = 0, constants.nEdges do
         latEdge_in_copy[i] = edge_region[{i, 0}].lat
         lonEdge_in_copy[i] = edge_region[{i, 0}].lon
         xEdge_in_copy[i] = edge_region[{i, 0}].x
@@ -909,18 +891,18 @@ where reads writes(cell_region, edge_region, vertex_region) do
         dcEdge_in_copy[i] = edge_region[{i, 0}].dcEdge
         angleEdge_in_copy[i] = edge_region[{i, 0}].angleEdge
 
-        for j = 0, TWO do
-            cellsOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].cellsOnEdge[j]
-            verticesOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].verticesOnEdge[j]
+        for j = 0, constants.TWO do
+            cellsOnEdge_in_copy[i*constants.TWO + j] = edge_region[{i, 0}].cellsOnEdge[j]
+            verticesOnEdge_in_copy[i*constants.TWO + j] = edge_region[{i, 0}].verticesOnEdge[j]
         end
 
-        for j = 0, maxEdges2 do
-            edgesOnEdge_in_copy[i*maxEdges2 + j] = edge_region[{i, 0}].edgesOnEdge_ECP[j]
-            weightsOnEdge_in_copy[i*maxEdges2 + j] = edge_region[{i, 0}].weightsOnEdge[j]
+        for j = 0, constants.maxEdges2 do
+            edgesOnEdge_in_copy[i*constants.maxEdges2 + j] = edge_region[{i, 0}].edgesOnEdge_ECP[j]
+            weightsOnEdge_in_copy[i*constants.maxEdges2 + j] = edge_region[{i, 0}].weightsOnEdge[j]
         end
     end
 
-    for i = 0, nVertices do
+    for i = 0, constants.nVertices do
         latVertex_in_copy[i] = vertex_region[{i, 0}].lat
         lonVertex_in_copy[i] = vertex_region[{i, 0}].lon
         xVertex_in_copy[i] = vertex_region[{i, 0}].x
@@ -929,10 +911,10 @@ where reads writes(cell_region, edge_region, vertex_region) do
         indexToVertexID_in_copy[i] = vertex_region[{i, 0}].vertexID
         areaTriangle_in_copy[i] = vertex_region[{i, 0}].areaTriangle
 
-        for j = 0, vertexDegree do
-            edgesOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].edgesOnVertex[j]
-            cellsOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].cellsOnVertex[j]
-            kiteAreasOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].kiteAreasOnVertex[j]
+        for j = 0, constants.vertexDegree do
+            edgesOnVertex_in_copy[i*constants.vertexDegree + j] = vertex_region[{i, 0}].edgesOnVertex[j]
+            cellsOnVertex_in_copy[i*constants.vertexDegree + j] = vertex_region[{i, 0}].cellsOnVertex[j]
+            kiteAreasOnVertex_in_copy[i*constants.vertexDegree + j] = vertex_region[{i, 0}].kiteAreasOnVertex[j]
         end
     end
 
@@ -980,48 +962,48 @@ where reads writes(cell_region, edge_region, vertex_region) do
     put_var_double(ncid_copy, kiteAreasOnVertex_varid_copy, kiteAreasOnVertex_in_copy)
 
     -- Lastly, we free the allocated memory for the 'copy' arrays
-    c.free(latCell_in_copy)
-    c.free(lonCell_in_copy)
-    c.free(meshDensity_in_copy)
-    c.free(xCell_in_copy)
-    c.free(yCell_in_copy)
-    c.free(zCell_in_copy)
-    c.free(indexToCellID_in_copy)
-    c.free(latEdge_in_copy)
-    c.free(lonEdge_in_copy)
-    c.free(xEdge_in_copy)
-    c.free(yEdge_in_copy)
-    c.free(zEdge_in_copy)
-    c.free(indexToEdgeID_in_copy)
-    c.free(latVertex_in_copy)
-    c.free(lonVertex_in_copy)
-    c.free(xVertex_in_copy)
-    c.free(yVertex_in_copy)
-    c.free(zVertex_in_copy)
-    c.free(indexToVertexID_in_copy)
-    c.free(cellsOnEdge_in_copy)
-    c.free(nEdgesOnCell_in_copy)
-    c.free(nEdgesOnEdge_in_copy)
-    c.free(edgesOnCell_in_copy)
-    c.free(edgesOnEdge_in_copy)
-    c.free(weightsOnEdge_in_copy)
-    c.free(dvEdge_in_copy)
-    c.free(dv1Edge_in_copy)
-    c.free(dv2Edge_in_copy)
-    c.free(dcEdge_in_copy)
-    c.free(angleEdge_in_copy)
-    c.free(areaCell_in_copy)
-    c.free(areaTriangle_in_copy)
-    c.free(cellsOnCell_in_copy)
-    c.free(verticesOnCell_in_copy)
-    c.free(verticesOnEdge_in_copy)
-    c.free(edgesOnVertex_in_copy)
-    c.free(cellsOnVertex_in_copy)
-    c.free(kiteAreasOnVertex_in_copy)
+    constants.c.free(latCell_in_copy)
+    constants.c.free(lonCell_in_copy)
+    constants.c.free(meshDensity_in_copy)
+    constants.c.free(xCell_in_copy)
+    constants.c.free(yCell_in_copy)
+    constants.c.free(zCell_in_copy)
+    constants.c.free(indexToCellID_in_copy)
+    constants.c.free(latEdge_in_copy)
+    constants.c.free(lonEdge_in_copy)
+    constants.c.free(xEdge_in_copy)
+    constants.c.free(yEdge_in_copy)
+    constants.c.free(zEdge_in_copy)
+    constants.c.free(indexToEdgeID_in_copy)
+    constants.c.free(latVertex_in_copy)
+    constants.c.free(lonVertex_in_copy)
+    constants.c.free(xVertex_in_copy)
+    constants.c.free(yVertex_in_copy)
+    constants.c.free(zVertex_in_copy)
+    constants.c.free(indexToVertexID_in_copy)
+    constants.c.free(cellsOnEdge_in_copy)
+    constants.c.free(nEdgesOnCell_in_copy)
+    constants.c.free(nEdgesOnEdge_in_copy)
+    constants.c.free(edgesOnCell_in_copy)
+    constants.c.free(edgesOnEdge_in_copy)
+    constants.c.free(weightsOnEdge_in_copy)
+    constants.c.free(dvEdge_in_copy)
+    constants.c.free(dv1Edge_in_copy)
+    constants.c.free(dv2Edge_in_copy)
+    constants.c.free(dcEdge_in_copy)
+    constants.c.free(angleEdge_in_copy)
+    constants.c.free(areaCell_in_copy)
+    constants.c.free(areaTriangle_in_copy)
+    constants.c.free(cellsOnCell_in_copy)
+    constants.c.free(verticesOnCell_in_copy)
+    constants.c.free(verticesOnEdge_in_copy)
+    constants.c.free(edgesOnVertex_in_copy)
+    constants.c.free(cellsOnVertex_in_copy)
+    constants.c.free(kiteAreasOnVertex_in_copy)
 
     -- Close the file
     file_close(ncid_copy)
-    cio.printf("Successfully written netcdf file!\n")
+    constants.cio.printf("Successfully written netcdf file!\n")
 
 end
 
@@ -1035,7 +1017,7 @@ where reads writes(cell_region, edge_region, vertex_region) do
     ----------------------------------------------------
 
     -- We create a netcdf file using the data in the regions, to test whether the data was written correctly.
-    cio.printf("Starting to write netcdf file..\n")
+    constants.cio.printf("Starting to write netcdf file..\n")
     var ncid_copy = 65538
 
     --Create a netcdf file
@@ -1054,15 +1036,15 @@ where reads writes(cell_region, edge_region, vertex_region) do
 
     --Define the dimension variables
     --define_dim(ncid: int, dim_name: &int, dim_size: int, dim_id_ptr: &int)
-    define_dim(ncid_copy, "nCells", nCells, &nCells_dimid_copy)
-    define_dim(ncid_copy, "nEdges", nEdges, &nEdges_dimid_copy)
-    define_dim(ncid_copy, "nVertices", nVertices, &nVertices_dimid_copy)
-    define_dim(ncid_copy, "maxEdges", maxEdges, &maxEdges_dimid_copy)
-    define_dim(ncid_copy, "maxEdges2", maxEdges2, &maxEdges2_dimid_copy)
-    define_dim(ncid_copy, "TWO", TWO, &TWO_dimid_copy)
-    define_dim(ncid_copy, "vertexDegree", vertexDegree, &vertexDegree_dimid_copy)
-    define_dim(ncid_copy, "nVertLevels", nVertLevels, &nVertLevels_dimid_copy)
-    define_dim(ncid_copy, "Time", netcdf.NC_UNLIMITED, &time_dimid_copy)
+    define_dim(ncid_copy, "nCells", constants.nCells, &nCells_dimid_copy)
+    define_dim(ncid_copy, "nEdges", constants.nEdges, &nEdges_dimid_copy)
+    define_dim(ncid_copy, "nVertices", constants.nVertices, &nVertices_dimid_copy)
+    define_dim(ncid_copy, "maxEdges", constants.maxEdges, &maxEdges_dimid_copy)
+    define_dim(ncid_copy, "maxEdges2", constants.maxEdges2, &maxEdges2_dimid_copy)
+    define_dim(ncid_copy, "TWO", constants.TWO, &TWO_dimid_copy)
+    define_dim(ncid_copy, "vertexDegree", constants.vertexDegree, &vertexDegree_dimid_copy)
+    define_dim(ncid_copy, "nVertLevels", constants.nVertLevels, &nVertLevels_dimid_copy)
+    define_dim(ncid_copy, "Time", constants.netcdf.NC_UNLIMITED, &time_dimid_copy)
 
     --For the 2D variables, the dimIDs need to be put in arrays
     var nEdges_TWO_dimids = array(nEdges_dimid_copy, TWO_dimid_copy)
@@ -1121,114 +1103,114 @@ where reads writes(cell_region, edge_region, vertex_region) do
     var surface_pressure_varid_copy : int
 
     --Define the variable IDs
-    define_var(ncid_copy, "latCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &latCell_varid_copy)
-    define_var(ncid_copy, "lonCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &lonCell_varid_copy)
-    define_var(ncid_copy, "meshDensity", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &meshDensity_varid_copy)
-    define_var(ncid_copy, "xCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &xCell_varid_copy)
-    define_var(ncid_copy, "yCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &yCell_varid_copy)
-    define_var(ncid_copy, "zCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &zCell_varid_copy)
-    define_var(ncid_copy, "indexToCellID", netcdf.NC_INT, 1, &nCells_dimid_copy, &indexToCellID_varid_copy)
-    define_var(ncid_copy, "latEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &latEdge_varid_copy)
-    define_var(ncid_copy, "lonEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &lonEdge_varid_copy)
-    define_var(ncid_copy, "xEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &xEdge_varid_copy)
-    define_var(ncid_copy, "yEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &yEdge_varid_copy)
-    define_var(ncid_copy, "zEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &zEdge_varid_copy)
-    define_var(ncid_copy, "indexToEdgeID", netcdf.NC_INT, 1, &nEdges_dimid_copy, &indexToEdgeID_varid_copy)
-    define_var(ncid_copy, "latVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &latVertex_varid_copy)
-    define_var(ncid_copy, "lonVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &lonVertex_varid_copy)
-    define_var(ncid_copy, "xVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &xVertex_varid_copy)
-    define_var(ncid_copy, "yVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &yVertex_varid_copy)
-    define_var(ncid_copy, "zVertex", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &zVertex_varid_copy)
-    define_var(ncid_copy, "indexToVertexID", netcdf.NC_INT, 1, &nVertices_dimid_copy, &indexToVertexID_varid_copy)
-    define_var(ncid_copy, "cellsOnEdge", netcdf.NC_INT, 2, nEdges_TWO_dimids, &cellsOnEdge_varid_copy)
-    define_var(ncid_copy, "nEdgesOnCell", netcdf.NC_INT, 1, &nCells_dimid_copy, &nEdgesOnCell_varid_copy)
-    define_var(ncid_copy, "nEdgesOnEdge", netcdf.NC_INT, 1, &nEdges_dimid_copy, &nEdgesOnEdge_varid_copy)
-    define_var(ncid_copy, "edgesOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &edgesOnCell_varid_copy)
-    define_var(ncid_copy, "edgesOnEdge", netcdf.NC_INT, 2, nEdges_maxEdges2_dimids, &edgesOnEdge_varid_copy)
-    define_var(ncid_copy, "weightsOnEdge", netcdf.NC_DOUBLE, 2, nEdges_maxEdges2_dimids, &weightsOnEdge_varid_copy)
-    define_var(ncid_copy, "dvEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dvEdge_varid_copy)
-    define_var(ncid_copy, "dv1Edge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv1Edge_varid_copy)
-    define_var(ncid_copy, "dv2Edge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv2Edge_varid_copy)
-    define_var(ncid_copy, "dcEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dcEdge_varid_copy)
-    define_var(ncid_copy, "angleEdge", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &angleEdge_varid_copy)
-    define_var(ncid_copy, "areaCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &areaCell_varid_copy)
-    define_var(ncid_copy, "areaTriangle", netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &areaTriangle_varid_copy)
-    define_var(ncid_copy, "cellsOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &cellsOnCell_varid_copy)
-    define_var(ncid_copy, "verticesOnCell", netcdf.NC_INT, 2, nCells_maxEdges_dimids, &verticesOnCell_varid_copy)
-    define_var(ncid_copy, "verticesOnEdge", netcdf.NC_INT, 2, nEdges_TWO_dimids, &verticesOnEdge_varid_copy)
-    define_var(ncid_copy, "edgesOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &edgesOnVertex_varid_copy)
-    define_var(ncid_copy, "cellsOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &cellsOnVertex_varid_copy)
-    define_var(ncid_copy, "kiteAreasOnVertex", netcdf.NC_DOUBLE, 2, nVertices_vertexDegree_dimids, &kiteAreasOnVertex_varid_copy)
+    define_var(ncid_copy, "latCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &latCell_varid_copy)
+    define_var(ncid_copy, "lonCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &lonCell_varid_copy)
+    define_var(ncid_copy, "meshDensity", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &meshDensity_varid_copy)
+    define_var(ncid_copy, "xCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &xCell_varid_copy)
+    define_var(ncid_copy, "yCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &yCell_varid_copy)
+    define_var(ncid_copy, "zCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &zCell_varid_copy)
+    define_var(ncid_copy, "indexToCellID", constants.netcdf.NC_INT, 1, &nCells_dimid_copy, &indexToCellID_varid_copy)
+    define_var(ncid_copy, "latEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &latEdge_varid_copy)
+    define_var(ncid_copy, "lonEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &lonEdge_varid_copy)
+    define_var(ncid_copy, "xEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &xEdge_varid_copy)
+    define_var(ncid_copy, "yEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &yEdge_varid_copy)
+    define_var(ncid_copy, "zEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &zEdge_varid_copy)
+    define_var(ncid_copy, "indexToEdgeID", constants.netcdf.NC_INT, 1, &nEdges_dimid_copy, &indexToEdgeID_varid_copy)
+    define_var(ncid_copy, "latVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &latVertex_varid_copy)
+    define_var(ncid_copy, "lonVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &lonVertex_varid_copy)
+    define_var(ncid_copy, "xVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &xVertex_varid_copy)
+    define_var(ncid_copy, "yVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &yVertex_varid_copy)
+    define_var(ncid_copy, "zVertex", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &zVertex_varid_copy)
+    define_var(ncid_copy, "indexToVertexID", constants.netcdf.NC_INT, 1, &nVertices_dimid_copy, &indexToVertexID_varid_copy)
+    define_var(ncid_copy, "cellsOnEdge", constants.netcdf.NC_INT, 2, nEdges_TWO_dimids, &cellsOnEdge_varid_copy)
+    define_var(ncid_copy, "nEdgesOnCell", constants.netcdf.NC_INT, 1, &nCells_dimid_copy, &nEdgesOnCell_varid_copy)
+    define_var(ncid_copy, "nEdgesOnEdge", constants.netcdf.NC_INT, 1, &nEdges_dimid_copy, &nEdgesOnEdge_varid_copy)
+    define_var(ncid_copy, "edgesOnCell", constants.netcdf.NC_INT, 2, nCells_maxEdges_dimids, &edgesOnCell_varid_copy)
+    define_var(ncid_copy, "edgesOnEdge", constants.netcdf.NC_INT, 2, nEdges_maxEdges2_dimids, &edgesOnEdge_varid_copy)
+    define_var(ncid_copy, "weightsOnEdge", constants.netcdf.NC_DOUBLE, 2, nEdges_maxEdges2_dimids, &weightsOnEdge_varid_copy)
+    define_var(ncid_copy, "dvEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dvEdge_varid_copy)
+    define_var(ncid_copy, "dv1Edge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv1Edge_varid_copy)
+    define_var(ncid_copy, "dv2Edge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dv2Edge_varid_copy)
+    define_var(ncid_copy, "dcEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &dcEdge_varid_copy)
+    define_var(ncid_copy, "angleEdge", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &angleEdge_varid_copy)
+    define_var(ncid_copy, "areaCell", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &areaCell_varid_copy)
+    define_var(ncid_copy, "areaTriangle", constants.netcdf.NC_DOUBLE, 1, &nVertices_dimid_copy, &areaTriangle_varid_copy)
+    define_var(ncid_copy, "cellsOnCell", constants.netcdf.NC_INT, 2, nCells_maxEdges_dimids, &cellsOnCell_varid_copy)
+    define_var(ncid_copy, "verticesOnCell", constants.netcdf.NC_INT, 2, nCells_maxEdges_dimids, &verticesOnCell_varid_copy)
+    define_var(ncid_copy, "verticesOnEdge", constants.netcdf.NC_INT, 2, nEdges_TWO_dimids, &verticesOnEdge_varid_copy)
+    define_var(ncid_copy, "edgesOnVertex", constants.netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &edgesOnVertex_varid_copy)
+    define_var(ncid_copy, "cellsOnVertex", constants.netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &cellsOnVertex_varid_copy)
+    define_var(ncid_copy, "kiteAreasOnVertex", constants.netcdf.NC_DOUBLE, 2, nVertices_vertexDegree_dimids, &kiteAreasOnVertex_varid_copy)
 
-    define_var(ncid_copy, "u", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &u_varid_copy)
-    define_var(ncid_copy, "v", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &v_varid_copy)
+    define_var(ncid_copy, "u", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &u_varid_copy)
+    define_var(ncid_copy, "v", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &v_varid_copy)
 
-    define_var(ncid_copy, "w", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &w_varid_copy)
-    define_var(ncid_copy, "pressure", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &pressure_varid_copy)
+    define_var(ncid_copy, "w", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &w_varid_copy)
+    define_var(ncid_copy, "pressure", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &pressure_varid_copy)
 
-    define_var(ncid_copy, "pressure_p", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &pressure_p_varid_copy)
-    define_var(ncid_copy, "rho", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &rho_varid_copy)
-    define_var(ncid_copy, "theta", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &theta_varid_copy)
-    define_var(ncid_copy, "surface_pressure", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &surface_pressure_varid_copy)
+    define_var(ncid_copy, "pressure_p", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &pressure_p_varid_copy)
+    define_var(ncid_copy, "rho", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &rho_varid_copy)
+    define_var(ncid_copy, "theta", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &theta_varid_copy)
+    define_var(ncid_copy, "surface_pressure", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &surface_pressure_varid_copy)
 
 
     --This function signals that we're done writing the metadata.
     end_def(ncid_copy)
 
     --Now define the new arrays to hold the data that will be put in the netcdf files
-    var latCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var lonCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var meshDensity_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var xCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var yCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var zCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var indexToCellID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells))
-    var latEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var lonEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var xEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var yEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var zEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var indexToEdgeID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges))
-    var latVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var lonVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var xVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var yVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var zVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var indexToVertexID_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices))
-    var cellsOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
-    var nEdgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells))
-    var nEdgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges))
-    var edgesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var edgesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*maxEdges2))
-    var weightsOnEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges*maxEdges2))
-    var dvEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dv1Edge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dv2Edge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var dcEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var angleEdge_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var areaCell_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var areaTriangle_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices))
-    var cellsOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var verticesOnCell_in_copy : &int = [&int](c.malloc([sizeof(int)] * nCells*maxEdges))
-    var verticesOnEdge_in_copy : &int = [&int](c.malloc([sizeof(int)] * nEdges*TWO))
-    var edgesOnVertex_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
-    var cellsOnVertex_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
-    var kiteAreasOnVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices*vertexDegree))
+    var latCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var lonCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var meshDensity_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var xCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var yCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var zCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var indexToCellID_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells))
+    var latEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var lonEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var xEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var yEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var zEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var indexToEdgeID_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges))
+    var latVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var lonVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var xVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var yVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var zVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var indexToVertexID_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices))
+    var cellsOnEdge_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.TWO))
+    var nEdgesOnCell_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells))
+    var nEdgesOnEdge_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges))
+    var edgesOnCell_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var edgesOnEdge_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.maxEdges2))
+    var weightsOnEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges*constants.maxEdges2))
+    var dvEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dv1Edge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dv2Edge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var dcEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var angleEdge_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var areaCell_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var areaTriangle_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices))
+    var cellsOnCell_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var verticesOnCell_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nCells*constants.maxEdges))
+    var verticesOnEdge_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nEdges*constants.TWO))
+    var edgesOnVertex_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices*constants.vertexDegree))
+    var cellsOnVertex_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices*constants.vertexDegree))
+    var kiteAreasOnVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices*constants.vertexDegree))
 
-    var u_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
-    var v_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var u_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var v_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
 
-    var w_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var pressure_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var w_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var pressure_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
 
-    var pressure_p_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var rho_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var theta_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
-    var surface_pressure_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var pressure_p_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var rho_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var theta_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var surface_pressure_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
 
 
     --Now we copy the data into the arrays so they can be read into the netcdf files
-    for i = 0, nCells do
+    for i = 0, constants.nCells do
         latCell_in_copy[i] = cell_region[{i, 0}].lat
         lonCell_in_copy[i] = cell_region[{i, 0}].lon
         xCell_in_copy[i] = cell_region[{i, 0}].x
@@ -1246,15 +1228,15 @@ where reads writes(cell_region, edge_region, vertex_region) do
         theta_in_copy[i]  = cell_region[{i, 0}].theta
         surface_pressure_in_copy[i]  = cell_region[{i, 0}].surface_pressure
 
-        for j = 0, maxEdges do
-            edgesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].edgesOnCell[j]
-            verticesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].verticesOnCell[j]
-            cellsOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].cellsOnCell[j]
+        for j = 0, constants.maxEdges do
+            edgesOnCell_in_copy[i*constants.maxEdges + j] = cell_region[{i, 0}].edgesOnCell[j]
+            verticesOnCell_in_copy[i*constants.maxEdges + j] = cell_region[{i, 0}].verticesOnCell[j]
+            cellsOnCell_in_copy[i*constants.maxEdges + j] = cell_region[{i, 0}].cellsOnCell[j]
         end
-        --cio.printf("Cell COPY : Cell ID %d, nEdgesOnCell is %d\n", indexToCellID_in_copy[i], nEdgesOnCell_in_copy[i])
+        --constants.cio.printf("Cell COPY : Cell ID %d, nEdgesOnCell is %d\n", indexToCellID_in_copy[i], nEdgesOnCell_in_copy[i])
     end
 
-    for i = 0, nEdges do
+    for i = 0, constants.nEdges do
         latEdge_in_copy[i] = edge_region[{i, 0}].lat
         lonEdge_in_copy[i] = edge_region[{i, 0}].lon
         xEdge_in_copy[i] = edge_region[{i, 0}].x
@@ -1271,18 +1253,18 @@ where reads writes(cell_region, edge_region, vertex_region) do
 
         v_in_copy[i]  = edge_region[{i, 0}].v
 
-        for j = 0, TWO do
-            cellsOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].cellsOnEdge[j]
-            verticesOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].verticesOnEdge[j]
+        for j = 0, constants.TWO do
+            cellsOnEdge_in_copy[i*constants.TWO + j] = edge_region[{i, 0}].cellsOnEdge[j]
+            verticesOnEdge_in_copy[i*constants.TWO + j] = edge_region[{i, 0}].verticesOnEdge[j]
         end
 
-        for j = 0, maxEdges2 do
-            edgesOnEdge_in_copy[i*maxEdges2 + j] = edge_region[{i, 0}].edgesOnEdge_ECP[j]
-            weightsOnEdge_in_copy[i*maxEdges2 + j] = edge_region[{i, 0}].weightsOnEdge[j]
+        for j = 0, constants.maxEdges2 do
+            edgesOnEdge_in_copy[i*constants.maxEdges2 + j] = edge_region[{i, 0}].edgesOnEdge_ECP[j]
+            weightsOnEdge_in_copy[i*constants.maxEdges2 + j] = edge_region[{i, 0}].weightsOnEdge[j]
         end
     end
 
-    for i = 0, nVertices do
+    for i = 0, constants.nVertices do
         latVertex_in_copy[i] = vertex_region[{i, 0}].lat
         lonVertex_in_copy[i] = vertex_region[{i, 0}].lon
         xVertex_in_copy[i] = vertex_region[{i, 0}].x
@@ -1291,10 +1273,10 @@ where reads writes(cell_region, edge_region, vertex_region) do
         indexToVertexID_in_copy[i] = vertex_region[{i, 0}].vertexID
         areaTriangle_in_copy[i] = vertex_region[{i, 0}].areaTriangle
 
-        for j = 0, vertexDegree do
-            edgesOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].edgesOnVertex[j]
-            cellsOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].cellsOnVertex[j]
-            kiteAreasOnVertex_in_copy[i*vertexDegree + j] = vertex_region[{i, 0}].kiteAreasOnVertex[j]
+        for j = 0, constants.vertexDegree do
+            edgesOnVertex_in_copy[i*constants.vertexDegree + j] = vertex_region[{i, 0}].edgesOnVertex[j]
+            cellsOnVertex_in_copy[i*constants.vertexDegree + j] = vertex_region[{i, 0}].cellsOnVertex[j]
+            kiteAreasOnVertex_in_copy[i*constants.vertexDegree + j] = vertex_region[{i, 0}].kiteAreasOnVertex[j]
         end
     end
 
@@ -1347,56 +1329,56 @@ where reads writes(cell_region, edge_region, vertex_region) do
     put_var_double(ncid_copy, kiteAreasOnVertex_varid_copy, kiteAreasOnVertex_in_copy)
 
     -- Lastly, we free the allocated memory for the 'copy' arrays
-    c.free(latCell_in_copy)
-    c.free(lonCell_in_copy)
-    c.free(meshDensity_in_copy)
-    c.free(xCell_in_copy)
-    c.free(yCell_in_copy)
-    c.free(zCell_in_copy)
-    c.free(indexToCellID_in_copy)
-    c.free(latEdge_in_copy)
-    c.free(lonEdge_in_copy)
-    c.free(xEdge_in_copy)
-    c.free(yEdge_in_copy)
-    c.free(zEdge_in_copy)
-    c.free(indexToEdgeID_in_copy)
-    c.free(latVertex_in_copy)
-    c.free(lonVertex_in_copy)
-    c.free(xVertex_in_copy)
-    c.free(yVertex_in_copy)
-    c.free(zVertex_in_copy)
-    c.free(indexToVertexID_in_copy)
-    c.free(cellsOnEdge_in_copy)
-    c.free(nEdgesOnCell_in_copy)
-    c.free(nEdgesOnEdge_in_copy)
-    c.free(edgesOnCell_in_copy)
-    c.free(edgesOnEdge_in_copy)
-    c.free(weightsOnEdge_in_copy)
-    c.free(dvEdge_in_copy)
-    c.free(dv1Edge_in_copy)
-    c.free(dv2Edge_in_copy)
-    c.free(dcEdge_in_copy)
-    c.free(angleEdge_in_copy)
-    c.free(areaCell_in_copy)
-    c.free(areaTriangle_in_copy)
-    c.free(cellsOnCell_in_copy)
-    c.free(verticesOnCell_in_copy)
-    c.free(verticesOnEdge_in_copy)
-    c.free(edgesOnVertex_in_copy)
-    c.free(cellsOnVertex_in_copy)
-    c.free(kiteAreasOnVertex_in_copy)
+    constants.c.free(latCell_in_copy)
+    constants.c.free(lonCell_in_copy)
+    constants.c.free(meshDensity_in_copy)
+    constants.c.free(xCell_in_copy)
+    constants.c.free(yCell_in_copy)
+    constants.c.free(zCell_in_copy)
+    constants.c.free(indexToCellID_in_copy)
+    constants.c.free(latEdge_in_copy)
+    constants.c.free(lonEdge_in_copy)
+    constants.c.free(xEdge_in_copy)
+    constants.c.free(yEdge_in_copy)
+    constants.c.free(zEdge_in_copy)
+    constants.c.free(indexToEdgeID_in_copy)
+    constants.c.free(latVertex_in_copy)
+    constants.c.free(lonVertex_in_copy)
+    constants.c.free(xVertex_in_copy)
+    constants.c.free(yVertex_in_copy)
+    constants.c.free(zVertex_in_copy)
+    constants.c.free(indexToVertexID_in_copy)
+    constants.c.free(cellsOnEdge_in_copy)
+    constants.c.free(nEdgesOnCell_in_copy)
+    constants.c.free(nEdgesOnEdge_in_copy)
+    constants.c.free(edgesOnCell_in_copy)
+    constants.c.free(edgesOnEdge_in_copy)
+    constants.c.free(weightsOnEdge_in_copy)
+    constants.c.free(dvEdge_in_copy)
+    constants.c.free(dv1Edge_in_copy)
+    constants.c.free(dv2Edge_in_copy)
+    constants.c.free(dcEdge_in_copy)
+    constants.c.free(angleEdge_in_copy)
+    constants.c.free(areaCell_in_copy)
+    constants.c.free(areaTriangle_in_copy)
+    constants.c.free(cellsOnCell_in_copy)
+    constants.c.free(verticesOnCell_in_copy)
+    constants.c.free(verticesOnEdge_in_copy)
+    constants.c.free(edgesOnVertex_in_copy)
+    constants.c.free(cellsOnVertex_in_copy)
+    constants.c.free(kiteAreasOnVertex_in_copy)
 
-    c.free(u_in_copy)
-    c.free(v_in_copy)
-    c.free(w_in_copy)
-    c.free(pressure_in_copy)
-    c.free(pressure_p_in_copy)
-    c.free(rho_in_copy)
-    c.free(theta_in_copy)
-    c.free(surface_pressure_in_copy)
+    constants.c.free(u_in_copy)
+    constants.c.free(v_in_copy)
+    constants.c.free(w_in_copy)
+    constants.c.free(pressure_in_copy)
+    constants.c.free(pressure_p_in_copy)
+    constants.c.free(rho_in_copy)
+    constants.c.free(theta_in_copy)
+    constants.c.free(surface_pressure_in_copy)
 
     -- Close the file
     file_close(ncid_copy)
-    cio.printf("Successfully written netcdf file!\n")
+    constants.cio.printf("Successfully written netcdf file!\n")
 
 end

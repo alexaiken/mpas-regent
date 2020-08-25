@@ -3,6 +3,9 @@ import "regent"
 require "data_structures"
 require "dynamics_tasks"
 
+local constants = require("constants")
+
+
 local nCells = 2562
 local nEdges = 7680
 local nVertices = 5120
