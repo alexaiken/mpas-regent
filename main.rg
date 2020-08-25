@@ -30,7 +30,6 @@ local rv = 461.6
 local cp = 7.0*rgas/2.0
 local gravity = 9.80616
 local rvord = rv/rgas
---local config_dt = 720.0 --registry.xml
 local config_epssm = 0.1
 
 task main()
@@ -65,7 +64,7 @@ task main()
 
   atm_compute_output_diagnostics(cell_region, rvord)
 
-  write_output(cell_region, edge_region, vertex_region)
+  write_output_plotting(cell_region, edge_region, vertex_region)
 
 end
 regentlib.start(main)

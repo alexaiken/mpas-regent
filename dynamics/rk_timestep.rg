@@ -99,7 +99,7 @@ where reads writes (cr, er, vr, vert_r) do
     -------------------------------------
     ------begin acoustic steps loop -----
     -------------------------------------
-    for small_step = 1, number_sub_steps[rk_step - 1] + 1 do
+    for small_step = 0, number_sub_steps[rk_step] + 1 do
 
       cio.printf("performing acoustic substeps within a rk step\n")
 
@@ -120,6 +120,10 @@ where reads writes (cr, er, vr, vert_r) do
     -- SKIPPING  if (config_scalar_advection .and. (.not. config_split_dynamics_transport) ) @ line 1246
 
     -- SKIPPING if(config_apply_lbcs @ line 1253)
+
+    --for iEdge = 0, nEdges do
+    cio.printf("Horizontal normal velocity at Edge %d is %f\n", 0, er[{0, 0}].u)
+    --end
 
   end
 
@@ -143,9 +147,7 @@ where reads writes (cr, er, vr, vert_r) do
   --  cio.printf("Surface pressure at Cell %d is %f\n", iCell, cr[{iCell, 0}].pressure_p)
   --end
 
-  for iEdges = 0, nEdges do
-    cio.printf("Horizontal normal velocity at Edge %d is %f\n", iEdge, er[{iEdge, 0}].u)
-  end
+
 
 end
 

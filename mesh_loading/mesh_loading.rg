@@ -1110,6 +1110,16 @@ where reads writes(cell_region, edge_region, vertex_region) do
     var cellsOnVertex_varid_copy : int
     var kiteAreasOnVertex_varid_copy : int
 
+    var u_varid_copy : int
+    var v_varid_copy : int
+
+    var w_varid_copy : int
+    var pressure_varid_copy : int
+    var pressure_p_varid_copy : int
+    var rho_varid_copy : int
+    var theta_varid_copy : int
+    var surface_pressure_varid_copy : int
+
     --Define the variable IDs
     define_var(ncid_copy, "latCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &latCell_varid_copy)
     define_var(ncid_copy, "lonCell", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &lonCell_varid_copy)
@@ -1149,6 +1159,18 @@ where reads writes(cell_region, edge_region, vertex_region) do
     define_var(ncid_copy, "edgesOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &edgesOnVertex_varid_copy)
     define_var(ncid_copy, "cellsOnVertex", netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &cellsOnVertex_varid_copy)
     define_var(ncid_copy, "kiteAreasOnVertex", netcdf.NC_DOUBLE, 2, nVertices_vertexDegree_dimids, &kiteAreasOnVertex_varid_copy)
+
+    define_var(ncid_copy, "u", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &u_varid_copy)
+    define_var(ncid_copy, "v", netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &v_varid_copy)
+
+    define_var(ncid_copy, "w", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &w_varid_copy)
+    define_var(ncid_copy, "pressure", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &pressure_varid_copy)
+
+    define_var(ncid_copy, "pressure_p", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &pressure_p_varid_copy)
+    define_var(ncid_copy, "rho", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &rho_varid_copy)
+    define_var(ncid_copy, "theta", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &theta_varid_copy)
+    define_var(ncid_copy, "surface_pressure", netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &surface_pressure_varid_copy)
+
 
     --This function signals that we're done writing the metadata.
     end_def(ncid_copy)
@@ -1193,6 +1215,18 @@ where reads writes(cell_region, edge_region, vertex_region) do
     var cellsOnVertex_in_copy : &int = [&int](c.malloc([sizeof(int)] * nVertices*vertexDegree))
     var kiteAreasOnVertex_in_copy : &double = [&double](c.malloc([sizeof(double)] * nVertices*vertexDegree))
 
+    var u_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+    var v_in_copy : &double = [&double](c.malloc([sizeof(double)] * nEdges))
+
+    var w_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var pressure_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+
+    var pressure_p_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var rho_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var theta_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+    var surface_pressure_in_copy : &double = [&double](c.malloc([sizeof(double)] * nCells))
+
+
     --Now we copy the data into the arrays so they can be read into the netcdf files
     for i = 0, nCells do
         latCell_in_copy[i] = cell_region[{i, 0}].lat
@@ -1204,6 +1238,13 @@ where reads writes(cell_region, edge_region, vertex_region) do
         meshDensity_in_copy[i] = cell_region[{i, 0}].meshDensity
         nEdgesOnCell_in_copy[i] = cell_region[{i, 0}].nEdgesOnCell
         areaCell_in_copy[i] = cell_region[{i, 0}].areaCell
+        pressure_in_copy[i] = cell_region[{i, 0}].pressure
+        w_in_copy[i]  = cell_region[{i, 0}].w
+
+        pressure_p_in_copy[i]  = cell_region[{i, 0}].pressure_p
+        rho_in_copy[i]  = cell_region[{i, 0}].rho
+        theta_in_copy[i]  = cell_region[{i, 0}].theta
+        surface_pressure_in_copy[i]  = cell_region[{i, 0}].surface_pressure
 
         for j = 0, maxEdges do
             edgesOnCell_in_copy[i*maxEdges + j] = cell_region[{i, 0}].edgesOnCell[j]
@@ -1226,6 +1267,9 @@ where reads writes(cell_region, edge_region, vertex_region) do
         dv2Edge_in_copy[i] = edge_region[{i, 0}].dv2Edge
         dcEdge_in_copy[i] = edge_region[{i, 0}].dcEdge
         angleEdge_in_copy[i] = edge_region[{i, 0}].angleEdge
+        u_in_copy[i]  = edge_region[{i, 0}].u
+
+        v_in_copy[i]  = edge_region[{i, 0}].v
 
         for j = 0, TWO do
             cellsOnEdge_in_copy[i*TWO + j] = edge_region[{i, 0}].cellsOnEdge[j]
@@ -1268,6 +1312,9 @@ where reads writes(cell_region, edge_region, vertex_region) do
     put_var_int(ncid_copy, edgesOnCell_varid_copy, edgesOnCell_in_copy)
     put_var_int(ncid_copy, verticesOnCell_varid_copy, verticesOnCell_in_copy)
     put_var_int(ncid_copy, cellsOnCell_varid_copy, cellsOnCell_in_copy)
+    put_var_double(ncid_copy, pressure_varid_copy, pressure_in_copy)
+    put_var_double(ncid_copy, w_varid_copy, w_in_copy)
+
 
     put_var_double(ncid_copy, latEdge_varid_copy, latEdge_in_copy)
     put_var_double(ncid_copy, lonEdge_varid_copy, lonEdge_in_copy)
@@ -1285,6 +1332,8 @@ where reads writes(cell_region, edge_region, vertex_region) do
     put_var_int(ncid_copy, verticesOnEdge_varid_copy, verticesOnEdge_in_copy)
     put_var_int(ncid_copy, edgesOnEdge_varid_copy, edgesOnEdge_in_copy)
     put_var_double(ncid_copy, weightsOnEdge_varid_copy, weightsOnEdge_in_copy)
+    put_var_double(ncid_copy, u_varid_copy, u_in_copy)
+    put_var_double(ncid_copy, v_varid_copy, v_in_copy)
 
     put_var_double(ncid_copy, latVertex_varid_copy, latVertex_in_copy)
     put_var_double(ncid_copy, lonVertex_varid_copy, lonVertex_in_copy)
@@ -1336,6 +1385,15 @@ where reads writes(cell_region, edge_region, vertex_region) do
     c.free(edgesOnVertex_in_copy)
     c.free(cellsOnVertex_in_copy)
     c.free(kiteAreasOnVertex_in_copy)
+
+    c.free(u_in_copy)
+    c.free(v_in_copy)
+    c.free(w_in_copy)
+    c.free(pressure_in_copy)
+    c.free(pressure_p_in_copy)
+    c.free(rho_in_copy)
+    c.free(theta_in_copy)
+    c.free(surface_pressure_in_copy)
 
     -- Close the file
     file_close(ncid_copy)

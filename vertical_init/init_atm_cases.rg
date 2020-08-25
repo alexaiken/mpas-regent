@@ -25,11 +25,11 @@ task init_atm_case_jw(vr : region(ispace(int2d), vertex_fs),
                       cp : double,
                       rgas : double,
                       gravity : double)
-where reads writes(vr, er, cr, vertr) do 
+where reads writes(vr, er, cr, vertr) do
 -- constants from constants.F --- TODO: combine constants in one place so you don't redefine every time you need
 
   var pii = 3.141592653589793
-  var omega = 7.29212E-5 
+  var omega = 7.29212E-5
 
 -- local vars/constants defined at beginning of subroutine
   var u0 = 35.0
@@ -61,19 +61,19 @@ where reads writes(vr, er, cr, vertr) do
   var rebalance = true
   --var nlat = 721
   var moisture = false
-  var nz1 = nVertLevels 
+  var nz1 = nVertLevels
   var nz = nz1 + 1
   var arr : double[2][3]
-  
+
   var qv_2d : double[nVertLevels][nlat]
 ---- Scale all distances and areas from a unit sphere to one with radius sphere_radius
 
   for iCell = 0, nCells do
-    cr[{iCell, 0}].x = cr[{iCell, 0}].x * sphere_radius 
-    cr[{iCell, 0}].y = cr[{iCell, 0}].y * sphere_radius 
-    cr[{iCell, 0}].z = cr[{iCell, 0}].z * sphere_radius 
-    cr[{iCell, 0}].areaCell = cr[{iCell, 0}].areaCell * cmath.pow(sphere_radius, 2.0) 
-  end 
+    cr[{iCell, 0}].x = cr[{iCell, 0}].x * sphere_radius
+    cr[{iCell, 0}].y = cr[{iCell, 0}].y * sphere_radius
+    cr[{iCell, 0}].z = cr[{iCell, 0}].z * sphere_radius
+    cr[{iCell, 0}].areaCell = cr[{iCell, 0}].areaCell * cmath.pow(sphere_radius, 2.0)
+  end
   for iVert = 0, nVertices do
     vr[{iVert, 0}].x = vr[{iVert, 0}].x * sphere_radius
     vr[{iVert, 0}].y = vr[{iVert, 0}].y * sphere_radius
@@ -85,11 +85,11 @@ where reads writes(vr, er, cr, vertr) do
   end
   for iEdge = 0, nEdges do
 
-    er[{iEdge, 0}].x = er[{iEdge, 0}].x * sphere_radius 
-    er[{iEdge, 0}].y = er[{iEdge, 0}].y * sphere_radius 
-    er[{iEdge, 0}].z = er[{iEdge, 0}].z * sphere_radius 
-    er[{iEdge, 0}].dvEdge = er[{iEdge, 0}].dvEdge * sphere_radius      
-    er[{iEdge, 0}].dcEdge = er[{iEdge, 0}].dcEdge * sphere_radius      
+    er[{iEdge, 0}].x = er[{iEdge, 0}].x * sphere_radius
+    er[{iEdge, 0}].y = er[{iEdge, 0}].y * sphere_radius
+    er[{iEdge, 0}].z = er[{iEdge, 0}].z * sphere_radius
+    er[{iEdge, 0}].dvEdge = er[{iEdge, 0}].dvEdge * sphere_radius
+    er[{iEdge, 0}].dcEdge = er[{iEdge, 0}].dcEdge * sphere_radius
 
   end
 
@@ -107,18 +107,18 @@ where reads writes(vr, er, cr, vertr) do
       qv_2d[iCell][k] = 0.0
     end
   end
-  
+
 -- end initialization of moisture.
 
 
   for iCell = 0, nCells do
     cr[{iCell, 0}].surface_pressure = 0.0
-  end 
+  end
 
 --      call atm_initialize_advection_rk(mesh, nCells, nEdges, maxEdges, on_a_sphere, sphere_radius )
 --      call atm_initialize_deformation_weights(mesh, nCells, on_a_sphere, sphere_radius)
 
---      call mpas_pool_get_dimension(state, 'index_qv', index_qv) 
+--      call mpas_pool_get_dimension(state, 'index_qv', index_qv)
 
 
   var xnutr = 0.0
@@ -146,7 +146,7 @@ where reads writes(vr, er, cr, vertr) do
   var zt = 45000.0
   var dz = zt/float(nz1)
   var sh : double[nVertLevels + 1]
-  var zw : double[nVertLevels + 1]  
+  var zw : double[nVertLevels + 1]
   var ah : double[nVertLevels + 1]
   var dzw : double[nVertLevels]
   var zu : double[nVertLevels]
@@ -156,7 +156,7 @@ where reads writes(vr, er, cr, vertr) do
   for k=0, nz do
 
 --!  sh[k] is the stretching specified for height surfaces
-    sh[k] = cmath.pow(((k - 1.0) * dz / zt), str) --- this was (real(k-1)) in mpas; do we need to cast it here too? 
+    sh[k] = cmath.pow(((k - 1.0) * dz / zt), str) --- this was (real(k-1)) in mpas; do we need to cast it here too?
 
 --!           to specify specific heights zc(k) for coordinate surfaces,
 --!           input zc(k) and define sh[k] = zc(k)/zt
@@ -164,20 +164,20 @@ where reads writes(vr, er, cr, vertr) do
 --!                zw[k] = (k-1)*dz yields constant dzeta
 --!                        and nonconstant dzeta/dz
 --!                zw[k] = sh[k]*zt yields nonconstant dzeta
---!                        and nearly constant dzeta/dz 
+--!                        and nearly constant dzeta/dz
 
     zw[k] = (k-1)*dz -- in mpas they cast to float
 
 --!            zw[k] = sh[k]*zt --- see above comments for which version you want
 --!
---!           ah[k] governs the transition between terrain-following 
+--!           ah[k] governs the transition between terrain-following
 --!           and pureheight coordinates
 --!                ah[k] = 0 is a terrain-following coordinate
 --!                ah[k] = 1 is a height coordinate
--- 
+--
     ah[k] = 1.0 - cmath.pow(cmath.cos(.5*pii*(k-1)*dz/zt), 6.0)
 --!            ah[k] = 0.
-  end 
+  end
   for k=0, nz1 do -- nz1 is just nVertLevels, idk why mpas renamed it
     dzw[k] = zw[k+1]-zw[k]
     vertr[k].rdzw = 1.0/dzw[k]
@@ -195,11 +195,11 @@ where reads writes(vr, er, cr, vertr) do
 
 --!**********  how are we storing cf1, cf2 and cf3?
 
-  var COF1 = (2.*vertr[1].dzu+vertr[2].dzu)/(vertr[1].dzu + vertr[2].dzu) * dzw[0]/ vertr[1].dzu 
-  var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu)*dzw[0]/ vertr[2].dzu 
+  var COF1 = (2.*vertr[1].dzu+vertr[2].dzu)/(vertr[1].dzu + vertr[2].dzu) * dzw[0]/ vertr[1].dzu
+  var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu)*dzw[0]/ vertr[2].dzu
   var CF1  = vertr[1].fzp + COF1
   var CF2  = vertr[1].fzm - COF1 - COF2
-  var CF3  = COF2       
+  var CF3  = COF2
 
 
 
@@ -207,19 +207,19 @@ where reads writes(vr, er, cr, vertr) do
   for iCell=0, nCells do
     for k=0, nz do
         cr[{iCell,k}].zgrid = (1.0-ah[k])*(sh[k]*(zt-cr[{iCell, k}].hx)+cr[{iCell, k}].hx) + ah[k] * sh[k]* zt
-    end 
+    end
     for k=0, nz1 do
       cr[{iCell, k}].zz = (zw[k+1]-zw[k])/(cr[{iCell, k+1}].zgrid-cr[{iCell,k}].zgrid)
-    end 
-  end 
+    end
+  end
 
   for i=0, nEdges do
     var iCell1 = er[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
     var iCell2 = er[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
     for k=1,nz1 do
       er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid-cr[{iCell1, k}].zgrid + cr[{iCell2, k+1}].zgrid-cr[{iCell1, k+1}].zgrid) / er[{i, 0}].dcEdge
-    end 
-  end 
+    end
+  end
   for i=0, nCells do
     for k=0, nz1 do
       ztemp = .5*(cr[{i, k+1}].zgrid+cr[{k,i}].zgrid)
@@ -272,7 +272,7 @@ where reads writes(vr, er, cr, vertr) do
 
     for k=1,nz1 do
       ztemp = .5*(zgrid_2d[k+1][i]+zgrid_2d[k][i])
-      ppb_2d[k][i] = p0*cmath.exp(-gravity*ztemp/(rgas*t0b)) 
+      ppb_2d[k][i] = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
       pb_2d[k][i] = cmath.pow((ppb_2d[k][i]/p0),(rgas/cp))
       rb_2d[k][i] = ppb_2d[k][i]/(rgas*t0b*zz_2d[k][i])
       tb_2d[k][i] = t0b/pb_2d[k][i]
@@ -280,7 +280,7 @@ where reads writes(vr, er, cr, vertr) do
       p_2d[k][i] = pb_2d[k][i]
       pp_2d[k][i] = 0.0
       rr_2d[k][i] = 0.0
-    end 
+    end
 
 
     for itr = 0,10 do
@@ -292,8 +292,8 @@ where reads writes(vr, er, cr, vertr) do
           teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity))
         else
           teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
-        end 
-      end 
+        end
+      end
 
       phi = lat_2d[i]
       for k=1,nz1 do
@@ -303,14 +303,14 @@ where reads writes(vr, er, cr, vertr) do
         ptemp   = ppb_2d[k][i] + pp_2d[k][i]
 
         --get moisture
-        ----SKIPPING THIS CONDITIONAL FOR NOW---- 
+        ----SKIPPING THIS CONDITIONAL FOR NOW----
         --if (moisture) then
           --qv_2d[k][i] = env_qv( ztemp, temperature_1d[k], ptemp, rh_max )
-        --end 
+        --end
 
         tt[k] = temperature_1d[k]*(1.0+1.61*qv_2d[k][i])
-      end 
-      
+      end
+
       for itrp = 0,25 do
         for k=0,nz1 do
           rr_2d[k][i]  = (pp_2d[k][i]/(rgas*zz_2d[k][i]) - rb_2d[k][i]*(tt[k]-t0b))/tt[k]
@@ -322,22 +322,22 @@ where reads writes(vr, er, cr, vertr) do
         for k=0, nz1-1 do
 
           ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity*  ( (rr_2d[k][i]+(rr_2d[k][i]+rb_2d[k][i])*qv_2d[k][i])*vertr[k+1].fzp  + (rr_2d[k+1][i]+(rr_2d[k+1][i]+rb_2d[k+1][i])*qv_2d[k+1][i])*vertr[k+1].fzm )
-        end 
+        end
 
         for k=0, nz1 do
           pp_2d[k][i] = .2*ppi[k]+.8*pp_2d[k][i]
-        end 
+        end
 
       end   -- end inner iteration loop itrp
 
     end   -- end outer iteration loop itr
-    
+
 
     for k = 0, nz1 do
       rho_2d[k][i] = rr_2d[k][i]+rb_2d[k][i]
       etavs_2d[k][i] = ((ppb_2d[k][i]+pp_2d[k][i])/p0 - 0.252)*pii/2.0
       u_2d[k][i] = u0*(cmath.pow(cmath.sin(2.*lat_2d[i]),2)) * (cmath.pow(cmath.cos(etavs_2d[k][i]),1.5))
-    end 
+    end
 
   end   -- end loop over latitudes for 2D zonal wind field calc
 
@@ -360,13 +360,13 @@ where reads writes(vr, er, cr, vertr) do
 --
 --      end if
 --
---!******************************************************************      
+--!******************************************************************
 --
 
 
 
 
---!******************************************************************      
+--!******************************************************************
 
 --!
 --!---- baroclinc wave initialization ---------------------------------
@@ -376,7 +376,7 @@ where reads writes(vr, er, cr, vertr) do
   for i=0, nCells do
     for k=0,nz1 do
       ztemp    = .5*(cr[{i, k+1}].zgrid+cr[{k,i}].zgrid)
-      cr[{i, k}].pressure_base = p0*cmath.exp(-gravity*ztemp/(rgas*t0b)) 
+      cr[{i, k}].pressure_base = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
       cr[{i, k}].pressure_p = cmath.pow((cr[{i, k}].pressure_base/p0),(rgas/cp))
       cr[{i, k}].rho_base = cr[{i, k}].pressure_base/(rgas*t0b*cr[{i, k}].zz)
       cr[{i, k}].theta_base = t0b/cr[{i, k}].pressure_p
@@ -384,7 +384,7 @@ where reads writes(vr, er, cr, vertr) do
       cr[{i, k}].exner = cr[{i, k}].pressure_p
       cr[{i, k}].pressure_p = 0.0
       cr[{i, k}].rho_p = 0.0
-    end 
+    end
 
 --!     iterations to converge temperature as a function of pressure
 --!
@@ -397,8 +397,8 @@ where reads writes(vr, er, cr, vertr) do
           teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity))
         else
           teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
-        end 
-      end 
+        end
+      end
       phi = cr[{i, 0}].lat
       for k=0,nz1 do
         temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.+0.61*cr[{i, k}].qv)
@@ -407,7 +407,7 @@ where reads writes(vr, er, cr, vertr) do
         ptemp   = cr[{i, k}].pressure_base + cr[{i, k}].pressure_p
 
 ------SKIPPING BECAUSE CONDITIONAL ----------
---  --!get moisture 
+--  --!get moisture
 --        if (moisture) then
 
 --            !scalars(index_qv,k,i) = env_qv( ztemp, temperature_1d[k], ptemp, rh_max )
@@ -418,7 +418,7 @@ where reads writes(vr, er, cr, vertr) do
 --              relhum(k,i) = 1.0
 --           else
 --              relhum(k,i) = (1.-((p0-ptemp)/50000.)**1.25)
---           end 
+--           end
 --           relhum(k,i) = min(rh_max,relhum(k,i))
 --
 --           !.. calculation of water vapor mixing ratio:
@@ -426,16 +426,16 @@ where reads writes(vr, er, cr, vertr) do
 --               es  = 1000.*0.6112*cmath.exp(17.67*(temperature_1d[k]-273.15)/(temperature_1d[k]-29.65))
 --           else
 --               es  = 1000.*0.6112*cmath.exp(21.8745584*(temperature_1d[k]-273.15)/(temperature_1d[k]-7.66))
---           end 
+--           end
 --           qsat(k,i) = (287.04/461.6)*es/(ptemp-es)
 --           if(relhum(k,i) .eq. 0.0) then qsat(k,i) = 0.0
 --           end
 --           scalars(index_qv,k,i) = relhum(k,i)*qsat(k,i)
---        end 
+--        end
 
         tt[k] = temperature_1d[k]*(1.+1.61*cr[{i, k}].qv)
 
-      end 
+      end
 
 
 
@@ -443,7 +443,7 @@ where reads writes(vr, er, cr, vertr) do
       for itrp = 0,25 do
         for k=0,nz1 do
           cr[{i,k}].rho_p  = (cr[{i, k}].pressure_p/(rgas*cr[{i, k}].zz) - cr[{i, k}].rho_base*(tt[k]-t0b))/tt[k]
-        end 
+        end
 
         ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+cr[{i, 0}].qv ) -.25*(cr[{i, 2}].rho_p+cr[{i, 2}].rho_base)*(1.+cr[{i, 1}].qv))
 
@@ -457,7 +457,7 @@ where reads writes(vr, er, cr, vertr) do
 
         for k=0 ,nz1 do
           cr[{i, k}].pressure_p = .2*ppi[k]+.8*cr[{i, k}].pressure_p
-        end 
+        end
 
       end   -- end inner iteration loop itrp
 
@@ -472,7 +472,7 @@ where reads writes(vr, er, cr, vertr) do
       cr[{i, k}].theta_m = tt[k]/cr[{i, k}].exner
       cr[{i, k}].rtheta_p = cr[{i, k}].theta_m * cr[{i,k}].rho_p+cr[{i, k}].rho_base*(cr[{i, k}].theta_m-cr[{i, k}].theta_base)
       cr[{i, k}].rho_zz = cr[{i, k}].rho_base + cr[{i,k}].rho_p
-    end 
+    end
 
     --calculation of surface pressure:
     cr[{i, 0}].surface_pressure = 0.5*dzw[1]*gravity * (1.25*(cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 0}].qv) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
@@ -512,7 +512,7 @@ where reads writes(vr, er, cr, vertr) do
 ----SKIPPING THE CONDITIONAL above, defaulting to the ELSE case
        u_pert = 0.0
 -------end conditional else----------
- 
+
 ----SKIPPING THE CONDITIONAL, ONLY PORTING THE ELSE STATEMENT FOR NOW--------
 --     if (rebalance) then
 --
@@ -522,7 +522,7 @@ where reads writes(vr, er, cr, vertr) do
 --         u(k,iEdge) = fluxk + u_pert
 --       end do
 
---     else 
+--     else
 
 --       do k=1,nVertLevels
 --         etavs = (0.5*(pressure_base(k,iCell1)+pressure_base(k,iCell2)+pp(k,iCell1)+pp(k,iCell2))/p0 - 0.252)*pii/2.
@@ -537,7 +537,7 @@ where reads writes(vr, er, cr, vertr) do
        etavs = (0.5*(cr[{iCell1, k}].pressure_base+cr[{iCell2, k}].pressure_base+cr[{iCell1, k}].pressure_p+cr[{iCell2, k}].pressure_p)/p0 - 0.252)*pii/2.0
        var fluxk = u0*flux*(cmath.pow(cmath.cos(etavs),1.5))
        er[{iEdge, k}].u = fluxk + u_pert
-     end 
+     end
 
 ------end conditional else---------
 
@@ -545,19 +545,19 @@ where reads writes(vr, er, cr, vertr) do
      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
      for k=0,nz1 do
         er[{iEdge, k}].ru  = 0.5*(cr[{cell1, k}].rho_zz+cr[{cell2, k}].rho_zz)*er[{iEdge, k}].u
-     end 
+     end
 
 --  !
 --  ! Generate rotated Coriolis field
 --  !
 
      er[{iEdge, 0}].fEdge = 2.0 * omega_e *  ( -1.0*cmath.cos(er[{iEdge, 0}].lon) * cmath.cos(er[{iEdge, 0}].lat) * cmath.sin(alpha_grid) +  cmath.sin(er[{iEdge, 0}].lat) * cmath.cos(alpha_grid) )
-  end 
+  end
 
 
   for iVtx=0,nVertices do
      vr[{iVtx, 0}].fVertex = 2.0 * omega_e *  (-1.0*cmath.cos(vr[{iVtx, 0}].lon) * cmath.cos(vr[{iVtx, 0}].lat) * cmath.sin(alpha_grid) +  cmath.sin(vr[{iVtx, 0}].lat) * cmath.cos(alpha_grid))
-  end 
+  end
 
 
 
@@ -576,7 +576,7 @@ where reads writes(vr, er, cr, vertr) do
      var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
      var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
-    --Below conditional is unnecessary because we use regions, not pools/threads 
+    --Below conditional is unnecessary because we use regions, not pools/threads
      --! Avoid a potential divide by zero below if areaCell(nCells+1) is used in the denominator
     -- if (cell1 <= nCellsSolve or cell2 <= nCellsSolve ) then
         for k = 0, nVertLevels do
@@ -585,7 +585,7 @@ where reads writes(vr, er, cr, vertr) do
 
             --  z_edge = (cr[{cell1, k}].zgrid+cr[{cell2, k}].zgrid)/2.
 
-          -- elseif (config_theta_adv_order == 3 or config_theta_adv_order ==4) then --theta_adv_order == 3 or 4 
+          -- elseif (config_theta_adv_order == 3 or config_theta_adv_order ==4) then --theta_adv_order == 3 or 4
 
           --    d2fdx2_cell1 = deriv_two(1,1,iEdge) * cr[{cell1, k}].zgrid
           --    d2fdx2_cell2 = deriv_two(1,2,iEdge) * cr[{cell2, k}].zgrid
@@ -599,7 +599,7 @@ where reads writes(vr, er, cr, vertr) do
           --    for i=0, nEdgesOnCell(cell2) do
           --       if ( cellsOnCell(i,cell2) > 0) then  d2fdx2_cell2 = d2fdx2_cell2 + deriv_two(i+1,2,iEdge) * zgrid(k,cellsOnCell(i,cell2))
           --       end
-          --    end              
+          --    end
 
           --    z_edge =  0.5*(cr[{cell1, k}].zgrid + cr[{cell2, k}].zgrid)         &
           --                  - (dcEdge(iEdge) **2) * (d2fdx2_cell1 + d2fdx2_cell2) / 12.
@@ -608,20 +608,20 @@ where reads writes(vr, er, cr, vertr) do
           --       z_edge3 =  - (dcEdge(iEdge) **2) * (d2fdx2_cell1 - d2fdx2_cell2) / 12.
           --    else
           --       z_edge3 = 0.
-          --    end 
+          --    end
               -- only using the ELSE default for now
                z_edge3 = 0.0
-     --      end 
+     --      end
 
            er[{iEdge, k}].zb[0] = (z_edge-cr[{cell1, k}].zgrid)*er[{iEdge, 0}].dvEdge/cr[{cell1, 0}].areaCell
            er[{iEdge, k}].zb[1] = (z_edge-cr[{cell2, k}].zgrid)*er[{iEdge, 0}].dvEdge/cr[{cell2, 0}].areaCell
            er[{iEdge, k}].zb3[0]=  z_edge3*er[{iEdge, 0}].dvEdge/cr[{cell1, 0}].areaCell
            er[{iEdge, k}].zb3[1] =  z_edge3*er[{iEdge, 0}].dvEdge/cr[{cell2, 0}].areaCell
 
-        end 
-    -- end 
+        end
+    -- end
 
-  end 
+  end
 
   --! for including terrain
   for iEdge = 0,nEdges do
@@ -642,25 +642,25 @@ where reads writes(vr, er, cr, vertr) do
         cr[{cell2, k}].rw = cr[{cell2, k}].rw + (vertr[k].fzm*cr[{cell2, k}].zz+vertr[k].fzp*cr[{cell2, k-1}].zz)*er[{iEdge, k}].zb[1]*flux
         cr[{cell1, k}].rw = cr[{cell1, k}].rw - (vertr[k].fzm*cr[{cell1, k}].zz+vertr[k].fzp*cr[{cell1, k-1}].zz)*er[{iEdge, k}].zb[0]*flux
 
---        if (config_theta_adv_order ==3) then 
+--        if (config_theta_adv_order ==3) then
 --           cr[{cell2, k}].rw = cr[{cell2, k}].rw    &
 --                                        - sign(1.0_RKIND,er[{iEdge, k}].ru)*config_coef_3rd_order* &
 --                                          (vertr[k].fzm*zz(k,cell2)+vertr[k].fzp*zz(k-1,cell2))*zb3(k,2,iEdge)*flux
 --           cr[{cell1, k}].rw = cr[{cell1, k}].rw    &
 --                                        + sign(1.0_RKIND,er[{iEdge, k}].ru)*config_coef_3rd_order* &
 --                                          (vertr[k].fzm*zz(k,cell1)+vertr[k].fzp*zz(k-1,cell1))*zb3(k,1,iEdge)*flux
---        end 
+--        end
 
-     end 
+     end
 
-  end 
+  end
 
   --! Compute w from rho_zz and rw
   for iCell=0,nCells do
      for k=1,nVertLevels do
         cr[{iCell, k}].w = cr[{iCell, k}].rw / (vertr[k].fzp * cr[{iCell, k-1}].rho_zz + vertr[k].fzm * cr[{iCell, k}].rho_zz)
-     end 
-  end 
+     end
+  end
 
 
   --!
@@ -674,12 +674,12 @@ where reads writes(vr, er, cr, vertr) do
 
   for iEdge = 0, nEdges do
      for i=0, er[{iEdge, 0}].nEdgesOnEdge do
-        eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i] 
+        eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i]
         for k = 0, nVertLevels do
            er[{iEdge, k}].v = er[{iEdge, k}].v + er[{iEdge, 0}].weightsOnEdge[i] * er[{eoe, k}].u
-        end 
-     end 
-  end 
+        end
+     end
+  end
 
 --------PSURF is never used, in mpas it only exists for purposes of logging. excluding because of this
 --  for i=0,10 do
@@ -689,14 +689,14 @@ where reads writes(vr, er, cr, vertr) do
 --                      *(1.25*(rr(1,i)+rb(1,i))*(1.+scalars(index_qv,1,i))   &
 --                       -.25*(rr(2,i)+rb(2,i))*(1.+scalars(index_qv,2,i)))
 --
---  end 
+--  end
 
   --! Compute rho and theta from rho_zz and theta_m
   for iCell=0,nCells do
      for k=0,nVertLevels do
         cr[{iCell, k}].rho = cr[{iCell, k}].rho_zz * cr[{iCell, k}].zz
         cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1.0 + 1.61 * cr[{iCell, k}].qv)
-     end 
-  end 
+     end
+  end
 
 end
