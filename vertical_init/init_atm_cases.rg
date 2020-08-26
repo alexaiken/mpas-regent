@@ -65,7 +65,7 @@ where reads writes(vr, er, cr, vertr) do
   var nz = nz1 + 1
   var arr : double[2][3]
 
-  var qv_2d : double[nVertLevels][nlat]
+  var qv_2d : double[nVertLevels * nlat]
 ---- Scale all distances and areas from a unit sphere to one with radius sphere_radius
 
   for iCell = 0, nCells do
@@ -104,8 +104,11 @@ where reads writes(vr, er, cr, vertr) do
       cr[{iCell, k}].qsat = 0.0
       cr[{iCell, k}].relhum = 0.0
     end
-    for k = 0, nlat do
-      qv_2d[iCell][k] = 0.0
+  end
+
+  for i = 0, nVertLevels do
+    for j = 0, nlat do
+      qv_2d[i*nlat + j] = 0.0
     end
   end
 
@@ -184,6 +187,7 @@ where reads writes(vr, er, cr, vertr) do
     vertr[k].rdzw = 1.0/dzw[k]
     zu[k] = .5*(zw[k]+zw[k+1])
   end
+
   for k=1, nz1 do -- k=2,nz1 in mpas
     vertr[k].dzu = .5*(dzw[k]+dzw[k-1])
     vertr[k].rdzu  =  1.0/vertr[k].dzu
@@ -239,19 +243,19 @@ where reads writes(vr, er, cr, vertr) do
 
   var dlat = 0.5*pii / float(nlat-1)
   var lat_2d : double[nlat]
-  var zgrid_2d : double[nVertLevels + 1][nlat]
-  var zz_2d : double[nVertLevels][nlat]
-  var ppb_2d : double[nVertLevels][nlat]
-  var pb_2d : double[nVertLevels][nlat]
-  var rb_2d : double[nVertLevels][nlat]
-  var tb_2d : double[nVertLevels][nlat]
-  var etavs_2d : double[nVertLevels][nlat]
-  var u_2d : double[nVertLevels][nlat]
-  var rho_2d : double[nVertLevels][nlat]
-  var p_2d : double[nVertLevels][nlat]
-  var pp_2d : double[nVertLevels][nlat]
-  var rr_2d : double[nVertLevels][nlat]
-  var rtb_2d : double[nVertLevels][nlat]
+  var zgrid_2d : double[(nVertLevels + 1) * nlat]
+  var zz_2d : double[nVertLevels * nlat]
+  var ppb_2d : double[nVertLevels * nlat]
+  var pb_2d : double[nVertLevels * nlat]
+  var rb_2d : double[nVertLevels * nlat]
+  var tb_2d : double[nVertLevels * nlat]
+  var etavs_2d : double[nVertLevels * nlat]
+  var u_2d : double[nVertLevels * nlat]
+  var rho_2d : double[nVertLevels * nlat]
+  var p_2d : double[nVertLevels * nlat]
+  var pp_2d : double[nVertLevels * nlat]
+  var rr_2d : double[nVertLevels * nlat]
+  var rtb_2d : double[nVertLevels * nlat]
   var eta : double[nVertLevels]
   var ppi : double[nVertLevels]
   var teta : double[nVertLevels]
@@ -265,29 +269,29 @@ where reads writes(vr, er, cr, vertr) do
     phi = lat_2d[i]
     var hx_1d = u0 / gravity * cmath.pow(cmath.cos(etavs),1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *(u0)*cmath.pow(cmath.cos(etavs),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)
     for k=0, nz do
-      zgrid_2d[k][i] = (1.-ah[k])*(sh[k]*(zt-hx_1d)+hx_1d) + ah[k] * sh[k]* zt
+      zgrid_2d[k * nlat + i] = (1.-ah[k])*(sh[k]*(zt-hx_1d)+hx_1d) + ah[k] * sh[k]* zt
     end
     for k=0, nz1 do
-      zz_2d[k][i] = (zw[k+1]-zw[k])/(zgrid_2d[k+1][i]-zgrid_2d[k][i])
+      zz_2d[k* nlat + i] = (zw[k+1]-zw[k])/(zgrid_2d[(k+1) * nlat + i]-zgrid_2d[k*nlat + i])
     end
 
     for k=1,nz1 do
-      ztemp = .5*(zgrid_2d[k+1][i]+zgrid_2d[k][i])
-      ppb_2d[k][i] = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
-      pb_2d[k][i] = cmath.pow((ppb_2d[k][i]/p0),(rgas/cp))
-      rb_2d[k][i] = ppb_2d[k][i]/(rgas*t0b*zz_2d[k][i])
-      tb_2d[k][i] = t0b/pb_2d[k][i]
-      rtb_2d[k][i] = rb_2d[k][i]*tb_2d[k][i]
-      p_2d[k][i] = pb_2d[k][i]
-      pp_2d[k][i] = 0.0
-      rr_2d[k][i] = 0.0
+      ztemp = .5*(zgrid_2d[(k+1)*nlat + i]+zgrid_2d[k*nlat + i])
+      ppb_2d[k * nlat + i] = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
+      pb_2d[k * nlat + i] = cmath.pow((ppb_2d[k * nlat + i]/p0),(rgas/cp))
+      rb_2d[k * nlat + i] = ppb_2d[k * nlat + i]/(rgas*t0b*zz_2d[k * nlat + i])
+      tb_2d[k * nlat + i] = t0b/pb_2d[k * nlat + i]
+      rtb_2d[k * nlat + i] = rb_2d[k * nlat + i]*tb_2d[k * nlat + i]
+      p_2d[k * nlat + i] = pb_2d[k * nlat + i]
+      pp_2d[k * nlat + i] = 0.0
+      rr_2d[k * nlat + i] = 0.0
     end
 
 
     for itr = 0,10 do
 
       for k=0,nz1 do
-        eta[k] = (ppb_2d[k][i]+pp_2d[k][i])/p0
+        eta[k] = (ppb_2d[k * nlat + i]+pp_2d[k * nlat + i])/p0
         etav[k] = (eta[k]-.252)*pii/2.0
         if(eta[k] >= znut)  then
           teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity))
@@ -298,35 +302,35 @@ where reads writes(vr, er, cr, vertr) do
 
       phi = lat_2d[i]
       for k=1,nz1 do
-        temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0)  *2.0*u0*cmath.pow(cmath.cos(etav[k]),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.0+0.61*qv_2d[k][i])
+        temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0)  *2.0*u0*cmath.pow(cmath.cos(etav[k]),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.0+0.61*qv_2d[nlat*k + i])
 
-        ztemp   = .5*(zgrid_2d[k][i]+zgrid_2d[k+1][i])
-        ptemp   = ppb_2d[k][i] + pp_2d[k][i]
+        ztemp   = .5*(zgrid_2d[k * nlat + i]+zgrid_2d[(k+1) * nlat + i])
+        ptemp   = ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]
 
         --get moisture
         ----SKIPPING THIS CONDITIONAL FOR NOW----
         --if (moisture) then
-          --qv_2d[k][i] = env_qv( ztemp, temperature_1d[k], ptemp, rh_max )
+          --qv_2d[k * nlat + i] = env_qv( ztemp, temperature_1d[k], ptemp, rh_max )
         --end
 
-        tt[k] = temperature_1d[k]*(1.0+1.61*qv_2d[k][i])
+        tt[k] = temperature_1d[k]*(1.0+1.61*qv_2d[k * nlat + i])
       end
 
       for itrp = 0,25 do
         for k=0,nz1 do
-          rr_2d[k][i]  = (pp_2d[k][i]/(rgas*zz_2d[k][i]) - rb_2d[k][i]*(tt[k]-t0b))/tt[k]
+          rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i]/(rgas*zz_2d[k * nlat + i]) - rb_2d[k * nlat + i]*(tt[k]-t0b))/tt[k]
         end
 
-        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(rr_2d[1][i]+rb_2d[1][i])*(1.0+qv_2d[1][i])  -.25*(rr_2d[2][i]+rb_2d[2][i])*(1.0+qv_2d[2][i]))
+        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(rr_2d[1 * nlat + i]+rb_2d[1 * nlat + i])*(1.0+qv_2d[1*nlat + i])  -.25*(rr_2d[2 * nlat + i]+rb_2d[2 * nlat + i])*(1.0+qv_2d[2 * nlat + i]))
 
-        ppi[1] = ppi[1]-ppb_2d[1][i]
+        ppi[1] = ppi[1]-ppb_2d[1 * nlat + i]
         for k=0, nz1-1 do
 
-          ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity*  ( (rr_2d[k][i]+(rr_2d[k][i]+rb_2d[k][i])*qv_2d[k][i])*vertr[k+1].fzp  + (rr_2d[k+1][i]+(rr_2d[k+1][i]+rb_2d[k+1][i])*qv_2d[k+1][i])*vertr[k+1].fzm )
+          ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity*  ( (rr_2d[k * nlat + i]+(rr_2d[k * nlat + i] +rb_2d[k * nlat + i])*qv_2d[k*nlat + i])*vertr[k+1].fzp  + (rr_2d[(k+1) * nlat + i]+(rr_2d[(k+1) * nlat + i]+rb_2d[(k+1) * nlat + i])*qv_2d[(k+1) * nlat + i])*vertr[k+1].fzm )
         end
 
         for k=0, nz1 do
-          pp_2d[k][i] = .2*ppi[k]+.8*pp_2d[k][i]
+          pp_2d[k * nlat + i] = .2*ppi[k]+.8*pp_2d[k * nlat + i]
         end
 
       end   -- end inner iteration loop itrp
@@ -335,9 +339,9 @@ where reads writes(vr, er, cr, vertr) do
 
 
     for k = 0, nz1 do
-      rho_2d[k][i] = rr_2d[k][i]+rb_2d[k][i]
-      etavs_2d[k][i] = ((ppb_2d[k][i]+pp_2d[k][i])/p0 - 0.252)*pii/2.0
-      u_2d[k][i] = u0*(cmath.pow(cmath.sin(2.*lat_2d[i]),2)) * (cmath.pow(cmath.cos(etavs_2d[k][i]),1.5))
+      rho_2d[k * nlat + i] = rr_2d[k * nlat + i]+rb_2d[k * nlat + i]
+      etavs_2d[k * nlat + i] = ((ppb_2d[k * nlat + i]+pp_2d[k * nlat + i])/p0 - 0.252)*pii/2.0
+      u_2d[k * nlat + i] = u0*(cmath.pow(cmath.sin(2.*lat_2d[i]),2)) * (cmath.pow(cmath.cos(etavs_2d[k * nlat + i]),1.5))
     end
 
   end   -- end loop over latitudes for 2D zonal wind field calc
