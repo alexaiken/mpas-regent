@@ -148,7 +148,7 @@ where reads writes(vr, er, cr, vertr) do
 
   var str = 1.5
   var zt = 45000.0
-  var dz = zt/float(nz1)
+  var dz = zt/nz1
   var sh : double[nVertLevels + 1]
   var zw : double[nVertLevels + 1]
   var ah : double[nVertLevels + 1]
@@ -158,9 +158,18 @@ where reads writes(vr, er, cr, vertr) do
   var rdzwm : double[nVertLevels]
 
   for k=0, nz do
+    if k == 0 then
+      sh[k] = -1
+    else
+  --!  sh[k] is the stretching specified for height surfaces
+      sh[k] = cmath.pow(([double](k - 1.0) * dz / zt), str) --- this was (real(k-1)) in mpas; do we need to cast it here too?
+    end
 
---!  sh[k] is the stretching specified for height surfaces
-    sh[k] = cmath.pow(((k - 1.0) * dz / zt), str) --- this was (real(k-1)) in mpas; do we need to cast it here too?
+    --cio.printf("dz is %f \n", dz)
+    --cio.printf("zt is %f \n", zt)
+    --cio.printf("str is %f \n", str)
+    --cio.printf("cmath.pow(([float](%d - 1.0) * dz=%f / zt=%f), str) is %f \n", k, dz, zt, cmath.pow(([float](k - 1.0) * dz / zt), str))
+
 
 --!           to specify specific heights zc(k) for coordinate surfaces,
 --!           input zc(k) and define sh[k] = zc(k)/zt
@@ -181,6 +190,10 @@ where reads writes(vr, er, cr, vertr) do
 --
     ah[k] = 1.0 - cmath.pow(cmath.cos(.5*pii*(k-1)*dz/zt), 6.0)
 --!            ah[k] = 0.
+
+    --cio.printf("sh[%d] is %f \n", k, sh[k])
+    --cio.printf("ah[%d] is %f \n", k, ah[k])
+    --cio.printf("zw[%d] is %f \n", k, zw[k])
   end
   for k=0, nz1 do -- nz1 is just nVertLevels, idk why mpas renamed it
     dzw[k] = zw[k+1]-zw[k]
@@ -212,9 +225,15 @@ where reads writes(vr, er, cr, vertr) do
   for iCell=0, nCells do
     for k=0, nz do
         cr[{iCell,k}].zgrid = (1.0-ah[k])*(sh[k]*(zt-cr[{iCell, k}].hx)+cr[{iCell, k}].hx) + ah[k] * sh[k]* zt
+        --cio.printf("ah[%d] is %f \n", k, ah[k])
+        --cio.printf("sh[%d] is %f \n", k, sh[k])
+        --cio.printf("cr[{%d, %d}].hx is %f\n", iCell, k, cr[{iCell, k}].hx)
     end
     for k=0, nz1 do
       cr[{iCell, k}].zz = (zw[k+1]-zw[k])/(cr[{iCell, k+1}].zgrid-cr[{iCell,k}].zgrid)
+      cio.printf("cr[{iCell = %d, k = %d}].zz is %f \n", iCell, k, cr[{iCell, k}].zz)
+      --cio.printf("zw[%d] is %f \n", k, zw[k]) : zw is set
+      --cio.printf("cr[{%d, %d}].zgrid is %f", iCell, k, cr[{iCell,k}].zgrid) : zgrid is not set
     end
   end
 

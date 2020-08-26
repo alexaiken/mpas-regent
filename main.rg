@@ -35,7 +35,7 @@ task main()
 
   init_atm_case_jw(vertex_region, edge_region, cell_region, vertical_region, constants.cp, constants.rgas, constants.gravity)
 
-  --atm_core_init(cell_region, edge_region, vertex_region, vertical_region, constants.rgas, constants.cp, constants.rvord)
+  atm_core_init(cell_region, edge_region, vertex_region, vertical_region, constants.rgas, constants.cp, constants.rvord)
 
   --for i = 0, constants.NUM_TIMESTEPS do
     --atm_timestep(1, vertex_region, edge_region, cell_region, vertical_region, constants.config_epssm, constants.rgas, constants.cp, constants.gravity)
