@@ -43,7 +43,7 @@ salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=02:00:00
 
 LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg
 
-## Installing MPAS
+## Installing MPAS (This still does not work :( )
 
 Step 1: **Environment Variables**  <br />
 
@@ -121,20 +121,28 @@ Please also add the following to your ~/.bash_profile so that terra knows where 
 This is the overview files that calls all of our sub-tasks.
 
 ### data_structures.rg
-This is the file in which we define our regions.
+This is the file in which we define our regions. We currently have 4 main regions - a cell region, an edge region, and a vertex region.
 
 ### constants.rg
 We declare constants here for use in other file.
 
 ### mesh_loading/mesh_loading.rg
 This file has the task to load the data from the netcdf grid file. 
-It also has two other tasks, one to produce a netcdf output after reading in for verification that we have read the file correctly, and another to produce an ouput after we run the rest of our code.
+
+task load_mesh: This loads the data from the netcdf grid file. You can change the grid name in constants.rg.
+
+task partition_regions: This partitions the regions. It works correctly, however I still have not been able to return the partition objects.
+
+task write_output: This writes an output file to test that we have read the file correctly. To be called just after load_mesh if verification is required.
+
+task write_output_plotting: This writes an output file to test that we have read the file correctly. To be called after running timestep, etc.
+
 
 ### mesh_loading/netcdf_tasks.rg
-This is a helper file employed by mesh_loading.rg that has the netcdf helper tasks we use to read the grid file.
+This is a helper file employed by mesh_loading.rg that has the terra wrapper tasks around the C/netcdf functions we use to read the grid file.
 
 ### dynamics/dynamics_tasks.rg
-This is where the meat of our kernels are.
+This is where the meat of our kernels are. 
 
 ### dynamics/rk_timestep.rg
 This is the file that contains the logic for taking a time step.
