@@ -1294,8 +1294,14 @@ where reads writes(cell_region, edge_region, vertex_region) do
     put_var_int(ncid_copy, edgesOnCell_varid_copy, edgesOnCell_in_copy)
     put_var_int(ncid_copy, verticesOnCell_varid_copy, verticesOnCell_in_copy)
     put_var_int(ncid_copy, cellsOnCell_varid_copy, cellsOnCell_in_copy)
-    put_var_double(ncid_copy, pressure_varid_copy, pressure_in_copy)
     put_var_double(ncid_copy, w_varid_copy, w_in_copy)
+    put_var_double(ncid_copy, pressure_varid_copy, pressure_in_copy)
+    put_var_double(ncid_copy, pressure_p_varid_copy, pressure_p_in_copy)
+
+    put_var_double(ncid_copy, rho_varid_copy, rho_in_copy)
+    put_var_double(ncid_copy, theta_varid_copy, theta_in_copy)
+    put_var_double(ncid_copy, surface_pressure_varid_copy, surface_pressure_in_copy)
+
 
 
     put_var_double(ncid_copy, latEdge_varid_copy, latEdge_in_copy)

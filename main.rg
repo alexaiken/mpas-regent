@@ -38,12 +38,12 @@ task main()
   atm_core_init(cell_region, edge_region, vertex_region, vertical_region, constants.rgas, constants.cp, constants.rvord)
 
   --for i = 0, constants.NUM_TIMESTEPS do
-    --atm_timestep(1, vertex_region, edge_region, cell_region, vertical_region, constants.config_epssm, constants.rgas, constants.cp, constants.gravity)
+  atm_timestep(1, vertex_region, edge_region, cell_region, vertical_region, constants.config_epssm, constants.rgas, constants.cp, constants.gravity)
   --end
 
-  --atm_compute_output_diagnostics(cell_region, constants.rvord)
+  atm_compute_output_diagnostics(cell_region, constants.rvord)
 
-  --write_output_plotting(cell_region, edge_region, vertex_region)
+  write_output_plotting(cell_region, edge_region, vertex_region)
 
 end
 regentlib.start(main)

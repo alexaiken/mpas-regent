@@ -231,7 +231,7 @@ where reads writes(vr, er, cr, vertr) do
     end
     for k=0, nz1 do
       cr[{iCell, k}].zz = (zw[k+1]-zw[k])/(cr[{iCell, k+1}].zgrid-cr[{iCell,k}].zgrid)
-      cio.printf("cr[{iCell = %d, k = %d}].zz is %f \n", iCell, k, cr[{iCell, k}].zz)
+      --cio.printf("cr[{iCell = %d, k = %d}].zz is %f \n", iCell, k, cr[{iCell, k}].zz)
       --cio.printf("zw[%d] is %f \n", k, zw[k]) : zw is set
       --cio.printf("cr[{%d, %d}].zgrid is %f", iCell, k, cr[{iCell,k}].zgrid) : zgrid is not set
     end

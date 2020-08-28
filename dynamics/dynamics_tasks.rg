@@ -31,25 +31,35 @@ local nVertLevels = 1
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
-  task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
+__demand(__cuda)
+task atm_compute_signs_pt1(cr : region(ispace(int2d), cell_fs),
                         er : region(ispace(int2d), edge_fs),
                         vr : region(ispace(int2d), vertex_fs))
 where reads writes(vr, cr), reads (er) do
 
-    for iVtx = 0, nVertices do -- TODO: change bounds once you know whether vOnEdge contains ID's or indices
-        for i = 0, vertexDegree do
-            if (vr[{iVtx, 0}].edgesOnVertex[i] <= nEdges) then
-                --note: when MPAS calls vOnEdge(2, ...), we access vOnEdge index 1!
-                if (iVtx == er[{vr[{iVtx, 0}].edgesOnVertex[i], 0}].verticesOnEdge[1]) then
-                    vr[{iVtx, 0}].edgesOnVertexSign[i] = 1.0
-                else
-                    vr[{iVtx, 0}].edgesOnVertexSign[i] = -1.0
-                end
-            else
-                vr[{iVtx, 0}].edgesOnVertexSign[i] = 0.0
-            end
+    var range = rect2d { int2d {0, 0}, int2d {nVertices - 1, 0} }
+    for iVtx in range do
+      for i = 0, vertexDegree do
+        if (vr[iVtx].edgesOnVertex[i] <= nEdges) then
+          if (iVtx.x == er[{vr[iVtx].edgesOnVertex[i], 0}].verticesOnEdge[1]) then
+            vr[iVtx].edgesOnVertexSign[i] = 1.0
+          else
+            vr[iVtx].edgesOnVertexSign[i] = -1.0
+          end
+
+        else
+          vr[iVtx].edgesOnVertexSign[i] = 0.0
         end
+
+      end
     end
+end
+
+
+task atm_compute_signs_pt2(cr : region(ispace(int2d), cell_fs),
+                          er : region(ispace(int2d), edge_fs),
+                          vr : region(ispace(int2d), vertex_fs))
+where reads writes(vr, cr), reads (er) do
 
 
       for iCell=0,nCells do
@@ -63,8 +73,8 @@ where reads writes(vr, cr), reads (er) do
                     cr[{iCell, vLevel}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb[0]
                     cr[{iCell, vLevel}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb3[0]
 
-                    cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb_cell[i])
-                    cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb3_cell[i])
+                    --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb_cell[i])
+                    --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb3_cell[i])
 
                   end
 
@@ -75,8 +85,8 @@ where reads writes(vr, cr), reads (er) do
 
                     cr[{iCell, vLevel}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb[1]
                     cr[{iCell, vLevel}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb3[1]
-                    cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb_cell[i])
-                    cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb3_cell[i])
+                    --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb_cell[i])
+                    --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb3_cell[i])
 
                   end
                end
@@ -101,7 +111,7 @@ where reads writes(vr, cr), reads (er) do
             else
                 cr[{iCell, 0}].kiteForCell[i] = 1
             end
-            cio.printf("cr[{%d, 0}].kiteForCell[%d] is %f \n", iCell, i, cr[{iCell, 0}].kiteForCell[i])
+            --cio.printf("cr[{%d, 0}].kiteForCell[%d] is %f \n", iCell, i, cr[{iCell, 0}].kiteForCell[i])
         end
     end
 end
@@ -762,12 +772,12 @@ where reads writes (cr, er, vert_r) do
     for k = 0, nVertLevels do
       cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz * rgas * (cr[{iCell, k}].exner * cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
       cr[{iCell, k}].pressure_base = cr[{iCell, k}].zz * rgas * cr[{iCell, k}].exner_base * cr[{iCell, k}].rtheta_base
-      cio.printf("zz at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].zz)
-      cio.printf("exner at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].exner)
-      cio.printf("rtheta_p at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].rtheta_p)
-      cio.printf("rtheta_base at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].rtheta_base)
-      cio.printf("exner_base at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].exner_base)
-      cio.printf("Pressure_p at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].pressure_p)
+      --cio.printf("zz at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].zz)
+      --cio.printf("exner at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].exner)
+      --cio.printf("rtheta_p at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].rtheta_p)
+      --cio.printf("rtheta_base at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].rtheta_base)
+      --cio.printf("exner_base at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].exner_base)
+      --cio.printf("Pressure_p at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].pressure_p)
     end
   end
 
@@ -817,7 +827,9 @@ end
 task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, rvord : double)
 where reads writes (cr, er, vr, vert_r) do
 
-  atm_compute_signs(cr, er, vr)
+  atm_compute_signs_pt1(cr, er, vr)
+
+  atm_compute_signs_pt2(cr, er, vr)
 
   --atm_adv_coef_compression(cr, er)
 
