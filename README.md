@@ -50,21 +50,21 @@ Step 1: **Environment Variables**  <br />
 You’ll need to add the openmpi installation directory to your path, as I have done. In general, you can also modify the PNETCDF and PIO environment variables to be wherever you want to install them.
 
 My ~/.bash_profile file looked like this:
-PATH=$PATH:$HOME/.local/bin:$HOME/bin:$HOME/openmpi_install/bin
-export PATH
+PATH=$PATH:$HOME/.local/bin:$HOME/bin:$HOME/openmpi_install/bin  <br />
+export PATH  <br />
 
-export CC=gcc
-export FC=gfortran
-export F77=gfortran
-export MPICC=mpicc
-export MPIF90=mpif90
-export MPIF77=mpif90
+export CC=gcc  <br />
+export FC=gfortran  <br />
+export F77=gfortran  <br />
+export MPICC=mpicc  <br />
+export MPIF90=mpif90  <br />
+export MPIF77=mpif90  <br />
 
-export OPENMPI=$HOME/openmpi_install
-export PNETCDF=$HOME/pnetcdf_install
-export MPIFC=mpif90
-export PNETCDF_PATH=$PNETCDF
-export PIO=$HOME/pio_install
+export OPENMPI=$HOME/openmpi_install  <br />
+export PNETCDF=$HOME/pnetcdf_install  <br />
+export MPIFC=mpif90  <br />
+export PNETCDF_PATH=$PNETCDF  <br />
+export PIO=$HOME/pio_install  <br />
 
 
 ￼
