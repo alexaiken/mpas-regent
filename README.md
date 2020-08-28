@@ -65,15 +65,11 @@ export PNETCDF=$HOME/pnetcdf_install  <br />
 export MPIFC=mpif90  <br />
 export PNETCDF_PATH=$PNETCDF  <br />
 export PIO=$HOME/pio_install  <br />
-
-
 ￼
 
 Step 2: **Other modules**  <br />
 ml purge
 ml libfabric/1.10.1 gcc/9.1.0
-
-
 
 Step 3: **Install OpenMPI**  <br />
 wget https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.4.tar.bz2
@@ -113,8 +109,36 @@ cd MPAS-Model
 make gfortran CORE=init_atmosphere 
 
 
+## Running regent-mpas
+In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main.rg.
 
-## Installing MPAS
+Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require". export TERRA_PATH="$HOME/regent_project_2020/mpas-regent/mesh_loading/?.rg;$HOME/regent_project_2020/mpas-regent/dynamics/?.rg;$HOME/regent_project_2020/mpas-regent/?.rg;$HOME/regent_project_2020/mpas-regent/vertical_init/?.rg"
+
+
+## File by file overview
+
+### main.rg
+This is the overview files that calls all of our sub-tasks.
+
+### data_structures.rg
+This is the file in which we define our regions.
+
+### constants.rg
+We declare constants here for use in other file.
+
+### mesh_loading/mesh_loading.rg
+This file has the task to load the data from the netcdf grid file. 
+It also has two other tasks, one to produce a netcdf output after reading in for verification that we have read the file correctly, and another to produce an ouput after we run the rest of our code.
+
+### mesh_loading/netcdf_tasks.rg
+This is a helper file employed by mesh_loading.rg that has the netcdf helper tasks we use to read the grid file.
+
+### dynamics/dynamics_tasks.rg
+This is where the meat of our kernels are.
+
+### dynamics/rk_timestep.rg
+This is the file that contains the logic for taking a time step.
+
 
 ## Plotting
 We turn the mesh into a 'patch' using mpas_patches.py. 
