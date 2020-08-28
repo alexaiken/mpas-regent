@@ -43,8 +43,78 @@ salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=02:00:00
 
 LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg
 
+## Installing MPAS
+
+Step 1: **Environment Variables**  <br />
+
+You’ll need to add the openmpi installation directory to your path, as I have done. In general, you can also modify the PNETCDF and PIO environment variables to be wherever you want to install them.
+
+My ~/.bash_profile file looked like this:
+PATH=$PATH:$HOME/.local/bin:$HOME/bin:$HOME/openmpi_install/bin
+export PATH
+
+export CC=gcc
+export FC=gfortran
+export F77=gfortran
+export MPICC=mpicc
+export MPIF90=mpif90
+export MPIF77=mpif90
+
+export OPENMPI=$HOME/openmpi_install
+export PNETCDF=$HOME/pnetcdf_install
+export MPIFC=mpif90
+export PNETCDF_PATH=$PNETCDF
+export PIO=$HOME/pio_install
 
 
+￼
+
+Step 2: **Other modules**  <br />
+ml purge
+ml libfabric/1.10.1 gcc/9.1.0
+
+
+
+Step 3: **Install OpenMPI**  <br />
+wget https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.4.tar.bz2
+tar -xvf openmpi-4.0.4.tar.bz2
+cd openmpi-4.0.4
+./configure --prefix=$OPENMPI --with-pmi-libdir=/usr/lib64 --with-pmix=internal --with-libevent=internal --with-slurm --without-verbs
+make 
+make install
+
+(You can change —prefix=$OPENMPI to be wherever you want openMPI to be installed to)
+Be sure to add the openmpi install directory to your path, as I have done above.
+
+Step 4: **Install PNETCDF**  <br />
+Wget https://parallel-netcdf.github.io/Release/parallel-netcdf-1.8.1.tar.gz
+tar -xvf parallel-netcdf-1.8.1.tar
+cd parallel-netcdf-1.8.1
+./configure --prefix=$PNETCDF --disable-cxx 
+make 
+make install
+
+Wget https://parallel-netcdf.github.io/Release/pnetcdf-1.12.1.tar.gz
+tar -xvf pnetcdf-1.12.1.tar.gz
+cd pnetcdf-1.12.1 
+
+
+Step 5: **Install PIO**  <br />
+wget https://github.com/NCAR/ParallelIO/archive/pio1_7_1.tar.gz
+tar -xvf ParallelIO-pio1_7_1.tar
+cd ParallelIO-pio1_7_1/pio
+./configure --prefix=$PIO --disable-netcdf --disable-mpiio 
+make 
+make install
+
+Step 6: **Install MPAS**   <br />
+git clone https://github.com/MPAS-Dev/MPAS-Model.git 
+cd MPAS-Model
+make gfortran CORE=init_atmosphere 
+
+
+
+## Installing MPAS
 
 ## Plotting
 We turn the mesh into a 'patch' using mpas_patches.py. 
