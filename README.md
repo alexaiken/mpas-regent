@@ -3,28 +3,28 @@
 
 ## Instructions to run regent on Sherlock:
 
-**load modules** \n
+**load modules** <br />
 module load python
 module load openmpi/2.0.2
 module load netcdf
 
-**clone legion repo**\n
+**clone legion repo** <br />
 git clone -b master https://github.com/StanfordLegion/legion.git
 cd legion/language
 
 https://github.com/StanfordLegion/legion.git
 
-**launch SLURM job** \n
+**launch SLURM job** <br />
 salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=05:00:00
 srun --pty bash
 
-**untar terra and llvm builds** \n
+**untar terra and llvm builds** <br />
 wget sapling.stanford.edu/~eslaught/terra.build.tar.gz
 tar -xzf terra.build.tar.gz
 wget sapling.stanford.edu/~eslaught/llvm.tar.gz
 tar -xzf llvm.tar.gz
 
-**setup** \n
+**setup** <br />
 CC=gcc CXX=g++ CONDUIT=ibv ./scripts/setup_env.py
 
 
