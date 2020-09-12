@@ -1,5 +1,16 @@
 # mpas-regent
 
+## Resources to learn about MPAS
+
+I would start by going to https://mpas-dev.github.io/ and poking around, especially the links about the atmospheric model.
+
+Then, you can go through the tutorial here: http://www2.mmm.ucar.edu/projects/mpas/tutorial/Boulder2019/index.html
+File 4 in particular is very helpful for understanding the mesh structure
+
+I have uploaded a Google Drive folder with a bunch of PDFs I found helpful to understand things. The tutorial PDFs are also located there.
+The link is https://drive.google.com/drive/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W?usp=sharing.
+
+
 
 ## Instructions to run regent on Sherlock:
 
@@ -127,17 +138,6 @@ make gfortran CORE=init_atmosphere 
 In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main.rg.
 
 Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require". export TERRA_PATH="$HOME/regent_project_2020/mpas-regent/mesh_loading/?.rg;$HOME/regent_project_2020/mpas-regent/dynamics/?.rg;$HOME/regent_project_2020/mpas-regent/?.rg;$HOME/regent_project_2020/mpas-regent/vertical_init/?.rg"
-
-
-## Resources to learn about MPAS
-
-I would start by going to https://mpas-dev.github.io/ and poking around, especially the links about the atmospheric model.
-
-Then, you can go through the tutorial here: http://www2.mmm.ucar.edu/projects/mpas/tutorial/Boulder2019/index.html
-File 4 in particular is very helpful for understanding the mesh structure
-
-I have uploaded a Google Drive folder with a bunch of PDFs I found helpful to understand things. The tutorial PDFs are also located there.
-The link is https://drive.google.com/drive/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W?usp=sharing.
 
 
 
