@@ -151,7 +151,7 @@ If you navigate to MPAS-Atmosphere -> MPAS-Atmosphere meshes, you will find some
 
 For example, you can do ncdump x1.2562.grid.nc >> output.txt to dump the contents of the grid file into a txt file called output.txt, and ncdump -v "latCell" to dump the contents of variable latCell.
 
-We have converted these netcdf files into regent data structures. This was possible because there is a C library to manipulate netcdf files (I think this is the one: https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html). Regent has support for calling C functions, so that is basically what we do to read the grid files into the data structures in mesh_loading.rg.
+We have converted these netcdf files into regent data structures. This was possible because there is a C library to manipulate netcdf files (I think this is the one: https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html). Regent has support for calling C functions, so that is basically what we do to read the grid files into the data structures in mesh_loading.rg. Many of the C functions are wrapped in terra functions in netcdf_tasks.rg
 
 
 ### Partitioning
@@ -163,7 +163,18 @@ This file has nCells rows, and each row has a number from 0-(N-1), which I assum
 
 I have a task called read_file in mesh_loading.rg that parses this graph.info file and returns an array where each element is the partition number of that cell index. We then assign this partition number to the cell and partition in regent based on this.
 
+We also create halo regions around each partition.
+partition_s_1 is the immediate ring around each partition, i.e. 10 neighbour cells
+partition_s_2 is two rings around each partition, so it has the neighbours of all neighbours. I.e. 100 cells.
 
+partition_halo_1 is just the inner halo, so partition_s_1 - cell_partition_initial
+and partition_halo_2 is the outer halo, so partition_s2  - partition_halo_1 - cell_partition_initial
+
+To understand the halo code, I would recommend reading the sections about images and preimages at http://regent-lang.org/reference/.  (And ask any questions that may come up, it's a little confusing).
+
+You can also read about dependent partitioning here: https://drive.google.com/drive/u/1/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W
+
+A significant TODO would be to find a better way to do dependent partitioning/haloes - because we require each of the 10^2 neighbours to be values in the cell region for dependent partitioning, our cell data structure has 100 fields which is very messy...
 ### 
 
 
