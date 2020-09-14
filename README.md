@@ -10,9 +10,9 @@ File 4 in particular is very helpful for understanding the mesh structure.
 I have uploaded a Google Drive folder with a bunch of PDFs I found helpful to understand things. The tutorial PDFs are also located there.
 The link is https://drive.google.com/drive/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W?usp=sharing.
 
-The user guide is also quite helpful (direct link: http://www2.mmm.ucar.edu/projects/mpas/mpas_atmosphere_users_guide_7.0.pdf), although it is also in the google drive.
+The user guide is also quite helpful (direct link: http://www2.mmm.ucar.edu/projects/mpas/mpas_atmosphere_users_guide_7.0.pdf), although it is also in the google drive. Pages 65-69 are useful for understanding the Voronoi mesh, as well as making sense of the variables in the mesh files. It might also provide some motivation for why we designed the data structures the way we did.
 
-
+When you get to the stage where you want to understand the MPAS codebase, we have a google doc here: https://docs.google.com/document/d/1yF4sEZyL1xUkHHfx-uYcRANpZyboRIZo3iiaydksnlw/edit
 
 
 
@@ -173,7 +173,7 @@ I have a task called read_file in mesh_loading.rg that parses this graph.info fi
 This is the overview files that calls all of our sub-tasks.
 
 ### data_structures.rg
-This is the file in which we define our regions. We currently have 4 main regions - a cell region, an edge region, and a vertex region.
+This is the file in which we define our regions. We currently have 4 main regions - a cell region, an edge region, a vertex region, and a vertical region. We find that most variables either are parameterized by a cell, edge, or vertex, while a small number are only a property of the vertical level we are at (hence the need for the fourth region).
 
 ### constants.rg
 We declare constants here for use in other file.
@@ -189,6 +189,8 @@ task write_output: This writes an output file to test that we have read the file
 
 task write_output_plotting: This writes an output file to test that we have read the file correctly. To be called after running timestep, etc.
 
+### vertical_init.rg/init_atm_cases.rg
+This initializes many variables needed before we run the RK timestep (including much of the vertical grid). We currently use the Jablonowski and Williamson baroclinic wave test case.
 
 ### mesh_loading/netcdf_tasks.rg
 This is a helper file employed by mesh_loading.rg that has the terra wrapper tasks around the C/netcdf functions we use to read the grid file.
