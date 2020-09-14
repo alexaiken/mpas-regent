@@ -5,10 +5,14 @@
 I would start by going to https://mpas-dev.github.io/ and poking around, especially the links about the atmospheric model.
 
 Then, you can go through the tutorial here: http://www2.mmm.ucar.edu/projects/mpas/tutorial/Boulder2019/index.html
-File 4 in particular is very helpful for understanding the mesh structure
+File 4 in particular is very helpful for understanding the mesh structure.
 
 I have uploaded a Google Drive folder with a bunch of PDFs I found helpful to understand things. The tutorial PDFs are also located there.
 The link is https://drive.google.com/drive/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W?usp=sharing.
+
+The user guide is also quite helpful (direct link: http://www2.mmm.ucar.edu/projects/mpas/mpas_atmosphere_users_guide_7.0.pdf), although it is also in the google drive.
+
+
 
 
 
@@ -133,13 +137,34 @@ git clone https://github.com/MPAS-Dev/MPAS-Model.git
 cd MPAS-Model
 make gfortran CORE=init_atmosphere 
 
+Unfortunately however, I still have not been able to get MPAS to work.  I have an ongoing thread on the MPAS forum and they are trying to help me troubleshoot there. The thread is https://forum.mmm.ucar.edu/phpBB3/viewtopic.php?f=12&t=9462.
 
 ## Running regent-mpas
 In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main.rg.
 
 Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require". export TERRA_PATH="$HOME/regent_project_2020/mpas-regent/mesh_loading/?.rg;$HOME/regent_project_2020/mpas-regent/dynamics/?.rg;$HOME/regent_project_2020/mpas-regent/?.rg;$HOME/regent_project_2020/mpas-regent/vertical_init/?.rg"
 
+## Overview of project:
 
+### Mesh loading
+If you navigate to MPAS-Atmosphere -> MPAS-Atmosphere meshes, you will find some MPAS meshes. If you download them, you will see that they have a grid.nc file. This contains the mesh data in netcdf format. If you have netcdf installed (you can load it easily on Sherlock), you can manipulate these files and see their contents easy using ncdump. Syntax for ncdump can be found here: http://www.bic.mni.mcgill.ca/users/sean/Docs/netcdf/guide.txn_79.html#:~:text=The%20ncdump%20tool%20generates%20an,variable%20data%20in%20the%20file.&text=Thus%20ncdump%20and%20ncgen%20can,between%20binary%20and%20ASCII%20representations.
+
+For example, you can do ncdump x1.2562.grid.nc >> output.txt to dump the contents of the grid file into a txt file called output.txt, and ncdump -v "latCell" to dump the contents of variable latCell.
+
+We have converted these netcdf files into regent data structures. This was possible because there is a C library to manipulate netcdf files (I think this is the one: https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html). Regent has support for calling C functions, so that is basically what we do to read the grid files into the data structures in mesh_loading.rg.
+
+
+### Partitioning
+In the grid folder that you download, there is a .graph.info file. The graph.info files can be partitioned using a software called METIS.
+
+If you'd like to partition the cells into N partitions, you run gpmetis graph.info N, which creates a file graph.info.part.N. 
+
+This file has nCells rows, and each row has a number from 0-(N-1), which I assume to mean the partition that each cell is split into. 
+
+I have a task called read_file in mesh_loading.rg that parses this graph.info file and returns an array where each element is the partition number of that cell index. We then assign this partition number to the cell and partition in regent based on this.
+
+
+### 
 
 
 ## File by file overview
