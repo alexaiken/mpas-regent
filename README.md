@@ -50,13 +50,13 @@ LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg
 
 In the future, when you login to Sherlock, you have to do the following:
 
-module load python
-module load openmpi/2.0.2
-module load netcdf
+module load python <br />
+module load openmpi/2.0.2 <br />
+module load netcdf <br />
 
-salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=02:00:00
+salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=02:00:00 <br />
 
-LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg
+LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg <br />
 
 ## Running GPU Nodes
 Elliott has put up a Regent build with CUDA here on Sherlock: /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
