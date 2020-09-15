@@ -34,13 +34,13 @@ salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=05:00:00
 srun --pty bash
 
 **untar terra and llvm builds** <br />
-wget sapling.stanford.edu/~eslaught/terra.build.tar.gz
-tar -xzf terra.build.tar.gz
-wget sapling.stanford.edu/~eslaught/llvm.tar.gz
-tar -xzf llvm.tar.gz
+wget sapling.stanford.edu/~eslaught/terra.build.tar.gz <br />
+tar -xzf terra.build.tar.gz <br />
+wget sapling.stanford.edu/~eslaught/llvm.tar.gz <br />
+tar -xzf llvm.tar.gz <br />
 
 **setup** <br />
-CC=gcc CXX=g++ CONDUIT=ibv ./scripts/setup_env.py
+CC=gcc CXX=g++ CONDUIT=ibv ./scripts/setup_env.py <br />
 
 
 It should be good to run now: Regent is not added to the path by default, so when running regent scripts, you have to invoke the regent.py file directly:
@@ -59,17 +59,17 @@ salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=02:00:00
 LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg
 
 ## Running GPU Nodes
-Elliott has put up a Regent build with CUDA here on Sherlock: /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language
+Elliott has put up a Regent build with CUDA here on Sherlock: /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
 Thus, all we need to do is:
 
-module load cuda
-cd /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language
-source env.sh
+module load cuda <br />
+cd /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
+source env.sh <br />
 
 <navigate to the folder with the main.rg regent file i want to run>
   
-salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=10 --gres=gpu:4 --time=02:00:00
-LAUNCHER="srun" /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language/regent.py main.rg
+salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=10 --gres=gpu:4 --time=02:00:00 <br />
+LAUNCHER="srun" /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language/regent.py main.rg <br />
 
 
 ## Installing MPAS (This still does not work :( )
