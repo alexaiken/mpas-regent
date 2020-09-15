@@ -19,19 +19,19 @@ When you get to the stage where you want to understand the MPAS codebase, we hav
 ## Instructions to run regent on Sherlock:
 
 **load modules** <br />
-module load python
-module load openmpi/2.0.2
-module load netcdf
+module load python <br />
+module load openmpi/2.0.2 <br />
+module load netcdf <br />
 
 **clone legion repo** <br />
-git clone -b master https://github.com/StanfordLegion/legion.git
-cd legion/language
+git clone -b master https://github.com/StanfordLegion/legion.git <br />
+cd legion/language <br />
 
-https://github.com/StanfordLegion/legion.git
+
 
 **launch SLURM job** <br />
-salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=05:00:00
-srun --pty bash
+salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=05:00:00 <br />
+srun --pty bash <br />
 
 **untar terra and llvm builds** <br />
 wget sapling.stanford.edu/~eslaught/terra.build.tar.gz <br />
@@ -45,7 +45,7 @@ CC=gcc CXX=g++ CONDUIT=ibv ./scripts/setup_env.py <br />
 
 It should be good to run now: Regent is not added to the path by default, so when running regent scripts, you have to invoke the regent.py file directly:
 
-LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg
+LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg <br />
 
 
 In the future, when you login to Sherlock, you have to do the following:
