@@ -140,9 +140,11 @@ make gfortran CORE=init_atmosphere 
 Unfortunately however, I still have not been able to get MPAS to work.  I have an ongoing thread on the MPAS forum and they are trying to help me troubleshoot there. The thread is https://forum.mmm.ucar.edu/phpBB3/viewtopic.php?f=12&t=9462.
 
 ## Running regent-mpas
-In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main.rg.
+In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main.rg. <br />
+ 
+Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require".<br />
 
-Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require". export TERRA_PATH="$HOME/regent_project_2020/mpas-regent/mesh_loading/?.rg;$HOME/regent_project_2020/mpas-regent/dynamics/?.rg;$HOME/regent_project_2020/mpas-regent/?.rg;$HOME/regent_project_2020/mpas-regent/vertical_init/?.rg"
+export TERRA_PATH="$HOME/regent_project_2020/mpas-regent/mesh_loading/?.rg;$HOME/regent_project_2020/mpas-regent/dynamics/?.rg;$HOME/regent_project_2020/mpas-regent/?.rg;$HOME/regent_project_2020/mpas-regent/vertical_init/?.rg" <br />
 
 ## Overview of project:
 
