@@ -21,8 +21,9 @@ When you get to the stage where you want to understand the MPAS codebase, we hav
 
 First, get Prof. Aiken to invite you to sherlock.
 
-You can then log onto sherlock by doing ssh <sunetID>@login.sherlock.stanford.edu <br />
-, and then typing in your Stanford password and 2FA. 
+You can then log onto sherlock by doing ssh <sunetID>@login.sherlock.stanford.edu, and then typing in your Stanford password and 2FA. 
+  
+Once you are on sherlock, do the following:
 
 **load modules** <br />
 module load python <br />
