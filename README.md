@@ -18,6 +18,12 @@ When you get to the stage where you want to understand the MPAS codebase, we hav
 
 ## Instructions to run regent on Sherlock:
 
+
+First, get Prof. Aiken to invite you to sherlock.
+
+You can then log onto sherlock by doing ssh <sunetID>@login.sherlock.stanford.edu <br />
+, and then typing in your Stanford password and 2FA. 
+
 **load modules** <br />
 module load python <br />
 module load openmpi/2.0.2 <br />
@@ -70,6 +76,15 @@ source env.sh <br />
   
 salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=10 --gres=gpu:4 --time=02:00:00 <br />
 LAUNCHER="srun" /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language/regent.py main.rg <br />
+
+
+## Helpful tricks for working in Sherlock
+You can avoid having to 2FA multiple times when logging into Sherlock by following the instructions here: 
+https://www.sherlock.stanford.edu/docs/advanced-topics/connection/#avoiding-multiple-duo-prompts <br />
+
+
+You can also edit files in Sherlock using VSCODE by doing something similar to this: 
+https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEberhardt <br />
 
 
 ## Installing MPAS (This still does not work :( )
