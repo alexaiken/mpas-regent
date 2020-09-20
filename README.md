@@ -99,7 +99,7 @@ LAUNCHER="srun" /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/langua
 
 
 
-## Installing MPAS (This still does not work :( )
+## Installing MPAS (Still does not work)
 
 Step 1: **Environment Variables**  <br />
 
