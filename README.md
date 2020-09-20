@@ -65,7 +65,24 @@ salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=02:00:00
 
 LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg <br />
 
-## Running GPU Nodes
+## Running regent-mpas
+In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main.rg. <br />. You have to run this in your regent-mpas folder, because we use relative paths to access some of the helper files.
+ 
+Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require". You will need to edit some of the filepaths depending on how you saves mpas-regent - I have it in a file called regent_project_2020, for e.g. - you should remove that otherwise. <br />
+
+export TERRA_PATH="$HOME/regent_project_2020/mpas-regent/mesh_loading/?.rg;$HOME/regent_project_2020/mpas-regent/dynamics/?.rg;$HOME/regent_project_2020/mpas-regent/?.rg;$HOME/regent_project_2020/mpas-regent/vertical_init/?.rg" <br />
+
+## Helpful tricks for working in Sherlock
+You can avoid having to 2FA multiple times when logging into Sherlock by following the instructions here: 
+https://www.sherlock.stanford.edu/docs/advanced-topics/connection/#avoiding-multiple-duo-prompts <br />
+
+
+You can also edit files in Sherlock using VSCODE by doing something similar to this: 
+https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEberhardt <br />
+
+
+
+## Running GPU Nodes / Regent with CUDA 
 Elliott has put up a Regent build with CUDA here on Sherlock: /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
 Thus, all we need to do is:
 
@@ -79,13 +96,7 @@ salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=10 --gres=gpu:4 --
 LAUNCHER="srun" /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language/regent.py main.rg <br />
 
 
-## Helpful tricks for working in Sherlock
-You can avoid having to 2FA multiple times when logging into Sherlock by following the instructions here: 
-https://www.sherlock.stanford.edu/docs/advanced-topics/connection/#avoiding-multiple-duo-prompts <br />
 
-
-You can also edit files in Sherlock using VSCODE by doing something similar to this: 
-https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEberhardt <br />
 
 
 ## Installing MPAS (This still does not work :( )
@@ -155,12 +166,7 @@ make gfortran CORE=init_atmosphere 
 
 Unfortunately however, I still have not been able to get MPAS to work.  I have an ongoing thread on the MPAS forum and they are trying to help me troubleshoot there. The thread is https://forum.mmm.ucar.edu/phpBB3/viewtopic.php?f=12&t=9462.
 
-## Running regent-mpas
-In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main.rg. <br />. You have to run this in your regent-mpas folder, because we use relative paths to access some of the helper files.
- 
-Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require". You will need to edit some of the filepaths depending on how you saves mpas-regent - I have it in a file called regent_project_2020, for e.g. - you should remove that otherwise. <br />
 
-export TERRA_PATH="$HOME/regent_project_2020/mpas-regent/mesh_loading/?.rg;$HOME/regent_project_2020/mpas-regent/dynamics/?.rg;$HOME/regent_project_2020/mpas-regent/?.rg;$HOME/regent_project_2020/mpas-regent/vertical_init/?.rg" <br />
 
 ## Overview of project:
 
