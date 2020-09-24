@@ -577,26 +577,21 @@ end
 
 
 task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs), 
-                                    er : region(ispace(int2d), edge_fs),
-                                   dims, state, diag,
-                                   cellStart, cellEnd, vertexStart, vertexEnd, edgeStart, edgeEnd,
-                                   cellSolveStart, cellSolveEnd, vertexSolveStart, vertexSolveEnd, edgeSolveStart, edgeSolveEnd
-) where reads writes(cr, er) do -- TODO: arguments, reads, writes
-  -- var moist_start = ?
-  -- var moist_end = ?
+                                    er : region(ispace(int2d), edge_fs))
+where reads writes(cr, er) do -- TODO: arguments, reads, writes
+
+  cio.printf("computing moist coefficients\n")
+
   for iCell = 0, nCells do
-    --qtot(1:nVertLevels,iCell) = 0.0
     for k = 0, nVertLevels do
       cr[{iCell, k}].qtot = 0.0
     end
-    --do k = 1,nVertLevels
     for k = 0, nVertLevels do
-      --do iq = moist_start, moist_end
-      for iq = moist_start, moist_end do
-        --qtot(k,iCell) = qtot(k,iCell) + scalars(iq, k, iCell)
+      --TODO: What should we use instead of moist_start/moist_end?
+      --for iq = moist_start, moist_end do
         --TODO: not sure how to translate: scalars(iq, k, iCell)
         --cr[{iCell, k}].qtot = cr[{iCell, k}].qtot + scalars(iq, k, iCell)
-      end
+      --end
     end
   end
 
@@ -604,20 +599,22 @@ task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs),
     for k = 1, nVertLevels do
       var qtotal = 0.5 * (cr[{iCell, k}].qtot + cr[{iCell, k-1}].qtot)
       cr[{iCell, k}].cqw = 1.0 / (1.0 + qtotal)
+      cio.printf("cr[{%d, %d}].cqw = %f", iCell, k, cr[{iCell, k}].cqw)
     end
   end
 
   for iEdge = 0, nEdges do
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
-    if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
-      for k = 0, nVertLevels do
-        var qtotal = 0.0
-        for iq = moist_start, moist_end do
-          -- qtotal = qtotal + 0.5 * ( scalars(iq, k, cell1) + scalars(iq, k, cell2) )
-        end
-        er[{iEdge, k}].cqu = 1.0 / (1.0 + qtotal)
-      end
+    --if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+      --for k = 0, nVertLevels do
+        --var qtotal = 0.0
+        --for iq = moist_start, moist_end do
+          --qtotal = qtotal + 0.5 * ( scalars(iq, k, cell1) + scalars(iq, k, cell2) )
+        --end
+        --er[{iEdge, k}].cqu = 1.0 / (1.0 + qtotal)
+      --end
+    --end
   end
 end
 

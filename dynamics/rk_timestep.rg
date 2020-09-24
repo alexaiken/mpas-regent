@@ -70,7 +70,7 @@ where reads writes (cr, er, vr, vert_r) do
   -- rk_integration_setup: saves state pre-loop
   rk_integration_setup()
 
-  atm_compute_moist_coefficients()
+  atm_compute_moist_coefficients(cr, er)
 
   ------------DYNAMICS SUB STEP LOOP ------------------------
   -- we ignore because assume no transport split (ie dynamics_split = 1, so we only loop once)
