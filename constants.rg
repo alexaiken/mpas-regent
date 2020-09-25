@@ -32,6 +32,7 @@ constants.gravity = 9.80616
 constants.rvord = constants.rv/constants.rgas
 constants.config_epssm = 0.1
 
+constants.nRelaxZone = 5
 
 
 

@@ -94,7 +94,7 @@ where reads writes (cr, er, vr, vert_r) do
 
     atm_compute_dyn_tend()
 
-    atm_set_smlstep_pert_variables()
+    atm_set_smlstep_pert_variables(cr, er, vert_r)
 
 
     -- SKIPPING if(config_apply_lbcs @ line 683)

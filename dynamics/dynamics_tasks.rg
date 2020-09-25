@@ -26,6 +26,7 @@ local TWO = 2
 local FIFTEEN = 15
 local vertexDegree = 3
 local nVertLevels = 1
+local nRelaxZone = 5
 
 
 local cio = terralib.includec("stdio.h")
@@ -841,8 +842,29 @@ task atm_compute_dyn_tend()
   cio.printf("computing dynamic tendencies\n")
 end
 
-task atm_set_smlstep_pert_variables()
+task atm_set_smlstep_pert_variables(cr : region(ispace(int2d), cell_fs),
+                                    er : region(ispace(int2d), edge_fs),
+                                    vert_r : region(ispace(int1d), vertical_fs))
+where reads writes (cr, er, vert_r) do
+
   cio.printf("set small step vars\n")
+
+  for iCell = 0, nCells do
+    if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
+      for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+        var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+        for k = 1, nVertLevels do
+            var flux = cr[{iCell, 0}].edgesOnCell_sign[i] * (vert_r[k].fzm * er[{iEdge, k}].u_tend + vert_r[k].fzp * er[{iEdge, k - 1}].u_tend)
+            --sign function copied as cmath.copysign, _RKIND removed as done previously
+            cr[{iCell, k}].w_tend = cr[{iCell, k}].w_tend - (cr[{iCell, k}].zb_cell[i] + cmath.copysign(1.0, er[{iEdge, k}].u_tend) * cr[{iCell, k}].zb3_cell[i]) * flux
+        end
+      end
+
+      for k = 1, nVertLevels do
+        cr[{iCell, k}].w_tend = ( vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k - 1}].zz ) * cr[{iCell, k}].w_tend
+      end
+    end
+  end
 end
 
 task atm_advance_acoustic_step()
