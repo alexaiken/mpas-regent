@@ -26,6 +26,7 @@ local TWO = 2
 local FIFTEEN = 15
 local vertexDegree = 3
 local nVertLevels = 1
+local nRelaxZone = 5
 
 
 local cio = terralib.includec("stdio.h")
@@ -576,8 +577,46 @@ end
 
 
 
-task atm_compute_moist_coefficients()
+task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs), 
+                                    er : region(ispace(int2d), edge_fs))
+where reads writes(cr, er) do -- TODO: arguments, reads, writes
+
   cio.printf("computing moist coefficients\n")
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].qtot = 0.0
+    end
+    for k = 0, nVertLevels do
+      --TODO: What should we use instead of moist_start/moist_end?
+      --for iq = moist_start, moist_end do
+        --TODO: not sure how to translate: scalars(iq, k, iCell)
+        --cr[{iCell, k}].qtot = cr[{iCell, k}].qtot + scalars(iq, k, iCell)
+      --end
+    end
+  end
+
+  for iCell = 0, nCells do
+    for k = 1, nVertLevels do
+      var qtotal = 0.5 * (cr[{iCell, k}].qtot + cr[{iCell, k-1}].qtot)
+      cr[{iCell, k}].cqw = 1.0 / (1.0 + qtotal)
+      cio.printf("cr[{%d, %d}].cqw = %f", iCell, k, cr[{iCell, k}].cqw)
+    end
+  end
+
+  for iEdge = 0, nEdges do
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    --if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+      --for k = 0, nVertLevels do
+        --var qtotal = 0.0
+        --for iq = moist_start, moist_end do
+          --qtotal = qtotal + 0.5 * ( scalars(iq, k, cell1) + scalars(iq, k, cell2) )
+        --end
+        --er[{iEdge, k}].cqu = 1.0 / (1.0 + qtotal)
+      --end
+    --end
+  end
 end
 
 --Comments for atm_compute_vert_imp_coefs
@@ -803,8 +842,29 @@ task atm_compute_dyn_tend()
   cio.printf("computing dynamic tendencies\n")
 end
 
-task atm_set_smlstep_pert_variables()
+task atm_set_smlstep_pert_variables(cr : region(ispace(int2d), cell_fs),
+                                    er : region(ispace(int2d), edge_fs),
+                                    vert_r : region(ispace(int1d), vertical_fs))
+where reads writes (cr, er, vert_r) do
+
   cio.printf("set small step vars\n")
+
+  for iCell = 0, nCells do
+    if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
+      for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+        var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+        for k = 1, nVertLevels do
+            var flux = cr[{iCell, 0}].edgesOnCell_sign[i] * (vert_r[k].fzm * er[{iEdge, k}].u_tend + vert_r[k].fzp * er[{iEdge, k - 1}].u_tend)
+            --sign function copied as cmath.copysign, _RKIND removed as done previously
+            cr[{iCell, k}].w_tend = cr[{iCell, k}].w_tend - (cr[{iCell, k}].zb_cell[i] + cmath.copysign(1.0, er[{iEdge, k}].u_tend) * cr[{iCell, k}].zb3_cell[i]) * flux
+        end
+      end
+
+      for k = 1, nVertLevels do
+        cr[{iCell, k}].w_tend = ( vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k - 1}].zz ) * cr[{iCell, k}].w_tend
+      end
+    end
+  end
 end
 
 task atm_advance_acoustic_step()

@@ -220,8 +220,11 @@ fspace cell_fs {
     theta_base : double, --type="real" dimensions="nVertLevels nCells Time" units="K" description="Base state potential temperature"/>
 
     --vars first seen in atm_compute_output_diagnostics --
-    pressure : double --type="real" dimensions="nVertLevels nCells Time" units="Pa" description="Pressure"
+    pressure : double, --type="real" dimensions="nVertLevels nCells Time" units="Pa" description="Pressure"
 
+    --vars first seen in atm_set_smlstep_pert_variables --
+    bdyMaskCell : int, --type="integer" dimensions="nCells" default_value="0" units="-" description="Limited-area specified/relaxation zone index for cells"
+    w_tend : double, --Note: not found in Registry.xml
 
 }
 
@@ -306,6 +309,9 @@ fspace edge_fs {
 
     -- vars first seen in atm_init_coupled_diagnostics --
     ru : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-2} s^{-1}" description="horizontal momentum at cell edge (rho*u/zz)"/>
+
+    -- vars first seen in atm_set_smlstep_pert_variables --
+    u_tend : double, --Note: not found in Registry.xml
 }
 
 
