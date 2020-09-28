@@ -871,8 +871,43 @@ task atm_advance_acoustic_step()
   cio.printf("advancing acoustic step\n")
 end
 
-task atm_divergence_damping_3d()
+-- Comments:
+-- dts is passed in as double - in code, passed in as rk_sub_timestep(rk_step)
+-- 1.0_RKIND and 2.0_RKIND translated as 1.0 and 2.0
+-- config_len_disp and config_smdiv found in registry as constants with values 120000.0 and 0.1
+-- respectively, added to constants
+-- This function also contains nCellsSolve, which has not been resolved yet
+task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
+                               er: region(ispace(int2d), edge_fs),
+                               dts : double,
+                               config_smdiv : double,
+                               config_len_disp : double)
+where reads writes (cr, er) do
   cio.printf("update horizontal momentum\n")
+
+  var smdiv = config_smdiv
+  var rdts = 1.0 / dts
+  var coef_divdamp = 2.0 * smdiv * config_len_disp * rdts
+
+  for iEdge = 0, nEdges do
+
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+
+    -- update edges for block-owned cells
+    -- if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+
+      for k = 0, nVertLevels do
+
+        -- scaled 3d divergence damping
+        var divCell1 = -(cr[{cell1, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp_old)
+        var divCell2 = -(cr[{cell2, k}].rtheta_pp - cr[{cell2, k}].rtheta_pp_old)
+        er[{iEdge, k}].ru_p = er[{iEdge, k}].ru_p + coef_divdamp * (divCell2 - divCell1) * 
+                              (1.0 - er[{iEdge, 0}].specZoneMaskEdge) 
+                              / (cr[{cell1, k}].theta_m + cr[{cell2, k}].theta_m)
+      end
+    -- end
+  end
 end
 
 task atm_recover_large_step_variables()

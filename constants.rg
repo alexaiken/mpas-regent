@@ -34,6 +34,9 @@ constants.config_epssm = 0.1
 
 constants.nRelaxZone = 5
 
+constants.config_smdiv = 0.1
+constants.config_len_disp = 120000.0
+
 
 
 

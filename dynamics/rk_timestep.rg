@@ -36,7 +36,9 @@ task atm_srk3(dt : double,
               epssm: double,
               rgas : double,
               cp : double,
-              gravity : double)
+              gravity : double,
+              smdiv : double,
+              config_len_disp : double)
 where reads writes (cr, er, vr, vert_r) do
 
   -- 2 is default value from Registry.xml
@@ -108,7 +110,7 @@ where reads writes (cr, er, vr, vert_r) do
 
       atm_advance_acoustic_step_work(cr, er, vert_r, rgas, cp, gravity, rk_sub_timestep[rk_step], epssm, small_step)
 
-      atm_divergence_damping_3d()
+      atm_divergence_damping_3d(cr, er, rk_sub_timestep[rk_step], smdiv, config_len_disp)
     end
 
     atm_recover_large_step_variables()
@@ -163,11 +165,13 @@ task atm_timestep(dt : double,
                   epssm: double,
                   rgas : double,
                   cp : double,
-                  gravity : double)
+                  gravity : double,
+                  smdiv : double,
+                  config_len_disp : double)
 where reads writes (cr, er, vr, vert_r) do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 
-  atm_srk3(dt, vr, er, cr, vert_r, epssm, rgas, cp, gravity)
+  atm_srk3(dt, vr, er, cr, vert_r, epssm, rgas, cp, gravity, smdiv, config_len_disp)
 
 
 end
