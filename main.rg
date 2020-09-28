@@ -38,7 +38,7 @@ task main()
   atm_core_init(cell_region, edge_region, vertex_region, vertical_region, constants.rgas, constants.cp, constants.rvord)
 
   --for i = 0, constants.NUM_TIMESTEPS do
-  atm_timestep(1, vertex_region, edge_region, cell_region, vertical_region, constants.config_epssm, constants.rgas, constants.cp, constants.gravity)
+  atm_timestep(1, vertex_region, edge_region, cell_region, vertical_region, constants.config_epssm, constants.rgas, constants.cp, constants.gravity, constants.config_smdiv, constants.config_len_disp)
   --end
 
   atm_compute_output_diagnostics(cell_region, constants.rvord)
