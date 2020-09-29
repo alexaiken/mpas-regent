@@ -425,11 +425,12 @@ where reads writes(vr, cr, er) do
     --SKIPPED: (config_apvm_upwinding > 0.0) then---
 end
 
-
-
+-- Comments:
+-- This function contains nCellsSolve, moist_start, moist_end, and scalars,
+-- which we are currently not sure how to translate 
 task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs), 
                                     er : region(ispace(int2d), edge_fs))
-where reads writes(cr, er) do -- TODO: arguments, reads, writes
+where reads writes(cr, er) do 
 
   cio.printf("computing moist coefficients\n")
 
@@ -448,7 +449,7 @@ where reads writes(cr, er) do -- TODO: arguments, reads, writes
 
   for iCell = 0, nCells do
     for k = 1, nVertLevels do
-      var qtotal = 0.5 * (cr[{iCell, k}].qtot + cr[{iCell, k-1}].qtot)
+      var qtotal = 0.5 * (cr[{iCell, k}].qtot + cr[{iCell, k - 1}].qtot)
       cr[{iCell, k}].cqw = 1.0 / (1.0 + qtotal)
       cio.printf("cr[{%d, %d}].cqw = %f", iCell, k, cr[{iCell, k}].cqw)
     end
