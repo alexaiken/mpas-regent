@@ -216,7 +216,7 @@ cbar.set_label("v")
 
 ''' Create the title as you see fit '''
 #plt.title(variable+' at time '+str(t)+' and at level '+str(l))
-plt.title("pressure_p")
+plt.title("v : Horizontal tangential velocity at edges")
 plt.style.use(style) # Set the style that we choose above
 
 ''' Save the file, remove the patch_collection, and close the figure.
