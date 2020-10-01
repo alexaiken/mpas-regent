@@ -191,7 +191,7 @@ We could also choose to write the following as:
 But I have choosen the way below for the brevity.
 '''
 
-var_scaled = var[:]/5
+var_scaled = var[:]/100
 var_scaled[var_scaled > 20] = 20
 var_scaled[var_scaled < -20] = -20
 
@@ -211,7 +211,7 @@ advance colorbar example.
 https://matplotlib.org/api/colorbar_api.html
 '''
 cbar = plt.colorbar(patch_collection)
-cbar.set_label("pressure_p")
+cbar.set_label("v")
 
 
 ''' Create the title as you see fit '''
