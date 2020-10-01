@@ -831,7 +831,7 @@ where reads writes (cr, er, vert_r) do
     end
 
     -- vertical transport of u
-    var wduz = array[nVertLevels+1] -- Syntax?????
+    var wduz : double[nVertLevels+1] -- Syntax?????
     wduz[0] = 0.0
 
     var k = 1
@@ -852,7 +852,7 @@ where reads writes (cr, er, vert_r) do
 
     -- Next, nonlinear Coriolis term (q) following Ringler et al JCP 2009
 
-    var q = array[nVertLevels]
+    var q : double[nVertLevels]
     for i = 0, nVertLevels do
       q[i] = 0.0
     end
