@@ -681,8 +681,224 @@ where reads writes (cr) do
 
 end
 
+task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int2d), vertical_fs), rk_step : int, config_horiz_mixing : string, config_mpas_cam_coef : double)
+where reads writes (cr, er, vert_r) do
+--Not sure how to translate:
+--  flux4(q_im2, q_im1, q_i, q_ip1, ua) =                     &
+--        ua*( 7.*(q_i + q_im1) - (q_ip1 + q_im2) )/12.0
+
+--  flux3(q_im2, q_im1, q_i, q_ip1, ua, coef3) =              &
+--        flux4(q_im2, q_im1, q_i, q_ip1, ua) +           &
+--        coef3*abs(ua)*((q_ip1 - q_im2)-3.*(q_i-q_im1))/12.0
+
+  var prandtl_inv = 1.0 / constants.prandtl
+  -- Can't find dt
+  --var invDt = 1.0 / dt
+  var r_earth = constants.sphere_radius
+  var inv_r_earth = 1.0 / r_earth
+
+  var v_mom_eddy_visc2 = constants.config_v_mom_eddy_visc2 -- 0.0
+  var v_theta_eddy_visc2 = constants.config_v_theta_eddy_visc2 -- 0.0
+
+  if (rk_step == 0) then
+    if (config_horiz_mixing == "2d_smagorinsky") then
+      for iCell = 0, nCells do
+        --TODO: It seems like d_diag should be from vert_r, but I can't find it anywhere.
+        --for k = 0, nVertLevels do
+        --  vert_r[k].d_diag = 0.0
+        --end
+        --for k = 0, nVertLevels do
+        --  vert_r[k].d_off_diag = 0.0
+        --end
+        for iEdge = 0, cr[{iCell, 0}].nEdgesOnCell do
+          for k = 0, nVertLevels do
+              --vert_r[k].d_diag     = vert_r[k].d_diag
+              --                        + cr[{iCell, iEdge}].defc_a * er[{cr[{iCell, iEdge}].EdgesOnCell, k}].u
+              --                        - cr[{iCell, iEdge}].defc_b * er[{cr[{iCell, iEdge}].EdgesOnCell, k}].v
+              --vert_r[k].d_off_diag = vert_r[k].d_off_diag
+              --                        + cr[{iCell, iEdge}].defc_b * er[{cr[{iCell, iEdge}].EdgesOnCell, k}].u 
+              --                        + cr[{iCell, iEdge}].defc_a * er[{cr[{iCell, iEdge}].EdgesOnCell, k}].v
+          end
+        end
+
+        for k = 0, nVertLevels do
+          -- here is the Smagorinsky formulation, 
+          -- followed by imposition of an upper bound on the eddy viscosity
+
+          -- Original: kdiff(k,iCell) = min((c_s * config_len_disp)**2 * sqrt(d_diag(k)**2 + d_off_diag(k)**2),(0.01*config_len_disp**2) * invDt)
+          var c_s = constants.config_smagorinsky_coef
+          --cr[{iCell, k}].kdiff = min(cmath.pow(c_s * constants.config_len_disp, 2.0) 
+          --                           * cmath.pow(cmath.pow(vert_r[k].d_diag, 2.0) 
+          --                                       + cmath.pow(vert_r[k].d_off_diag, 2.0), 0.5),
+          --                           (0.01 * cmath.pow(constants.config_len_disp, 2.0)) * invDt)
+        end
+      end
+
+      -- h_mom_eddy_visc4   = config_visc4_2dsmag * config_len_disp**3 --0.05 * 120000.0**3
+      var h_mom_eddy_visc4 = constants.config_visc4_2dsmag * cmath.pow(constants.config_len_disp, 3.0)
+      var h_theta_eddy_visc4 = h_mom_eddy_visc4
+
+    else if (config_horiz_mixing == "2d_fixed") then
+
+      --kdiff(1:nVertLevels,cellStart:cellEnd) = config_h_theta_eddy_visc2
+      for i = 0, nCells do
+        for k = 0, nVertLevels do
+          cr[{i, k}].kdiff = constants.config_h_theta_eddy_visc2 --0.0
+        end
+      end
+      var h_mom_eddy_visc4 = constants.config_h_mom_eddy_visc4 --0.0
+      var h_theta_eddy_visc4 = constants.config_h_theta_eddy_visc4 --0.0
+
+    end
+
+    if (config_mpas_cam_coef > 0.0) then
+
+      for iCell = 0, nCells do
+        -- 2nd-order filter for top absorbing layer as in CAM-SE :  WCS 10 May 2017
+        -- From MPAS-CAM V4.0 code, with addition to config-specified coefficient (V4.0_coef = 0.2; SE_coef = 1.0)
+        cr[{iCell, nVertLevels - 2}].kdiff = max(cr[{iCell, nVertLevels - 2}].kdiff,
+                                                        2.0833 * constants.config_len_disp * config_mpas_cam_coef)
+        cr[{iCell, nVertLevels - 1}].kdiff = max(cr[{iCell, nVertLevels - 1}].kdiff,
+                                                  2.0 * 2.0833 * constants.config_len_disp * config_mpas_cam_coef)
+        cr[{iCell, nVertLevels    }].kdiff = max(cr[{iCell, nVertLevels    }].kdiff,
+                                                  4.0 * 2.0833 * constants.config_len_disp * config_mpas_cam_coef)
+      end
+    end
+  end
+
+  -- tendency for density.
+  -- accumulate total water here for later use in w tendency calculation.
+
+  -- accumulate horizontal mass-flux
+
+  for iCell = 0, nCells do
+    for i = 0, nVertLevels do
+      cr[{iCell, i}].h_divergence = 0.0
+    end
+    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+      var edge_sign = cr[{iCell, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].dvEdge
+      for k = 0, nVertLevels do
+        cr[{iCell, k}].h_divergence = cr[{iCell, k}].h_divergence + edge_sign * er[{iEdge, k}].ru
+      end
+    end
+  end
+
+  -- compute horiontal mass-flux divergence, add vertical mass flux divergence to complete tend_rho
+
+  for iCell = 0, nCells do
+    var r = cr[{iCell, 0}].invAreaCell
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].h_divergence = cr[{iCell, k}].h_divergence * r
+    end
+  end
+
+  -- dp / dz and tend_rho
+  -- only needed on first rk_step with pert variables defined a pert from time t
+  if (rk_step == 0) then
+
+    var rgas_cprcv = constants.rgas * constants.cp / constants.cv
+    for iCell = 0, nCells do
+
+      for k = 0, nVertLevels do
+        --Not sure what tend_rho_physics, dpdz, rb, rr_save are.
+        --cr[{iCell, k}].tend_rho = -cr[{iCell, k}].h_divergence - vert_r[k].rdzw * (cr[{iCell, k + 1}].rw - cr[{iCell, k}].rw + tend_rho_physics(k, iCell))
+        --Original: dpdz(k,iCell) = -gravity*(rb(k,iCell)*(qtot(k,iCell)) + rr_save(k,iCell)*(1.+qtot(k,iCell)))
+        --dpdz(k,iCell) = -constants.gravity * (rb(k,iCell) * (cr[{iCell, k}].qtot) + rr_save(k,iCell) * (1.0 + cr[{iCell, k}].qtot))
+      end
+    end
+  end
+
+  -- Compute u (normal) velocity tendency for each edge (cell face)
+  for iEdge = 0, nEdges do
+
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+
+    -- horizontal pressure gradient 
+
+    if (rk_step == 0) then
+      for k = 0, nVertLevels do
+        -- Unable to find: tend_u_euler, pp, dpdz
+        --Original: tend_u_euler(k,iEdge) =  - cqu(k,iEdge)*( (pp(k,cell2)-pp(k,cell1))*invDcEdge(iEdge)/(.5*(zz(k,cell2)+zz(k,cell1))) &
+        --                            -0.5*zxu(k,iEdge)*(dpdz(k,cell1)+dpdz(k,cell2)) )
+        
+        --It looks like tend_u_euler is from er
+        --tend_u_euler(k, iEdge) = -er[{iEdge, k}].cqu * ( (pp(k,cell2) - pp(k,cell1)) * er[{iEdge, 0}].invDcEdge / (0.5 * (cr[{cell2, k}].zz + cr[{cell1, k}].zz)) 
+        --                         - 0.5 * er[{iEdge, k}].zxu * (dpdz(k,cell1)+dpdz(k,cell2)) )
+      end
+
+    end
+
+    -- vertical transport of u
+    var wduz = array[nVertLevels+1] -- Syntax?????
+    wduz[0] = 0.0
+
+    var k = 1
+    wduz[k] = 0.5 * (cr[{cell1, k}].rw + cr[{cell2, k}].rw) * (vert_r[k].fzm * er[{iEdge, k}].u + vert_r[k].fzp * er[{iEdge, k - 1}].u)
+    for k = 2, nVertLevels - 2 do
+      --Original: wduz(k) = flux3( u(k-2,iEdge), u(k-1,iEdge), u(k,iEdge), u(k+1,iEdge), 0.5*(rw(k,cell1)+rw(k,cell2)), 1.0_RKIND )
+      --wduz[k] = flux3( er[{iEdge,k-2}].u, er[{iEdge,k-1}].u, er[{iEdge,k}].u, er[{iEdge,k+1}].u, 0.5*(cr[{cell1,k}].rw+cr[{cell2,k}].rw)), 1.0 )
+    end
+    k = nVertLevels - 1
+    wduz[k] =  0.5 * (cr[{cell1, k}].rw + cr[{cell2, k}].rw) * (vert_r[k].fzm * er[{iEdge, k}].u + vert_r[k].fzp * er[{iEdge, k - 1}].u)
+
+    wduz[nVertLevels] = 0.
+
+    for k=0, nVertLevels do
+      tend_u(k,iEdge) = - rdzw(k)*(wduz(k+1)-wduz(k)) !  first use of tend_u
+      er[{iEdge, k}].tend_u = -vert_r[k].rdzw * (wduz[k+1] - wduz[k])
+    end do
+
+    -- Next, nonlinear Coriolis term (q) following Ringler et al JCP 2009
+
+    var q = array[nVertLevels]
+    for i = 0, nVertLevels do
+      q[i] = 0.0
+    end
+
+    -- To be continued:
+    for j = 0, er[{iEdge, 0}].nEdgesOnEdge do
+      eoe = edgesOnEdge(j,iEdge)
+      var eoe = er[{iEdge, j}].edgesOnEdge
+      for k = 0, nVertLevels do
+        var workpv = 0.5 * (er[{iEdge, k}].pv_edge + er[{eoe, k}].pv_edge)
+        -- the original definition of pv_edge had a factor of 1/density.  We have removed that factor
+        -- given that it was not integral to any conservation property of the system
+        q[k] = q[k] + er[{iEdge, j}].weightsOnEdge * er[{eoe, k}].u * workpv
+      end
+    end
+
+    do k=1,nVertLevels
+
+      -- horizontal ke gradient and vorticity terms in the vector invariant formulation
+      -- of the horizontal momentum equation
+      er[{iEdge, k}].tend_u = er[{iEdge, k}].tend_u + er[{iEdge, k}].rho_edge 
+                              * ( q[k] - (cr[{cell2, k}].ke - cr[{cell1, k}].ke) * er[{iEdge, 0}].invDcEdge )
+                              - er[{iEdge, k}].u * 0.5 * (cr[{cell1, k}].h_divergence + cr[{cell2, k}].h_divergence)
+
+      -- curvature terms for the sphere
+      er[{iEdge, k}].tend_u = er[{iEdge, k}].tend_u - ( 2.0 * constants.omega
+                               * cmath.cos(er[{iEdge, 0}].angleEdge) * cmath.cos(er[{iEdge, 0}].latEdge)
+                               * er[{iEdge, k}].rho_edge * 0.25 * (cr[{cell1, k}].w + cr[{cell1, k + 1}].w 
+                               + cr[{cell2, k}].w + cr[{cell2, k + 1}].w) )
+                               - ( er[{iEdge, k}].u * 0.25 * (cr[{cell1, k}].w + cr[{cell1, k + 1}].w 
+                               + cr[{cell2, k}].w + cr[{cell2, k + 1}].w) * er[{iEdge, k}].rho_edge 
+                               * inv_r_earth )
+    end
+  end
+
+
+
+
+  -- To be continued
+end
+
+-- There is a special case when rthdynten is not associated with packages. Ignoring for now by
+-- assuming that they are associated properly
 task atm_compute_dyn_tend()
   cio.printf("computing dynamic tendencies\n")
+  atm_compute_dyn_tend_work()
 end
 
 task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),

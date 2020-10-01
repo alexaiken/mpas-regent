@@ -226,6 +226,11 @@ fspace cell_fs {
     bdyMaskCell : int, --type="integer" dimensions="nCells" default_value="0" units="-" description="Limited-area specified/relaxation zone index for cells"
     w_tend : double, --Note: not found in Registry.xml
 
+    --vars first seen in atm_compute_dyn_tend --
+    defc_a : double, --type="real" dimensions="maxEdges nCells" units="unitless" description="Coefficients for computing the off-diagonal components of the horizontal deformation"
+    defc_b : double, --type="real" dimensions="maxEdges nCells" units="unitless" description="Coefficients for computing the diagonal components of the horizontal deformation"
+    kdiff : double, --type="real" dimensions="nVertLevels nCells Time" units="m^2 s^{-1}" description="Smagorinsky horizontal eddy viscosity"
+    h_divergence : double, --type="real" dimensions="nVertLevels nCells Time" units="???" description="???"
 }
 
 
@@ -269,6 +274,7 @@ fspace edge_fs {
     verticesOnEdge : int[constants.TWO],
     edgesOnEdge_ECP : int[constants.maxEdges2],
     weightsOnEdge : double[constants.maxEdges2],
+    edgesOnEdge : int,
 
     -----------begin vertical structure ---------
 
@@ -312,6 +318,10 @@ fspace edge_fs {
 
     -- vars first seen in atm_set_smlstep_pert_variables --
     u_tend : double, --Note: not found in Registry.xml
+
+    -- vars first seen in atm_compute_dyn_tend_work --
+    tend_u : double, --type="real" dimensions="nVertLevels nEdges Time" units="m s^{-2}" description="Tendency of u from dynamics"
+    rho_edge : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-3}" description="rho_zz averaged from cell centers to the cell edge"
 }
 
 
