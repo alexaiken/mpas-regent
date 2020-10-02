@@ -86,14 +86,16 @@ https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEber
 Elliott has put up a Regent build with CUDA here on Sherlock: /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
 Thus, all we need to do is:
 
-module load cuda <br />
-cd /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
-source env.sh <br />
+1) module load cuda <br />
+2) cd /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
+3) source env.sh <br />
 
-<navigate to the folder with the main.rg regent file i want to run>
+4) Navigate to the folder with the main.rg regent file i want to run: <br />
+e.g.
+cd $HOME/mpas-regent
   
-salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=10 --gres=gpu:4 --time=02:00:00 <br />
-LAUNCHER="srun" /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language/regent.py main.rg <br />
+5) salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=10 --gres=gpu:4 --time=02:00:00 <br />
+6) LAUNCHER="srun" /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language/regent.py main.rg <br />
 
 
 
