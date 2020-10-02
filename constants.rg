@@ -36,9 +36,6 @@ constants.gravity = 9.80616
 constants.rvord = terralib.constant(double, `(constants.rv/constants.rgas))
 constants.config_epssm = 0.1
 constants.prandtl = 1.0
-constants.pii = 3.141592653589793
-constants.a = 6371229.0
-constants.omega = 7.29212 * cmath.pow(10, -5)
 
 constants.nRelaxZone = 5
 
@@ -52,9 +49,9 @@ constants.config_h_mom_eddy_visc4 = 0.0
 constants.config_h_theta_eddy_visc4 = 0.0
 constants.config_visc4_2dsmag = 0.05
 constants.config_smagorinsky_coef = 0.125
-
-constants.sphere_radius = 1.0
-
+constants.config_del4u_div_factor = 10.0
+constants.config_number_rayleigh_damp_u_levels = 6
+constants.config_rayleigh_damp_u_timescale_days = 5.0
 
 
 

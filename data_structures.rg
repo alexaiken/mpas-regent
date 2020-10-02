@@ -335,6 +335,7 @@ fspace edge_fs {
     tend_u_euler : double, --Note: not found in Registry.xml
     invDvEdge : double, --type="real" dimensions="nEdges" units="m^{-1}" description="Inverse distance between vertex endpoints of an edge"
     delsq_u : double, --Note: not found in Registry.xml
+    tend_ru_physics : double, --Note: not found in Registry.xml
 }
 
 
@@ -347,6 +348,12 @@ fspace vertical_fs {
   fzm : double, -- level dependent
   fzp : double, -- level dependent
   cofrz : double, --type="real" dimensions="nVertLevels Time" units="s m^{-1}" description="coefficient for implicit contribution of Omega to density update"
+
+  -- vars first seen in atm_compute_dyn_tend_work --
   d_diag : double, --Note: not found in Registry.xml
   d_off_diag : double, --Note: not found in Registry.xml
+  u_mix : double, --Note: not found in Registry.xml
+  u_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="u reference profile"
+  v_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="v reference profile"
+  rayleigh_damp_coef : double, --Note: not found in Registry.xml
 }
