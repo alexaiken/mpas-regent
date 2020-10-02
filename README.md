@@ -70,7 +70,7 @@ In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main
  
 Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require". You will need to edit some of the filepaths depending on how you saves mpas-regent - I have it in a file called regent_project_2020, for e.g. - you should remove that otherwise. <br />
 
-export TERRA_PATH="$HOME/regent_project_2020/mpas-regent/mesh_loading/?.rg;$HOME/regent_project_2020/mpas-regent/dynamics/?.rg;$HOME/regent_project_2020/mpas-regent/?.rg;$HOME/regent_project_2020/mpas-regent/vertical_init/?.rg" <br />
+export TERRA_PATH="$HOME/mpas-regent/mesh_loading/?.rg;$HOME/mpas-regent/dynamics/?.rg;$HOME/mpas-regent/?.rg;$HOME/mpas-regent/vertical_init/?.rg" <br />
 
 ## Helpful tricks for working in Sherlock
 You can avoid having to 2FA multiple times when logging into Sherlock by following the instructions here: 
