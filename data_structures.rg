@@ -226,11 +226,17 @@ fspace cell_fs {
     bdyMaskCell : int, --type="integer" dimensions="nCells" default_value="0" units="-" description="Limited-area specified/relaxation zone index for cells"
     w_tend : double, --Note: not found in Registry.xml
 
-    --vars first seen in atm_compute_dyn_tend --
+    --vars first seen in atm_compute_dyn_tend_work --
     defc_a : double, --type="real" dimensions="maxEdges nCells" units="unitless" description="Coefficients for computing the off-diagonal components of the horizontal deformation"
     defc_b : double, --type="real" dimensions="maxEdges nCells" units="unitless" description="Coefficients for computing the diagonal components of the horizontal deformation"
     kdiff : double, --type="real" dimensions="nVertLevels nCells Time" units="m^2 s^{-1}" description="Smagorinsky horizontal eddy viscosity"
     h_divergence : double, --type="real" dimensions="nVertLevels nCells Time" units="???" description="???"
+    tend_rho_physics : double, --Note: not found in Registry.xml
+    dpdz : double, --Note: not found in Registry.xml
+    rb : double, --Note: not found in Registry.xml
+    rr_save : double, --Note: not found in Registry.xml
+    pp : double, --Note: not found in Registry.xml
+    delsq_divergence : double, --Note: not found in Registry.xml
 }
 
 
@@ -255,6 +261,10 @@ fspace vertex_fs {
     invAreaTriangle : double, --type="real" dimensions="nVertices" units="m^{-2}" description="Inverse area of a Delaunay triangle"
     ke_vertex : double, -- vertex and vertical levels
     pv_vertex : double, --type="real"     dimensions="nVertLevels nVertices Time"
+
+    -- vars first seen in atm_compute_dyn_tend_work --
+    delsq_vorticity : double, --Note: not found in Registry.xml
+    edgesOnVertex_sign : double, --type="real" dimensions="vertexDegree nVertices" units="-" description="Sign for edges incident with a vertex: positive for positive inward tengential velocity"
 }
 
 fspace edge_fs {
@@ -322,6 +332,9 @@ fspace edge_fs {
     -- vars first seen in atm_compute_dyn_tend_work --
     tend_u : double, --type="real" dimensions="nVertLevels nEdges Time" units="m s^{-2}" description="Tendency of u from dynamics"
     rho_edge : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-3}" description="rho_zz averaged from cell centers to the cell edge"
+    tend_u_euler : double, --Note: not found in Registry.xml
+    invDvEdge : double, --type="real" dimensions="nEdges" units="m^{-1}" description="Inverse distance between vertex endpoints of an edge"
+    delsq_u : double, --Note: not found in Registry.xml
 }
 
 
@@ -334,5 +347,6 @@ fspace vertical_fs {
   fzm : double, -- level dependent
   fzp : double, -- level dependent
   cofrz : double, --type="real" dimensions="nVertLevels Time" units="s m^{-1}" description="coefficient for implicit contribution of Omega to density update"
-
+  d_diag : double, --Note: not found in Registry.xml
+  d_off_diag : double, --Note: not found in Registry.xml
 }
