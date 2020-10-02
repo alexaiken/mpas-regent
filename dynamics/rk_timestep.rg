@@ -28,17 +28,11 @@ task summarize_timestep()
   cio.printf("summarizing step\n")
 end
 
-task atm_srk3(dt : double,
-              vr : region(ispace(int2d), vertex_fs),
+task atm_srk3(cr : region(ispace(int2d), cell_fs),
               er : region(ispace(int2d), edge_fs),
-              cr : region(ispace(int2d), cell_fs),
+              vr : region(ispace(int2d), vertex_fs),
               vert_r : region(ispace(int1d), vertical_fs),
-              epssm: double,
-              rgas : double,
-              cp : double,
-              gravity : double,
-              smdiv : double,
-              config_len_disp : double)
+              dt : double)
 where reads writes (cr, er, vr, vert_r) do
 
   -- 2 is default value from Registry.xml
@@ -79,7 +73,7 @@ where reads writes (cr, er, vr, vert_r) do
 
 
   --compute original vertical coefficients (for initial step)
-  atm_compute_vert_imp_coefs(cr, vert_r, rk_sub_timestep[0], epssm, rgas, cp, gravity)
+  atm_compute_vert_imp_coefs(cr, vert_r, rk_sub_timestep[0])
 
 
 
@@ -91,7 +85,7 @@ where reads writes (cr, er, vr, vert_r) do
     cio.printf("\nRK STEP: %d\n", rk_step)
     if rk_step == 1 then
       --recompute vertical coefficients, same ones for step 3
-      atm_compute_vert_imp_coefs(cr, vert_r, rk_sub_timestep[rk_step], epssm, rgas, cp, gravity)
+      atm_compute_vert_imp_coefs(cr, vert_r, rk_sub_timestep[rk_step])
     end
 
     atm_compute_dyn_tend()
@@ -108,9 +102,9 @@ where reads writes (cr, er, vr, vert_r) do
 
       cio.printf("performing acoustic substeps within a rk step\n")
 
-      atm_advance_acoustic_step(cr, er, vert_r, rgas, cp, gravity, rk_sub_timestep[rk_step], epssm, small_step)
+      atm_advance_acoustic_step(cr, er, vert_r, rk_sub_timestep[rk_step], small_step)
 
-      atm_divergence_damping_3d(cr, er, rk_sub_timestep[rk_step], smdiv, config_len_disp)
+      atm_divergence_damping_3d(cr, er, rk_sub_timestep[rk_step])
     end
 
     atm_recover_large_step_variables()
@@ -157,21 +151,14 @@ where reads writes (cr, er, vr, vert_r) do
 end
 
 --__demand(__cuda)
-task atm_timestep(dt : double,
-                  vr : region(ispace(int2d), vertex_fs),
+task atm_timestep(cr : region(ispace(int2d), cell_fs),
                   er : region(ispace(int2d), edge_fs),
-                  cr : region(ispace(int2d), cell_fs),
+                  vr : region(ispace(int2d), vertex_fs),
                   vert_r : region(ispace(int1d), vertical_fs),
-                  epssm: double,
-                  rgas : double,
-                  cp : double,
-                  gravity : double,
-                  smdiv : double,
-                  config_len_disp : double)
+                  dt : double)
 where reads writes (cr, er, vr, vert_r) do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 
-  atm_srk3(dt, vr, er, cr, vert_r, epssm, rgas, cp, gravity, smdiv, config_len_disp)
-
+  atm_srk3(cr, er, vr, vert_r, dt)
 
 end

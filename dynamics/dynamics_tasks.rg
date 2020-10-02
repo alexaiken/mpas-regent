@@ -473,9 +473,6 @@ end
 --Comments for atm_compute_vert_imp_coefs
 --Combined this and atm_compute_vert_imp_coefs_work (one was just a helper)
 --purpose: "Compute coefficients for vertically implicit gravity-wave/acoustic computations"
---Constants declared in task:
---Constants from mpas_constants.F : . These are passed in to the task as doubles at the moment
---Contants from config: config_epssm: default = 0.1. Passed in as double at the moment.
 --dts is passed in as double now - in code, passed in as rk_sub_timestep(rk_step)
 --1.0_RKIND translated as just 1.0
 --mpas used cellSolveStart, cellSolveEnd; we believe those deal with how mpas uses parallelization (a start and end for which cell pool is currently being worked on). We will just loop thru the entire cell region instead.
@@ -483,16 +480,12 @@ end
 
 task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
                                 vert_r : region(ispace(int1d), vertical_fs),
-                                dts : double,
-                                epssm : double,
-                                rgas : double,
-                                cp : double,
-                                gravity : double)
+                                dts : double)
 where reads writes (cr, vert_r) do
       --  set coefficients
-      var dtseps = .5*dts*(1.+epssm)
-      var rcv = rgas/(cp-rgas)
-      var c2 = cp*rcv
+      var dtseps = .5 * dts * (1.0 + constants.config_epssm)
+      var rcv = constants.rgas / (constants.cp - constants.rgas)
+      var c2 = constants.cp * rcv
 
       var qtotal : double
       var b_tri : double[nVertLevels]
@@ -508,7 +501,7 @@ where reads writes (cr, vert_r) do
 
 --DIR$ IVDEP
          for k=1, nVertLevels do
-            cr[{iCell, k}].cofwr = .5 * dtseps * gravity * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz)
+            cr[{iCell, k}].cofwr = .5 * dtseps * constants.gravity * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz)
          end
          cr[{iCell, 0}].coftz = 0.0 --coftz(1,iCell) = 0.0
 --DIR$ IVDEP
@@ -522,7 +515,7 @@ where reads writes (cr, vert_r) do
 
             qtotal = cr[{iCell, k}].qtot
 
-            cr[{iCell, k}].cofwt = .5 * dtseps * rcv * cr[{iCell, k}].zz * gravity * cr[{iCell, k}].rho_base / ( 1.0 + qtotal) * cr[{iCell, k}].exner / ((cr[{iCell, k}].rtheta_base + cr[{iCell, k}].rtheta_p) * cr[{iCell, k}].exner_base)
+            cr[{iCell, k}].cofwt = .5 * dtseps * rcv * cr[{iCell, k}].zz * constants.gravity * cr[{iCell, k}].rho_base / ( 1.0 + qtotal) * cr[{iCell, k}].exner / ((cr[{iCell, k}].rtheta_base + cr[{iCell, k}].rtheta_p) * cr[{iCell, k}].exner_base)
          end
 
          cr[{iCell, 0}].a_tri = 0.0 --a_tri(1,iCell) = 0.  -- note, this value is never used
@@ -587,20 +580,18 @@ where reads writes (cr, er) do
   end
 end
 
-
---Constants: rgas, cp, rvord (From mpas_constants.F)
 --Not sure how to translate: scalars(index_qv,k,iCell)
 --sign(1.0_RKIND,flux) translated as cmath.copysign(1.0, flux)
 
-task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, rvord : double)
+task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs))
 where reads writes (cr, er, vert_r) do
-
-  var rcv = rgas / (cp-rgas)
+  var rgas = constants.rgas
+  var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
 
   for iCell = 0, nCells do
     for k = 0, nVertLevels do
-      --cr[{iCell, k}].theta_m = cr[{iCell, k}].theta * (1.0 + rvord * scalars(index_qv,k,iCell))
+      --cr[{iCell, k}].theta_m = cr[{iCell, k}].theta * (1.0 + constants.rvord * scalars(index_qv,k,iCell))
       cr[{iCell, k}].rho_zz = cr[{iCell, k}].rho_zz / cr[{iCell, k}].zz
     end
   end
@@ -673,15 +664,14 @@ where reads writes (cr, er, vert_r) do
 
 end
 
---Constants: rvord (From mpas_constants.F)
 --Not sure how to translate: scalars(index_qv,k,iCell)
 --__demand(__cuda)
-task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs), rvord : double)
+task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs))
 where reads writes (cr) do
 
   for iCell = 1, nCells do
     for k = 0, nVertLevels do
-      --cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1 + rvord * scalars(index_qv,k,iCell))
+      --cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1 + constants.rvord * scalars(index_qv,k,iCell))
       cr[{iCell, k}].rho = cr[{iCell, k}].rho_zz * cr[{iCell, k}].zz
       cr[{iCell, k}].pressure = cr[{iCell, k}].pressure_base + cr[{iCell, k}].pressure_p
     end
@@ -725,21 +715,18 @@ where reads writes (cr, er, vert_r) do
 end
 
 --Comments for atm_advance_acoustic_step_work
---Constants declared in task: rgas, cp, epssm, dts
---Constants from mpas_constants.F : rgas, cp, gravity. These are passed in to the task as doubles at the moment
---Contants from config: config_epssm: default = 0.1. Passed in as double at the moment.
 --dts is passed in as double now - in code, passed in as rk_sub_timestep(rk_step)
 --1.0_RKIND translated as just 1.0
 --Tendency variables: tend_rw, tend_rt, tend_rho (added to CR), tend_ru (added to ER). Not in registry
 --Other variables not in registry: rs, ts: added to CR as part of vertical grid, ru_Avg (added to ER)
 
-task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, gravity : double, dts : double, config_epssm: double, small_step : int) -- nCellsSolve : int)
+task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), dts : double, small_step : int) -- nCellsSolve : int)
 where reads writes (er, cr, vert_r) do
-  var epssm = config_epssm
-  var rcv = rgas / (cp - rgas)
-  var c2 = cp * rcv
+  var epssm = constants.config_epssm
+  var rcv = constants.rgas / (constants.cp - constants.rgas)
+  var c2 = constants.cp * rcv
   var resm = (1.0 - epssm) / (1.0 + epssm)
-  var rdts = 1./dts
+  var rdts = 1.0 / dts
 
   var rs : double[nVertLevels]
   var ts : double[nVertLevels]
@@ -756,7 +743,7 @@ where reads writes (er, cr, vert_r) do
         --for k = 0, nVertLevels do
           --var pgrad = ((cr[{cell2, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp) * er[{iEdge, 0}].invDcEdge) / (0.5 * (cr[{cell2, k}].zz +cr[{cell1, k}].zz))
           --pgrad = er[{iEdge, k}].cqu * 0.5 * c2 * (cr[{cell1, k}].exner + cr[{cell2, k}].exner) * pgrad
-          --pgrad = pgrad + 0.5 * er[{iEdge, k}].zxu * gravity * (cr[{cell1, k}].rho_pp + cr[{cell2, k}].rho_pp)
+          --pgrad = pgrad + 0.5 * er[{iEdge, k}].zxu * constants.gravity * (cr[{cell1, k}].rho_pp + cr[{cell2, k}].rho_pp)
           --er[{iEdge, k}].ru_p = er[{iEdge, k}].ru_p + dts * (er[{iEdge, k}].tend_ru - (1.0 - er[{iEdge, 0}].specZoneMaskEdge) * pgrad)  --NEEDS FIXING
         --end
         --for k = 0, nVertLevels do
@@ -874,29 +861,25 @@ where reads writes (er, cr, vert_r) do
   end
 end
 
-task atm_advance_acoustic_step(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, gravity : double, dts : double, config_epssm: double, small_step : int) -- nCellsSolve : int)
+task atm_advance_acoustic_step(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), dts : double, small_step : int) -- nCellsSolve : int)
 where reads writes (er, cr, vert_r) do
   cio.printf("advancing acoustic step\n")
-  atm_advance_acoustic_step_work(cr, er, vert_r, rgas, cp, gravity, dts, config_epssm, small_step)
+  atm_advance_acoustic_step_work(cr, er, vert_r, dts, small_step)
 end
 
 -- Comments:
 -- dts is passed in as double - in code, passed in as rk_sub_timestep(rk_step)
 -- 1.0_RKIND and 2.0_RKIND translated as 1.0 and 2.0
--- config_len_disp and config_smdiv found in registry as constants with values 120000.0 and 0.1
--- respectively, added to constants
 -- This function also contains nCellsSolve, which has not been resolved yet
 task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
                                er: region(ispace(int2d), edge_fs),
-                               dts : double,
-                               config_smdiv : double,
-                               config_len_disp : double)
+                               dts : double)
 where reads writes (cr, er) do
   cio.printf("update horizontal momentum\n")
 
-  var smdiv = config_smdiv
+  var smdiv = constants.config_smdiv
   var rdts = 1.0 / dts
-  var coef_divdamp = 2.0 * smdiv * config_len_disp * rdts
+  var coef_divdamp = 2.0 * smdiv * constants.config_len_disp * rdts
 
   for iEdge = 0, nEdges do
 
@@ -928,7 +911,7 @@ task atm_rk_dynamics_substep_finish()
 end
 
 --__demand(__cuda)
-task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs), rgas : double, cp : double, rvord : double)
+task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs))
 where reads writes (cr, er, vr, vert_r) do
 
   atm_compute_signs_pt1(cr, er, vr)
@@ -940,7 +923,7 @@ where reads writes (cr, er, vr, vert_r) do
   --config_coef_3rd_order = 0.25 in namelist
   atm_couple_coef_3rd_order(0.25, cr, er)
 
-  atm_init_coupled_diagnostics(cr, er, vert_r, rgas, cp, rvord)
+  atm_init_coupled_diagnostics(cr, er, vert_r)
 
   atm_compute_solve_diagnostics(cr, er, vr, false) --last param is hollingsworth
 
