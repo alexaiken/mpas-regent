@@ -52,6 +52,7 @@ constants.config_smagorinsky_coef = 0.125
 constants.config_del4u_div_factor = 10.0
 constants.config_number_rayleigh_damp_u_levels = 6
 constants.config_rayleigh_damp_u_timescale_days = 5.0
+constants.config_coef_3rd_order = 0.25
 
 
 
