@@ -237,6 +237,11 @@ fspace cell_fs {
     rr_save : double, --Note: not found in Registry.xml
     pp : double, --Note: not found in Registry.xml
     delsq_divergence : double, --Note: not found in Registry.xml
+    ur_cell : double, --Note: not found in Registry.xml
+    vr_cell : double, --Note: not found in Registry.xml
+    latCell : double, --type="real" dimensions="nCells" units="rad" description="Latitude of cells"
+    delsq_w : double, --Note: not found in Registry.xml
+    tend_w_euler : double, --Note: not found in Registry.xml
 }
 
 
@@ -336,6 +341,7 @@ fspace edge_fs {
     invDvEdge : double, --type="real" dimensions="nEdges" units="m^{-1}" description="Inverse distance between vertex endpoints of an edge"
     delsq_u : double, --Note: not found in Registry.xml
     tend_ru_physics : double, --Note: not found in Registry.xml
+    tend_w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-2}" description="Tendency of w from dynamics"
 }
 
 
@@ -356,4 +362,5 @@ fspace vertical_fs {
   u_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="u reference profile"
   v_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="v reference profile"
   rayleigh_damp_coef : double, --Note: not found in Registry.xml
+  ru_edge_w : double, --Note: not found in Registry.xml
 }
