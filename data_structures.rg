@@ -244,6 +244,7 @@ fspace cell_fs {
     delsq_w : double, --Note: not found in Registry.xml
     tend_w_euler : double, --Note: not found in Registry.xml
     tend_theta : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3} s^{-1}" description="tendency of coupled potential temperature rho*theta_m/zz from dynamics and physics, updated each RK step"
+    theta_m_save : double, --Note: not found in Registry.xml
     delsq_theta : double, --Note: not found in Registry.xml
     tend_theta_euler : double, --Note: not found in Registry.xml
     tend_rtheta_adv : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3} s^{-1}" description="flux divergence for rho*theta_m/zz, used in the Tiedtke convective parameterization"
@@ -278,7 +279,7 @@ fspace vertex_fs {
 
     -- vars first seen in atm_compute_dyn_tend_work --
     delsq_vorticity : double, --Note: not found in Registry.xml
-    edgesOnVertex_sign : double, --type="real" dimensions="vertexDegree nVertices" units="-" description="Sign for edges incident with a vertex: positive for positive inward tengential velocity"
+    edgesOnVertex_sign : double[constants.vertexDegree], --type="real" dimensions="vertexDegree nVertices" units="-" description="Sign for edges incident with a vertex: positive for positive inward tengential velocity"
 }
 
 fspace edge_fs {
@@ -345,11 +346,13 @@ fspace edge_fs {
 
     -- vars first seen in atm_compute_dyn_tend_work --
     tend_u : double, --type="real" dimensions="nVertLevels nEdges Time" units="m s^{-2}" description="Tendency of u from dynamics"
+    latEdge : double, --type="real" dimensions="nEdges" units="rad" description="Latitude of edges"
     rho_edge : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-3}" description="rho_zz averaged from cell centers to the cell edge"
     tend_u_euler : double, --Note: not found in Registry.xml
     invDvEdge : double, --type="real" dimensions="nEdges" units="m^{-1}" description="Inverse distance between vertex endpoints of an edge"
     delsq_u : double, --Note: not found in Registry.xml
     tend_ru_physics : double, --Note: not found in Registry.xml
+    ru_save : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-2} s^{-1}" description="predicted value of horizontal momentum, saved before acoustic steps"
 }
 
 

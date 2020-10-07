@@ -54,6 +54,13 @@ constants.config_number_rayleigh_damp_u_levels = 6
 constants.config_rayleigh_damp_u_timescale_days = 5.0
 constants.config_coef_3rd_order = 0.25
 
+--Not sure about these as they seem to be parameters:
+constants.config_horiz_mixing = "2d_smagorinsky"
+constants.config_mpas_cam_coef = 0.0
+constants.config_mix_full = false
+constants.config_rayleigh_damp_u = false
+
+
 
 
 return constants

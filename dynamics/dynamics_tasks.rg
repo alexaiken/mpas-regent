@@ -682,7 +682,15 @@ where reads writes (cr) do
 
 end
 
-task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs), rk_step : int, config_horiz_mixing : string, config_mpas_cam_coef : double, config_mix_full : bool, config_rayleigh_damp_u : bool)
+task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
+                               er : region(ispace(int2d), edge_fs),
+                               vr : region(ispace(int2d), vertex_fs),
+                               vert_r : region(ispace(int1d), vertical_fs),
+                               rk_step : int,
+                               config_horiz_mixing : regentlib.string,
+                               config_mpas_cam_coef : double,
+                               config_mix_full : bool,
+                               config_rayleigh_damp_u : bool)
 where reads writes (cr, er, vr, vert_r) do
 --Not sure how to translate:
 --  flux4(q_im2, q_im1, q_i, q_ip1, ua) =                     &
@@ -700,11 +708,13 @@ where reads writes (cr, er, vr, vert_r) do
 
   var v_mom_eddy_visc2 = constants.config_v_mom_eddy_visc2 -- 0.0
   var v_theta_eddy_visc2 = constants.config_v_theta_eddy_visc2 -- 0.0
+  var h_mom_eddy_visc4 = constants.config_h_mom_eddy_visc4 -- 0.0
+  var h_theta_eddy_visc4 = constants.config_h_theta_eddy_visc4 --0.0
 
   if (rk_step == 0) then
     -- Smagorinsky eddy viscosity, based on horizontal deformation (in this case on model coordinate surfaces).
     -- The integration coefficients were precomputed and stored in defc_a and defc_b
-    if (config_horiz_mixing == "2d_smagorinsky") then
+    if ([rawstring](config_horiz_mixing) == "2d_smagorinsky") then
       var c_s = constants.config_smagorinsky_coef
       for iCell = 0, nCells do
         var d_diag : double[nVertLevels]
@@ -737,19 +747,24 @@ where reads writes (cr, er, vr, vert_r) do
         end
       end
 
-      var h_mom_eddy_visc4 = constants.config_visc4_2dsmag * cmath.pow(constants.config_len_disp, 3.0) --0.05 * 120000.0**3
-      var h_theta_eddy_visc4 = h_mom_eddy_visc4
+      h_mom_eddy_visc4 = constants.config_visc4_2dsmag * cmath.pow(constants.config_len_disp, 3.0) --0.05 * 120000.0**3
+      h_theta_eddy_visc4 = h_mom_eddy_visc4
 
-    else if (config_horiz_mixing == "2d_fixed") then
+    elseif ([rawstring](config_horiz_mixing) == "2d_fixed") then
 
       --Original: kdiff(1:nVertLevels,cellStart:cellEnd) = config_h_theta_eddy_visc2
-      var kdiff_range : rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
-      for i in kdiff_range do
-        cr[i].kdiff = constants.config_h_theta_eddy_visc2 --0.0
-      end
-      var h_mom_eddy_visc4 = constants.config_h_mom_eddy_visc4 --0.0
-      var h_theta_eddy_visc4 = constants.config_h_theta_eddy_visc4 --0.0
+      
+      --Attempted cuda-friendly implementation
+      --var kdiff_range : rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
+      --for i in kdiff_range do
+        --cr[i].kdiff = constants.config_h_theta_eddy_visc2 --0.0
+      --end
 
+      for i = 0, nCells do
+        for k = 0, nVertLevels do
+          cr[{i, k}].kdiff = constants.config_h_theta_eddy_visc2 --0.0
+        end
+      end
     end
 
     if (config_mpas_cam_coef > 0.0) then
@@ -836,18 +851,20 @@ where reads writes (cr, er, vr, vert_r) do
     var wduz : double[nVertLevels + 1]
     wduz[0] = 0.0
 
-    wduz[1] = 0.5 * (cr[{cell1, k}].rw + cr[{cell2, k}].rw) * (vert_r[k].fzm * er[{iEdge, k}].u + vert_r[k].fzp * er[{iEdge, k - 1}].u)
+    var k = 1
+    wduz[k] = 0.5 * (cr[{cell1, k}].rw + cr[{cell2, k}].rw) * (vert_r[k].fzm * er[{iEdge, k}].u + vert_r[k].fzp * er[{iEdge, k - 1}].u)
     for k = 2, nVertLevels - 1 do
       --Original: wduz(k) = flux3( u(k-2,iEdge), u(k-1,iEdge), u(k,iEdge), u(k+1,iEdge), 0.5*(rw(k,cell1)+rw(k,cell2)), 1.0_RKIND )
       --wduz[k] = flux3( er[{iEdge,k-2}].u, er[{iEdge,k-1}].u, er[{iEdge,k}].u, er[{iEdge,k+1}].u, 0.5*(cr[{cell1,k}].rw+cr[{cell2,k}].rw)), 1.0 )
     end
-    wduz[nVertLevels - 1] = 0.5 * (cr[{cell1, k}].rw + cr[{cell2, k}].rw) * (vert_r[k].fzm * er[{iEdge, k}].u + vert_r[k].fzp * er[{iEdge, k - 1}].u)
+    k = nVertLevels - 1
+    wduz[k] = 0.5 * (cr[{cell1, k}].rw + cr[{cell2, k}].rw) * (vert_r[k].fzm * er[{iEdge, k}].u + vert_r[k].fzp * er[{iEdge, k - 1}].u)
 
     wduz[nVertLevels] = 0.0
 
     for k = 0, nVertLevels do
       er[{iEdge, k}].tend_u = -vert_r[k].rdzw * (wduz[k+1] - wduz[k])
-    end do
+    end
 
     -- Next, nonlinear Coriolis term (q) following Ringler et al JCP 2009
 
@@ -895,9 +912,17 @@ where reads writes (cr, er, vr, vert_r) do
 
     -- del^4 horizontal filter.  We compute this as del^2 ( del^2 (u) ).
     -- First, storage to hold the result from the first del^2 computation.
-    var delsq_u_range = rect2d { int2d {0, 0}, int2d{nEdges, nVertLevels} }
-    for i in delsq_u_range do
-      er[i].delsq_u = 0.0
+    
+    --Attempted cuda-friendly implementation
+    --var delsq_u_range = rect2d { int2d {0, 0}, int2d{nEdges, nVertLevels} }
+    --for i in delsq_u_range do
+      --er[i].delsq_u = 0.0
+    --end
+
+    for i = 0, nEdges do
+      for k = 0, nVertLevels do
+        er[{i, k}].delsq_u = 0.0
+      end
     end
 
     for iEdge = 0, nEdges do
@@ -930,8 +955,8 @@ where reads writes (cr, er, vr, vert_r) do
           vr[{iVertex, k}].delsq_vorticity = 0.0
         end
         for i = 0, vertexDegree do
-          var iEdge = vr[{iVertex, i}].edgesOnVertex
-          var edge_sign = vr[{iVertex, 0}].invAreaTriangle * er[{iEdge, 0}].dcEdge * vr[{iVertex, i}].edgesOnVertex_sign
+          var iEdge = vr[{iVertex, 0}].edgesOnVertex[i]
+          var edge_sign = vr[{iVertex, 0}].invAreaTriangle * er[{iEdge, 0}].dcEdge * vr[{iVertex, 0}].edgesOnVertex_sign[i]
           for k = 0, nVertLevels do
               vr[{iVertex, k}].delsq_vorticity += edge_sign * er[{iEdge, k}].delsq_u
           end
@@ -1050,7 +1075,7 @@ where reads writes (cr, er, vr, vert_r) do
     end
 
     for iEdge = 0, nEdges do
-      for k = nVertlevels - constants.config_number_rayleigh_damp_u_levels + 1, nVertLevels do
+      for k = nVertLevels - constants.config_number_rayleigh_damp_u_levels + 1, nVertLevels do
         er[{iEdge, k}].tend_u -= er[{iEdge, k}].rho_edge * er[{iEdge, k}].u * rayleigh_damp_coef[k]
       end
     end
@@ -1059,8 +1084,8 @@ where reads writes (cr, er, vr, vert_r) do
   for iEdge = 0, nEdges do
     for k = 0, nVertLevels do
       er[{iEdge, k}].tend_u += er[{iEdge, k}].tend_u_euler + er[{iEdge, k}].tend_ru_physics
-    end do
-  end do
+    end
+  end
 
 
 
@@ -1130,9 +1155,16 @@ where reads writes (cr, er, vr, vert_r) do
     -- First, storage to hold the result from the first del^2 computation.
     --  we copied code from the theta mixing, hence the theta* names.
 
-    var delsq_w_range = rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
-    for i in delsq_w_range do
-      cr[i].delsq_w = 0.0
+    -- Attempted cuda-friendly implementation
+    --var delsq_w_range = rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
+    --for i in delsq_w_range do
+      --cr[i].delsq_w = 0.0
+    --end
+
+    for i = 0, nCells do
+      for k = 0, nVertLevels do
+        cr[{i, k}].delsq_w = 0.0
+      end
     end
 
     for iCell = 0, nCells do
@@ -1165,7 +1197,7 @@ where reads writes (cr, er, vr, vert_r) do
 
       for iCell = 0, nCells do
         var r_areaCell = h_mom_eddy_visc4 * cr[{iCell, 0}].invAreaCell
-        for i = 0, cr[{iCell, 0}].nEdgesOnCell
+        for i = 0, cr[{iCell, 0}].nEdgesOnCell do
           var iEdge = cr[{iCell, 0}].edgesOnCell[i]
           var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
           var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
@@ -1186,13 +1218,15 @@ where reads writes (cr, er, vr, vert_r) do
 
     var wdwz : double[nVertLevels + 1]
     wdwz[0] = 0.0
-    wdwz[1] = 0.25 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw)*(cr[{iCell, k}].w + cr[{iCell, k-1}].w)
+    var k = 1
+    wdwz[k] = 0.25 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw)*(cr[{iCell, k}].w + cr[{iCell, k-1}].w)
     for k = 2, nVertLevels - 1 do
       --What is flux3???
       --wdwz[k] = flux3( cr[{iCell, k-2}].w, cr[{iCell, k-1}].w, cr[{iCell, k}].w, cr[{iCell, k+1}].w, 
       --                 0.5 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw), 1.0 )
-    end do
-    wdwz[nVertLevels - 1] = 0.25 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw) * (cr[{iCell, k}].w + cr[{iCell, k-1}].rw)
+    end
+    k = nVertLevels - 1
+    wdwz[k] = 0.25 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw) * (cr[{iCell, k}].w + cr[{iCell, k-1}].rw)
     wdwz[nVertLevels] = 0.0
 
     -- Note: next we are also dividing through by the cell area after the horizontal flux divergence
@@ -1242,8 +1276,9 @@ where reads writes (cr, er, vr, vert_r) do
     for i = 0, cr[{iCell, 0}].nEdgesOnCell do
       var iEdge = cr[{iCell, 0}].edgesOnCell[i]
 
+      var flux_arr : double[nVertLevels]
       for k = 0, nVertLevels do
-        flux_arr[k] = 0.0 -- flux_arr was defined previously
+        flux_arr[k] = 0.0
       end
 
       for j = 0, er[{iEdge, 0}].nAdvCellsForEdge do
@@ -1264,7 +1299,7 @@ where reads writes (cr, er, vr, vert_r) do
   -- addition to pick up perturbation flux for rtheta_pp equation
   if (rk_step > 0) then
     for iCell = 0, nCells do
-      do i = 0, cr[{iCell, 0}].nEdgesOnCell do
+      for i = 0, cr[{iCell, 0}].nEdgesOnCell do
         var iEdge = cr[{iCell, 0}].edgesOnCell[i]
         var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
         var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
@@ -1283,9 +1318,16 @@ where reads writes (cr, er, vr, vert_r) do
   -- but here we can also code in hyperdiffusion if we wish (2nd order at present)
   if (rk_step == 0) then
 
-    var delsq_theta_range = rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
-    for i in delsq_theta_range do
-      cr[i].delsq_theta = 0.0
+    --Attempted cuda-friendly implementation
+    --var delsq_theta_range = rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
+    --for i in delsq_theta_range do
+      --cr[i].delsq_theta = 0.0
+    --end
+
+    for i = 0, nCells do
+      for k = 0, nVertLevels do
+        cr[{i, k}].delsq_theta = 0.0
+      end
     end
 
     for iCell = 0, nCells do
@@ -1338,8 +1380,8 @@ where reads writes (cr, er, vr, vert_r) do
   for iCell = 0, nCells do
 
     wdtz[0] = 0.0
-
-    wdtz[1] = cr[{iCell, k}].rw * (vert_r[k].fzm * cr[{iCell, k}].theta_m + vert_r[k].fzp * cr[{iCell, k-1}].theta_m) 
+    var k = 1
+    wdtz[k] = cr[{iCell, k}].rw * (vert_r[k].fzm * cr[{iCell, k}].theta_m + vert_r[k].fzp * cr[{iCell, k-1}].theta_m) 
               + ( (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw) 
               * (vert_r[k].fzm * cr[{iCell, k}].theta_m_save + vert_r[k].fzp * cr[{iCell, k-1}].theta_m_save) )
     for k = 2, nVertLevels - 1 do
@@ -1349,7 +1391,8 @@ where reads writes (cr, er, vr, vert_r) do
       --wdtz[k] += (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw)
       --           * (vert_r[k].fzm * cr[{iCell, k}].theta_m_save + vert_r[k].fzp * cr[{iCell, k-1}].theta_m_save)  -- rtheta_pp redefinition
     end
-    wdtz[nVertLevels - 1] =  cr[{iCell, k}].rw_save * (vert_r[k].fzm * cr[{iCell, k}].theta_m_save 
+    k = nVertLevels - 1
+    wdtz[k] =  cr[{iCell, k}].rw_save * (vert_r[k].fzm * cr[{iCell, k}].theta_m_save 
                              + vert_r[k].fzp * cr[{iCell, k-1}].theta_m_save)  -- rtheta_pp redefinition
     wdtz[nVertLevels] = 0.0
 
@@ -1379,7 +1422,7 @@ where reads writes (cr, er, vr, vert_r) do
             var z0 = 0.5 * (z2 + z3)
             var zp = 0.5 * (z3 + z4)
 
-            cr[{iCell, k}].tend_theta_euler += v_theta_eddy_visc2 * prandtl_inv * rho_zz(k,iCell)
+            cr[{iCell, k}].tend_theta_euler += v_theta_eddy_visc2 * prandtl_inv * cr[{iCell, k}].rho_zz
                                                * ( (cr[{iCell, k+1}].theta_m - cr[{iCell, k}].theta_m) / (zp-z0)
                                                - (cr[{iCell, k}].theta_m-cr[{iCell, k-1}].theta_m) / (z0-zm) )
                                                / (0.5*(zp-zm))
@@ -1418,9 +1461,18 @@ end
 
 -- There is a special case when rthdynten is not associated with packages. Ignoring for now by
 -- assuming that they are associated properly
-task atm_compute_dyn_tend()
+task atm_compute_dyn_tend(cr : region(ispace(int2d), cell_fs),
+                          er : region(ispace(int2d), edge_fs),
+                          vr : region(ispace(int2d), vertex_fs),
+                          vert_r : region(ispace(int1d), vertical_fs),
+                          rk_step : int,
+                          config_horiz_mixing : regentlib.string,
+                          config_mpas_cam_coef : double,
+                          config_mix_full : bool,
+                          config_rayleigh_damp_u : bool)
+where reads writes (cr, er, vr, vert_r) do
   cio.printf("computing dynamic tendencies\n")
-  atm_compute_dyn_tend_work()
+  atm_compute_dyn_tend_work(cr, er, vr, vert_r, rk_step, config_horiz_mixing, config_mpas_cam_coef, config_mix_full, config_rayleigh_damp_u)
 end
 
 task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
