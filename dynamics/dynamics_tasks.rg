@@ -682,6 +682,11 @@ where reads writes (cr) do
 
 end
 
+__demand(__inline)
+task flux3()
+
+end
+
 task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
                                vr : region(ispace(int2d), vertex_fs),
@@ -751,20 +756,7 @@ where reads writes (cr, er, vr, vert_r) do
       h_theta_eddy_visc4 = h_mom_eddy_visc4
 
     elseif ([rawstring](config_horiz_mixing) == "2d_fixed") then
-
-      --Original: kdiff(1:nVertLevels,cellStart:cellEnd) = config_h_theta_eddy_visc2
-      
-      --Attempted cuda-friendly implementation
-      --var kdiff_range : rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
-      --for i in kdiff_range do
-        --cr[i].kdiff = constants.config_h_theta_eddy_visc2 --0.0
-      --end
-
-      for i = 0, nCells do
-        for k = 0, nVertLevels do
-          cr[{i, k}].kdiff = constants.config_h_theta_eddy_visc2 --0.0
-        end
-      end
+      fill(cr.kdiff, 0.0)
     end
 
     if (config_mpas_cam_coef > 0.0) then
@@ -787,10 +779,8 @@ where reads writes (cr, er, vr, vert_r) do
 
   -- accumulate horizontal mass-flux
 
+  fill(cr.h_divergence, 0.0)
   for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].h_divergence = 0.0
-    end
     for i = 0, cr[{iCell, 0}].nEdgesOnCell do
       var iEdge = cr[{iCell, 0}].edgesOnCell[i]
       var edge_sign = cr[{iCell, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].dvEdge
@@ -912,18 +902,7 @@ where reads writes (cr, er, vr, vert_r) do
 
     -- del^4 horizontal filter.  We compute this as del^2 ( del^2 (u) ).
     -- First, storage to hold the result from the first del^2 computation.
-    
-    --Attempted cuda-friendly implementation
-    --var delsq_u_range = rect2d { int2d {0, 0}, int2d{nEdges, nVertLevels} }
-    --for i in delsq_u_range do
-      --er[i].delsq_u = 0.0
-    --end
-
-    for i = 0, nEdges do
-      for k = 0, nVertLevels do
-        er[{i, k}].delsq_u = 0.0
-      end
-    end
+    fill(er.delsq_u, 0.0)
 
     for iEdge = 0, nEdges do
       var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
@@ -950,10 +929,8 @@ where reads writes (cr, er, vr, vert_r) do
 
     if (h_mom_eddy_visc4 > 0.0) then  -- 4th order mixing is active
 
+      fill(vr.delsq_vorticity, 0.0)
       for iVertex = 0, nVertices do
-        for k = 0, nVertLevels do
-          vr[{iVertex, k}].delsq_vorticity = 0.0
-        end
         for i = 0, vertexDegree do
           var iEdge = vr[{iVertex, 0}].edgesOnVertex[i]
           var edge_sign = vr[{iVertex, 0}].invAreaTriangle * er[{iEdge, 0}].dcEdge * vr[{iVertex, 0}].edgesOnVertex_sign[i]
@@ -963,16 +940,14 @@ where reads writes (cr, er, vr, vert_r) do
         end
       end
 
+      fill(cr.delsq_divergence, 0.0)
       for iCell = 0, nCells do
-        for k = 0, nVertLevels do
-          cr[{iCell, k}].delsq_divergence = 0.0
-        end
         var r = cr[{iCell, 0}].invAreaCell
         for i = 0, cr[{iCell, 0}].nEdgesOnCell do
           var iEdge = cr[{iCell, 0}].edgesOnCell[i]
           var edge_sign = r * er[{iEdge, 0}].dvEdge * cr[{iCell, 0}].edgesOnCell_sign[i]
           for k = 0, nVertLevels do
-              cr[{iCell, k}].delsq_divergence += edge_sign * er[{iEdge, k}].delsq_u
+            cr[{iCell, k}].delsq_divergence += edge_sign * er[{iEdge, k}].delsq_u
           end
         end
       end
@@ -1155,17 +1130,7 @@ where reads writes (cr, er, vr, vert_r) do
     -- First, storage to hold the result from the first del^2 computation.
     --  we copied code from the theta mixing, hence the theta* names.
 
-    -- Attempted cuda-friendly implementation
-    --var delsq_w_range = rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
-    --for i in delsq_w_range do
-      --cr[i].delsq_w = 0.0
-    --end
-
-    for i = 0, nCells do
-      for k = 0, nVertLevels do
-        cr[{i, k}].delsq_w = 0.0
-      end
-    end
+    fill(cr.delsq_w, 0.0)
 
     for iCell = 0, nCells do
       for k = 0, nVertLevels + 1 do
@@ -1268,11 +1233,8 @@ where reads writes (cr, er, vr, vert_r) do
 -------- BEGIN THETA SECTION --------
 
   -- horizontal advection for theta
+  fill(cr.tend_theta, 0.0)
   for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].tend_theta = 0.0
-    end
-
     for i = 0, cr[{iCell, 0}].nEdgesOnCell do
       var iEdge = cr[{iCell, 0}].edgesOnCell[i]
 
@@ -1317,23 +1279,9 @@ where reads writes (cr, er, vr, vert_r) do
   -- horizontal mixing for theta_m - we could combine this with advection directly (i.e. as a turbulent flux),
   -- but here we can also code in hyperdiffusion if we wish (2nd order at present)
   if (rk_step == 0) then
-
-    --Attempted cuda-friendly implementation
-    --var delsq_theta_range = rect2d { int2d {0, 0}, int2d{nCells, nVertLevels} }
-    --for i in delsq_theta_range do
-      --cr[i].delsq_theta = 0.0
-    --end
-
-    for i = 0, nCells do
-      for k = 0, nVertLevels do
-        cr[{i, k}].delsq_theta = 0.0
-      end
-    end
-
+    fill(cr.delsq_theta, 0.0)
+    fill(cr.tend_theta_euler, 0.0)
     for iCell = 0, nCells do
-      for k = 0, nVertLevels do
-        cr[{iCell, k}].tend_theta_euler = 0.0
-      end
       var r_areaCell = cr[{iCell, 0}].invAreaCell
       for i = 0, cr[{iCell, 0}].nEdgesOnCell do
         var iEdge = cr[{iCell, 0}].edgesOnCell[i]
