@@ -24,7 +24,7 @@ constants.TWO = 2
 constants.FIFTEEN = 15
 constants.vertexDegree = 3
 constants.nVertLevels = 1
-constants.sphere_radius = 6371229.0 --from ncdump of the grid, default is 1.0, but set to "a" from constants.F in init_atm_core.F
+constants.sphere_radius = terralib.constant(double, 6371229.0) --from ncdump of the grid, default is 1.0, but set to "a" from constants.F in init_atm_core.F
 constants.nlat = 721
 
 constants.pii = 3.141592653589793
