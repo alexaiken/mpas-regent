@@ -29,17 +29,17 @@ constants.nlat = 721
 
 constants.pii = 3.141592653589793
 constants.omega = 7.29212E-5
-constants.rgas = 287.0
+constants.rgas = terralib.constant(double, 287.0)
 constants.rv = 461.6
-constants.cp = 7.0*constants.rgas/2.0
+constants.cp = terralib.constant(double, `(7.0*constants.rgas/2.0))
 constants.gravity = 9.80616
-constants.rvord = constants.rv/constants.rgas
+constants.rvord = terralib.constant(double, `(constants.rv/constants.rgas))
 constants.config_epssm = 0.1
 
 constants.nRelaxZone = 5
 
 constants.config_smdiv = 0.1
-constants.config_len_disp = 120000.0
+constants.config_len_disp = terralib.constant(double, 120000.0)
 
 
 

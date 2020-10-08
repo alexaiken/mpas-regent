@@ -27,6 +27,10 @@ task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
 where reads writes(vr, er, cr, vertr) do
 
 -- local vars/constants defined at beginning of subroutine
+  var cp = constants.cp
+  var rgas = constants.rgas
+  var gravity = constants.gravity
+  var pii = constants.pii
   var u0 = 35.0
   var alpha_grid = 0.0 -- no grid rotation
   var omega_e : double
@@ -44,8 +48,8 @@ where reads writes(vr, er, cr, vertr) do
   var pert_radius = 0.1
   var latitude_pert = 40.0
   var longitude_pert = 20.0
-  var theta_c = constants.pii/4.0
-  var lambda_c = 3.0*constants.pii/2.0
+  var theta_c = pii/4.0
+  var lambda_c = 3.0*pii/2.0
   var k_x = 9.0           -- Normal mode wave number
 
 --initialization of moisture:
@@ -123,7 +127,7 @@ where reads writes(vr, er, cr, vertr) do
   var xnutr = 0.0
   var zd = 12000.0
   var znut = eta_t
-  var etavs = (1.0 - 0.252) * constants.pii/2.
+  var etavs = (1.0 - 0.252) * pii/2.
   var r_earth = sphere_radius
   omega_e = constants.omega
   var p0 = 1.0E+05
@@ -134,7 +138,7 @@ where reads writes(vr, er, cr, vertr) do
   for iCell=0, nCells do
     for k = 0, nz do
       phi = cr[{iCell, 0}].lat
-      cr[{iCell, k}].hx = u0 / constants.gravity * cmath.pow(cmath.cos(etavs), 1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi), 2.0) + 1.0/3.0) + 10.0/63.0) * u0*cmath.pow(cmath.cos(etavs), 1.5) + (1.6 * cmath.pow(cmath.cos(phi), 3) * (cmath.pow(cmath.sin(phi), 2) + 2.0/3.0) - constants.pii/4.0)*r_earth*omega_e)
+      cr[{iCell, k}].hx = u0 / gravity * cmath.pow(cmath.cos(etavs), 1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi), 2.0) + 1.0/3.0) + 10.0/63.0) * u0*cmath.pow(cmath.cos(etavs), 1.5) + (1.6 * cmath.pow(cmath.cos(phi), 3) * (cmath.pow(cmath.sin(phi), 2) + 2.0/3.0) - pii/4.0)*r_earth*omega_e)
     end
   end
 
@@ -183,7 +187,7 @@ where reads writes(vr, er, cr, vertr) do
 --!                ah[k] = 0 is a terrain-following coordinate
 --!                ah[k] = 1 is a height coordinate
 --
-    ah[k] = 1.0 - cmath.pow(cmath.cos(.5*constants.pii*(k-1)*dz/zt), 6.0)
+    ah[k] = 1.0 - cmath.pow(cmath.cos(.5*pii*(k-1)*dz/zt), 6.0)
 --!            ah[k] = 0.
 
     --cio.printf("sh[%d] is %f \n", k, sh[k])
@@ -245,7 +249,7 @@ where reads writes(vr, er, cr, vertr) do
       cr[{i, k}].dss = 0.0
       ztemp = cr[{k,i}].zgrid
       if(ztemp > zd+.1)  then
-         cr[{i, k}].dss = cr[{i, k}].dss+xnutr*cmath.pow(cmath.sin(.5*constants.pii*(ztemp-zd)/(zt-zd)), 2)
+         cr[{i, k}].dss = cr[{i, k}].dss+xnutr*cmath.pow(cmath.sin(.5*pii*(ztemp-zd)/(zt-zd)), 2)
       end
     end
   end
@@ -255,7 +259,7 @@ where reads writes(vr, er, cr, vertr) do
 
 --!**************  section for 2d (z,lat) calc for zonal velocity
 
-  var dlat = 0.5*constants.pii / float(nlat-1)
+  var dlat = 0.5*pii / float(nlat-1)
   var lat_2d : double[nlat]
   var zgrid_2d : double[(nVertLevels + 1) * nlat]
   var zz_2d : double[nVertLevels * nlat]
@@ -281,7 +285,7 @@ where reads writes(vr, er, cr, vertr) do
 
     lat_2d[i] = float(i-1)*dlat
     phi = lat_2d[i]
-    var hx_1d = u0 / constants.gravity * cmath.pow(cmath.cos(etavs),1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *(u0)*cmath.pow(cmath.cos(etavs),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-constants.pii/4.0)*r_earth*omega_e)
+    var hx_1d = u0 / gravity * cmath.pow(cmath.cos(etavs),1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *(u0)*cmath.pow(cmath.cos(etavs),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)
     for k=0, nz do
       zgrid_2d[k * nlat + i] = (1.-ah[k])*(sh[k]*(zt-hx_1d)+hx_1d) + ah[k] * sh[k]* zt
     end
@@ -291,9 +295,9 @@ where reads writes(vr, er, cr, vertr) do
 
     for k=1,nz1 do
       ztemp = .5*(zgrid_2d[(k+1)*nlat + i]+zgrid_2d[k*nlat + i])
-      ppb_2d[k * nlat + i] = p0*cmath.exp(-constants.gravity*ztemp/(constants.rgas*t0b))
-      pb_2d[k * nlat + i] = cmath.pow((ppb_2d[k * nlat + i]/p0),(constants.rgas/constants.cp))
-      rb_2d[k * nlat + i] = ppb_2d[k * nlat + i]/(constants.rgas*t0b*zz_2d[k * nlat + i])
+      ppb_2d[k * nlat + i] = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
+      pb_2d[k * nlat + i] = cmath.pow((ppb_2d[k * nlat + i]/p0),(rgas/cp))
+      rb_2d[k * nlat + i] = ppb_2d[k * nlat + i]/(rgas*t0b*zz_2d[k * nlat + i])
       tb_2d[k * nlat + i] = t0b/pb_2d[k * nlat + i]
       rtb_2d[k * nlat + i] = rb_2d[k * nlat + i]*tb_2d[k * nlat + i]
       p_2d[k * nlat + i] = pb_2d[k * nlat + i]
@@ -306,17 +310,17 @@ where reads writes(vr, er, cr, vertr) do
 
       for k=0,nz1 do
         eta[k] = (ppb_2d[k * nlat + i]+pp_2d[k * nlat + i])/p0
-        etav[k] = (eta[k]-.252)*constants.pii/2.0
+        etav[k] = (eta[k]-.252)*pii/2.0
         if(eta[k] >= znut)  then
-          teta[k] = t0*cmath.pow(eta[k],(constants.rgas*dtdz/constants.gravity))
+          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity))
         else
-          teta[k] = t0*cmath.pow(eta[k],(constants.rgas*dtdz/constants.gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
+          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
         end
       end
 
       phi = lat_2d[i]
       for k=1,nz1 do
-        temperature_1d[k] = teta[k]+.75*eta[k]*constants.pii*u0/constants.rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0)  *2.0*u0*cmath.pow(cmath.cos(etav[k]),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-constants.pii/4.0)*r_earth*omega_e)/(1.0+0.61*qv_2d[nlat*k + i])
+        temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0)  *2.0*u0*cmath.pow(cmath.cos(etav[k]),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.0+0.61*qv_2d[nlat*k + i])
 
         ztemp   = .5*(zgrid_2d[k * nlat + i]+zgrid_2d[(k+1) * nlat + i])
         ptemp   = ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]
@@ -332,15 +336,15 @@ where reads writes(vr, er, cr, vertr) do
 
       for itrp = 0,25 do
         for k=0,nz1 do
-          rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i]/(constants.rgas*zz_2d[k * nlat + i]) - rb_2d[k * nlat + i]*(tt[k]-t0b))/tt[k]
+          rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i]/(rgas*zz_2d[k * nlat + i]) - rb_2d[k * nlat + i]*(tt[k]-t0b))/tt[k]
         end
 
-        ppi[1] = p0-.5*dzw[1]*constants.gravity *(1.25*(rr_2d[1 * nlat + i]+rb_2d[1 * nlat + i])*(1.0+qv_2d[1*nlat + i])  -.25*(rr_2d[2 * nlat + i]+rb_2d[2 * nlat + i])*(1.0+qv_2d[2 * nlat + i]))
+        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(rr_2d[1 * nlat + i]+rb_2d[1 * nlat + i])*(1.0+qv_2d[1*nlat + i])  -.25*(rr_2d[2 * nlat + i]+rb_2d[2 * nlat + i])*(1.0+qv_2d[2 * nlat + i]))
 
         ppi[1] = ppi[1]-ppb_2d[1 * nlat + i]
         for k=0, nz1-1 do
 
-          ppi[k+1] = ppi[k]-vertr[k+1].dzu*constants.gravity*  ( (rr_2d[k * nlat + i]+(rr_2d[k * nlat + i] +rb_2d[k * nlat + i])*qv_2d[k*nlat + i])*vertr[k+1].fzp  + (rr_2d[(k+1) * nlat + i]+(rr_2d[(k+1) * nlat + i]+rb_2d[(k+1) * nlat + i])*qv_2d[(k+1) * nlat + i])*vertr[k+1].fzm )
+          ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity*  ( (rr_2d[k * nlat + i]+(rr_2d[k * nlat + i] +rb_2d[k * nlat + i])*qv_2d[k*nlat + i])*vertr[k+1].fzp  + (rr_2d[(k+1) * nlat + i]+(rr_2d[(k+1) * nlat + i]+rb_2d[(k+1) * nlat + i])*qv_2d[(k+1) * nlat + i])*vertr[k+1].fzm )
         end
 
         for k=0, nz1 do
@@ -354,7 +358,7 @@ where reads writes(vr, er, cr, vertr) do
 
     for k = 0, nz1 do
       rho_2d[k * nlat + i] = rr_2d[k * nlat + i]+rb_2d[k * nlat + i]
-      etavs_2d[k * nlat + i] = ((ppb_2d[k * nlat + i]+pp_2d[k * nlat + i])/p0 - 0.252)*constants.pii/2.0
+      etavs_2d[k * nlat + i] = ((ppb_2d[k * nlat + i]+pp_2d[k * nlat + i])/p0 - 0.252)*pii/2.0
       u_2d[k * nlat + i] = u0*(cmath.pow(cmath.sin(2.*lat_2d[i]),2)) * (cmath.pow(cmath.cos(etavs_2d[k * nlat + i]),1.5))
     end
 
@@ -395,9 +399,9 @@ where reads writes(vr, er, cr, vertr) do
   for i=0, nCells do
     for k=0,nz1 do
       ztemp    = .5*(cr[{i, k+1}].zgrid+cr[{k,i}].zgrid)
-      cr[{i, k}].pressure_base = p0*cmath.exp(-constants.gravity*ztemp/(constants.rgas*t0b))
-      cr[{i, k}].pressure_p = cmath.pow((cr[{i, k}].pressure_base/p0),(constants.rgas/constants.cp))
-      cr[{i, k}].rho_base = cr[{i, k}].pressure_base/(constants.rgas*t0b*cr[{i, k}].zz)
+      cr[{i, k}].pressure_base = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
+      cr[{i, k}].pressure_p = cmath.pow((cr[{i, k}].pressure_base/p0),(rgas/cp))
+      cr[{i, k}].rho_base = cr[{i, k}].pressure_base/(rgas*t0b*cr[{i, k}].zz)
       cr[{i, k}].theta_base = t0b/cr[{i, k}].pressure_p
       cr[{i, k}].rtheta_base = cr[{i, k}].rho_base*cr[{i, k}].theta_base
       cr[{i, k}].exner = cr[{i, k}].pressure_p
@@ -411,16 +415,16 @@ where reads writes(vr, er, cr, vertr) do
 
       for k=0, nz1 do
         eta[k] = (cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0
-        etav[k] = (eta[k]-.252)*constants.pii/2.
+        etav[k] = (eta[k]-.252)*pii/2.
         if(eta[k] >= znut)  then
-          teta[k] = t0*cmath.pow(eta[k],(constants.rgas*dtdz/constants.gravity))
+          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity))
         else
-          teta[k] = t0*cmath.pow(eta[k],(constants.rgas*dtdz/constants.gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
+          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
         end
       end
       phi = cr[{i, 0}].lat
       for k=0,nz1 do
-        temperature_1d[k] = teta[k]+.75*eta[k]*constants.pii*u0/constants.rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-constants.pii/4.0)*r_earth*omega_e)/(1.+0.61*cr[{i, k}].qv)
+        temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.+0.61*cr[{i, k}].qv)
 
         ztemp   = .5*(cr[{k,i}].zgrid+cr[{i, k+1}].zgrid)
         ptemp   = cr[{i, k}].pressure_base + cr[{i, k}].pressure_p
@@ -461,16 +465,16 @@ where reads writes(vr, er, cr, vertr) do
 
       for itrp = 0,25 do
         for k=0,nz1 do
-          cr[{i,k}].rho_p  = (cr[{i, k}].pressure_p/(constants.rgas*cr[{i, k}].zz) - cr[{i, k}].rho_base*(tt[k]-t0b))/tt[k]
+          cr[{i,k}].rho_p  = (cr[{i, k}].pressure_p/(rgas*cr[{i, k}].zz) - cr[{i, k}].rho_base*(tt[k]-t0b))/tt[k]
         end
 
-        ppi[1] = p0-.5*dzw[1]*constants.gravity *(1.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+cr[{i, 0}].qv ) -.25*(cr[{i, 2}].rho_p+cr[{i, 2}].rho_base)*(1.+cr[{i, 1}].qv))
+        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+cr[{i, 0}].qv ) -.25*(cr[{i, 2}].rho_p+cr[{i, 2}].rho_base)*(1.+cr[{i, 1}].qv))
 
         ppi[1] = ppi[1]-cr[{i, 1}].pressure_base
         for k=0,nz1-1 do
 
 
-           ppi[k+1] = ppi[k]-vertr[k+1].dzu*constants.gravity* ( (cr[{i,k}].rho_p+(cr[{i,k}].rho_p+cr[{i, k}].rho_base)*cr[{i, k}].qv)*vertr[k+1].fzp   + (cr[{i, k+1}].rho_p+(cr[{i, k+1}].rho_p+cr[{i, k+1}].rho_base)*cr[{i, k+1}].qv)*vertr[k+1].fzm)
+           ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity* ( (cr[{i,k}].rho_p+(cr[{i,k}].rho_p+cr[{i, k}].rho_base)*cr[{i, k}].qv)*vertr[k+1].fzp   + (cr[{i, k+1}].rho_p+(cr[{i, k+1}].rho_p+cr[{i, k+1}].rho_base)*cr[{i, k+1}].qv)*vertr[k+1].fzm)
 
         end
 
@@ -487,20 +491,20 @@ where reads writes(vr, er, cr, vertr) do
 
 
     for k=0,nz1 do
-      cr[{i, k}].exner = cmath.pow(((cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0),(constants.rgas/constants.cp))
+      cr[{i, k}].exner = cmath.pow(((cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0),(rgas/cp))
       cr[{i, k}].theta_m = tt[k]/cr[{i, k}].exner
       cr[{i, k}].rtheta_p = cr[{i, k}].theta_m * cr[{i,k}].rho_p+cr[{i, k}].rho_base*(cr[{i, k}].theta_m-cr[{i, k}].theta_base)
       cr[{i, k}].rho_zz = cr[{i, k}].rho_base + cr[{i,k}].rho_p
     end
 
     --calculation of surface pressure:
-    cr[{i, 0}].surface_pressure = 0.5*dzw[1]*constants.gravity * (1.25*(cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 0}].qv) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
+    cr[{i, 0}].surface_pressure = 0.5*dzw[1]*gravity * (1.25*(cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 0}].qv) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
     cr[{i, 0}].surface_pressure = cr[{i, 0}].surface_pressure + cr[{i, 1}].pressure_p + cr[{i, 1}].pressure_base
 
   end   -- end loop over cells
 
-  var lat_pert = latitude_pert*constants.pii/180.0
-  var lon_pert = longitude_pert*constants.pii/180.0
+  var lat_pert = latitude_pert*pii/180.0
+  var lon_pert = longitude_pert*pii/180.0
 
 
 
@@ -544,7 +548,7 @@ where reads writes(vr, er, cr, vertr) do
 --     else
 
 --       do k=1,nVertLevels
---         etavs = (0.5*(pressure_base(k,iCell1)+pressure_base(k,iCell2)+pp(k,iCell1)+pp(k,iCell2))/p0 - 0.252)*constants.pii/2.
+--         etavs = (0.5*(pressure_base(k,iCell1)+pressure_base(k,iCell2)+pp(k,iCell1)+pp(k,iCell2))/p0 - 0.252)*pii/2.
 --         fluxk = u0*flux*(cmath.cos(etavs)**1.5)
 --         u(k,iEdge) = fluxk + u_pert
 --       end do
@@ -553,7 +557,7 @@ where reads writes(vr, er, cr, vertr) do
 
 
      for k=0, nVertLevels do
-       etavs = (0.5*(cr[{iCell1, k}].pressure_base+cr[{iCell2, k}].pressure_base+cr[{iCell1, k}].pressure_p+cr[{iCell2, k}].pressure_p)/p0 - 0.252)*constants.pii/2.0
+       etavs = (0.5*(cr[{iCell1, k}].pressure_base+cr[{iCell2, k}].pressure_base+cr[{iCell1, k}].pressure_p+cr[{iCell2, k}].pressure_p)/p0 - 0.252)*pii/2.0
        var fluxk = u0*flux*(cmath.pow(cmath.cos(etavs),1.5))
        er[{iEdge, k}].u = fluxk + u_pert
      end
@@ -704,7 +708,7 @@ where reads writes(vr, er, cr, vertr) do
 --  for i=0,10 do
 --    psurf = (cf1*(pressure_base(1,i)+pp(1,i)) + cf2*(pressure_base(2,i)+pp(2,i)) + cf3*(pressure_base(3,i)+pp(3,i)))/100.
 --
---        psurf = (pressure_base(1,i)+pp(1,i)) + .5*dzw[1]*constants.gravity        &
+--        psurf = (pressure_base(1,i)+pp(1,i)) + .5*dzw[1]*gravity        &
 --                      *(1.25*(rr(1,i)+rb(1,i))*(1.+scalars(index_qv,1,i))   &
 --                       -.25*(rr(2,i)+rb(2,i))*(1.+scalars(index_qv,2,i)))
 --

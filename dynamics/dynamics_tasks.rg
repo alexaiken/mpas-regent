@@ -2,7 +2,7 @@ import "regent"
 require "data_structures"
 
 local constants = require("constants")
-
+local format = require("std/format")
 
 --------------------------------------------------------------
 -------------NOTES ON PORTING OVER FROM MPAS FORTRAN----------
@@ -484,7 +484,8 @@ task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
 where reads writes (cr, vert_r) do
       --  set coefficients
       var dtseps = .5 * dts * (1.0 + constants.config_epssm)
-      var rcv = constants.rgas / (constants.cp - constants.rgas)
+      var rgas = constants.rgas
+      var rcv = rgas / (constants.cp - rgas)
       var c2 = constants.cp * rcv
 
       var qtotal : double
@@ -585,6 +586,7 @@ end
 
 task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs))
 where reads writes (cr, er, vert_r) do
+  cio.printf("initializing coupled diagnostics\n")
   var rgas = constants.rgas
   var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
@@ -723,7 +725,8 @@ end
 task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), dts : double, small_step : int) -- nCellsSolve : int)
 where reads writes (er, cr, vert_r) do
   var epssm = constants.config_epssm
-  var rcv = constants.rgas / (constants.cp - constants.rgas)
+  var rgas = constants.rgas
+  var rcv = rgas / (constants.cp - rgas)
   var c2 = constants.cp * rcv
   var resm = (1.0 - epssm) / (1.0 + epssm)
   var rdts = 1.0 / dts
