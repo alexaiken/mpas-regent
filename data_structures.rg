@@ -226,6 +226,32 @@ fspace cell_fs {
     bdyMaskCell : int, --type="integer" dimensions="nCells" default_value="0" units="-" description="Limited-area specified/relaxation zone index for cells"
     w_tend : double, --Note: not found in Registry.xml
 
+    --vars first seen in atm_compute_dyn_tend_work --
+    defc_a : double[constants.maxEdges], --type="real" dimensions="maxEdges nCells" units="unitless" description="Coefficients for computing the off-diagonal components of the horizontal deformation"
+    defc_b : double[constants.maxEdges], --type="real" dimensions="maxEdges nCells" units="unitless" description="Coefficients for computing the diagonal components of the horizontal deformation"
+    kdiff : double, --type="real" dimensions="nVertLevels nCells Time" units="m^2 s^{-1}" description="Smagorinsky horizontal eddy viscosity"
+    h_divergence : double, --type="real" dimensions="nVertLevels nCells Time" units="???" description="???"
+    tend_rho_physics : double, --Note: not found in Registry.xml
+    dpdz : double, --Note: not found in Registry.xml
+    rb : double, --Note: not found in Registry.xml
+    rr_save : double, --Note: not found in Registry.xml
+    pp : double, --Note: not found in Registry.xml
+    delsq_divergence : double, --Note: not found in Registry.xml
+    ur_cell : double, --Note: not found in Registry.xml
+    vr_cell : double, --Note: not found in Registry.xml
+    latCell : double, --type="real" dimensions="nCells" units="rad" description="Latitude of cells"
+    tend_w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-2}" description="Tendency of w from dynamics"
+    delsq_w : double, --Note: not found in Registry.xml
+    tend_w_euler : double, --Note: not found in Registry.xml
+    tend_theta : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3} s^{-1}" description="tendency of coupled potential temperature rho*theta_m/zz from dynamics and physics, updated each RK step"
+    theta_m_save : double, --Note: not found in Registry.xml
+    delsq_theta : double, --Note: not found in Registry.xml
+    tend_theta_euler : double, --Note: not found in Registry.xml
+    tend_rtheta_adv : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3} s^{-1}" description="flux divergence for rho*theta_m/zz, used in the Tiedtke convective parameterization"
+    rthdynten : double, --type="real" dimensions="nVertLevels nCells Time" units="K s^{-1}" description="tendency of temperature due to horizontal and vertical advections" packages="cu_grell_freitas_in;cu_tiedtke_in"
+    rt_diabatic_tend : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K s^{-1}" description="Tendency of coupled potential temperature from physics"
+    t_init : double, --type="real" dimensions="nVertLevels nCells" units="K" description="theta reference profile"
+    tend_rtheta_physics : double, --Note: not found in Registry.xml
 }
 
 
@@ -250,6 +276,10 @@ fspace vertex_fs {
     invAreaTriangle : double, --type="real" dimensions="nVertices" units="m^{-2}" description="Inverse area of a Delaunay triangle"
     ke_vertex : double, -- vertex and vertical levels
     pv_vertex : double, --type="real"     dimensions="nVertLevels nVertices Time"
+
+    -- vars first seen in atm_compute_dyn_tend_work --
+    delsq_vorticity : double, --Note: not found in Registry.xml
+    edgesOnVertex_sign : double[constants.vertexDegree], --type="real" dimensions="vertexDegree nVertices" units="-" description="Sign for edges incident with a vertex: positive for positive inward tengential velocity"
 }
 
 fspace edge_fs {
@@ -269,6 +299,7 @@ fspace edge_fs {
     verticesOnEdge : int[constants.TWO],
     edgesOnEdge_ECP : int[constants.maxEdges2],
     weightsOnEdge : double[constants.maxEdges2],
+    edgesOnEdge : int[constants.maxEdges2],
 
     -----------begin vertical structure ---------
 
@@ -312,6 +343,16 @@ fspace edge_fs {
 
     -- vars first seen in atm_set_smlstep_pert_variables --
     u_tend : double, --Note: not found in Registry.xml
+
+    -- vars first seen in atm_compute_dyn_tend_work --
+    tend_u : double, --type="real" dimensions="nVertLevels nEdges Time" units="m s^{-2}" description="Tendency of u from dynamics"
+    latEdge : double, --type="real" dimensions="nEdges" units="rad" description="Latitude of edges"
+    rho_edge : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-3}" description="rho_zz averaged from cell centers to the cell edge"
+    tend_u_euler : double, --Note: not found in Registry.xml
+    invDvEdge : double, --type="real" dimensions="nEdges" units="m^{-1}" description="Inverse distance between vertex endpoints of an edge"
+    delsq_u : double, --Note: not found in Registry.xml
+    tend_ru_physics : double, --Note: not found in Registry.xml
+    ru_save : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-2} s^{-1}" description="predicted value of horizontal momentum, saved before acoustic steps"
 }
 
 
@@ -325,4 +366,7 @@ fspace vertical_fs {
   fzp : double, -- level dependent
   cofrz : double, --type="real" dimensions="nVertLevels Time" units="s m^{-1}" description="coefficient for implicit contribution of Omega to density update"
 
+  -- vars first seen in atm_compute_dyn_tend_work --
+  u_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="u reference profile"
+  v_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="v reference profile"
 }
