@@ -32,31 +32,33 @@ constants.omega = 7.29212E-5
 constants.rgas = terralib.constant(double, 287.0)
 constants.rv = 461.6
 constants.cp = terralib.constant(double, `(7.0*constants.rgas/2.0))
+constants.cv = terralib.constant(double, `(constants.cp - constants.rgas))
+constants.cvpm = terralib.constant(double, `(-constants.cv / constants.cp))
 constants.gravity = 9.80616
 constants.rvord = terralib.constant(double, `(constants.rv/constants.rgas))
 constants.config_epssm = 0.1
-constants.prandtl = 1.0
+constants.prandtl = terralib.constant(double, 1.0)
 
 constants.nRelaxZone = 5
 
 constants.config_smdiv = 0.1
 constants.config_len_disp = terralib.constant(double, 120000.0)
 
-constants.config_v_mom_eddy_visc2 = 0.0
-constants.config_h_theta_eddy_visc2 = 0.0
-constants.config_v_theta_eddy_visc2 = 0.0
-constants.config_h_mom_eddy_visc4 = 0.0
-constants.config_h_theta_eddy_visc4 = 0.0
+constants.config_v_mom_eddy_visc2 = terralib.constant(double, 0.0)
+constants.config_h_theta_eddy_visc2 = terralib.constant(double, 0.0)
+constants.config_v_theta_eddy_visc2 = terralib.constant(double, 0.0)
+constants.config_h_mom_eddy_visc4 = terralib.constant(double, 0.0)
+constants.config_h_theta_eddy_visc4 = terralib.constant(double, 0.0)
 constants.config_visc4_2dsmag = 0.05
 constants.config_smagorinsky_coef = 0.125
-constants.config_del4u_div_factor = 10.0
+constants.config_del4u_div_factor = terralib.constant(double, 10.0)
 constants.config_number_rayleigh_damp_u_levels = 6
-constants.config_rayleigh_damp_u_timescale_days = 5.0
+constants.config_rayleigh_damp_u_timescale_days = terralib.constant(double, 5.0)
 constants.config_coef_3rd_order = 0.25
 
 --Not sure about these as they seem to be parameters:
 constants.config_horiz_mixing = "2d_smagorinsky"
-constants.config_mpas_cam_coef = 0.0
+constants.config_mpas_cam_coef = terralib.constant(double, 0.0)
 constants.config_mix_full = false
 constants.config_rayleigh_damp_u = false
 

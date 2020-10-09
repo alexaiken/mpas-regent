@@ -683,9 +683,30 @@ where reads writes (cr) do
 end
 
 __demand(__inline)
-task flux3()
-
+task flux4(q_im2 : double, q_im1 : double, q_i : double, q_ip1 : double, ua : double) : double
+  return ua*( 7.*(q_i + q_im1) - (q_ip1 + q_im2) )/12.0
 end
+
+__demand(__inline)
+task flux3(q_im2 : double, q_im1 : double, q_i : double, q_ip1 : double, ua : double, coef3 : double) : double
+  return flux4(q_im2, q_im1, q_i, q_ip1, ua) 
+         + coef3*cmath.fabs(ua)*((q_ip1-q_im2)-3.*(q_i-q_im1))/12.0
+end
+
+-- Comments for atm_compute_dyn_tend_work
+-- A large number of variables appeared to be missing from the registry. I have inferred their types
+-- and regions to the best of my ability, but may have gotten some of them wrong.
+-- They are as follows:
+--    cr: tend_rho_physics, dpdz, rb, rr_save, pp, delsq_divergence, ur_cell, vr_cell, delsq_w, 
+--    tend_w_euler, theta_m_save, delsq_theta, tend_theta_euler, tend_rtheta_physics
+--    er: tend_u_euler, delsq_u, tend_ru_physics
+--    vr: delsq_vorticity
+-- I also was unable to find dt.
+-- Variable c_s appears to be a renaming of constants.config_smagorinsky_coef.
+-- Some pieces of code were inside an #ifdef CURVATURE. I have ignored the ifdefs and put the code in 
+-- unconditionally.
+-- I have also used previous conventions like removing "_RKIND", looping over all cells instead of 
+-- cellSolveStart to cellStartEnd, using cmath.copysign and cmath.fabs for sign and abs, etc.
 
 task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
@@ -697,14 +718,6 @@ task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
                                config_mix_full : bool,
                                config_rayleigh_damp_u : bool)
 where reads writes (cr, er, vr, vert_r) do
---Not sure how to translate:
---  flux4(q_im2, q_im1, q_i, q_ip1, ua) =                     &
---        ua*( 7.*(q_i + q_im1) - (q_ip1 + q_im2) )/12.0
-
---  flux3(q_im2, q_im1, q_i, q_ip1, ua, coef3) =              &
---        flux4(q_im2, q_im1, q_i, q_ip1, ua) +           &
---        coef3*abs(ua)*((q_ip1 - q_im2)-3.*(q_i-q_im1))/12.0
-
   var prandtl_inv = 1.0 / constants.prandtl
   -- Can't find dt
   --var invDt = 1.0 / dt
@@ -844,8 +857,7 @@ where reads writes (cr, er, vr, vert_r) do
     var k = 1
     wduz[k] = 0.5 * (cr[{cell1, k}].rw + cr[{cell2, k}].rw) * (vert_r[k].fzm * er[{iEdge, k}].u + vert_r[k].fzp * er[{iEdge, k - 1}].u)
     for k = 2, nVertLevels - 1 do
-      --Original: wduz(k) = flux3( u(k-2,iEdge), u(k-1,iEdge), u(k,iEdge), u(k+1,iEdge), 0.5*(rw(k,cell1)+rw(k,cell2)), 1.0_RKIND )
-      --wduz[k] = flux3( er[{iEdge,k-2}].u, er[{iEdge,k-1}].u, er[{iEdge,k}].u, er[{iEdge,k+1}].u, 0.5*(cr[{cell1,k}].rw+cr[{cell2,k}].rw)), 1.0 )
+      wduz[k] = flux3( er[{iEdge,k-2}].u, er[{iEdge,k-1}].u, er[{iEdge,k}].u, er[{iEdge,k+1}].u, 0.5*(cr[{cell1,k}].rw+cr[{cell2,k}].rw), 1.0 )
     end
     k = nVertLevels - 1
     wduz[k] = 0.5 * (cr[{cell1, k}].rw + cr[{cell2, k}].rw) * (vert_r[k].fzm * er[{iEdge, k}].u + vert_r[k].fzp * er[{iEdge, k - 1}].u)
@@ -1186,9 +1198,8 @@ where reads writes (cr, er, vr, vert_r) do
     var k = 1
     wdwz[k] = 0.25 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw)*(cr[{iCell, k}].w + cr[{iCell, k-1}].w)
     for k = 2, nVertLevels - 1 do
-      --What is flux3???
-      --wdwz[k] = flux3( cr[{iCell, k-2}].w, cr[{iCell, k-1}].w, cr[{iCell, k}].w, cr[{iCell, k+1}].w, 
-      --                 0.5 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw), 1.0 )
+      wdwz[k] = flux3( cr[{iCell, k-2}].w, cr[{iCell, k-1}].w, cr[{iCell, k}].w, cr[{iCell, k+1}].w, 
+                       0.5 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw), 1.0 )
     end
     k = nVertLevels - 1
     wdwz[k] = 0.25 * (cr[{iCell, k}].rw + cr[{iCell, k-1}].rw) * (cr[{iCell, k}].w + cr[{iCell, k-1}].rw)
@@ -1333,11 +1344,10 @@ where reads writes (cr, er, vr, vert_r) do
               + ( (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw) 
               * (vert_r[k].fzm * cr[{iCell, k}].theta_m_save + vert_r[k].fzp * cr[{iCell, k-1}].theta_m_save) )
     for k = 2, nVertLevels - 1 do
-      --TODO: What is flux3???
-      --wdtz[k] = flux3( cr[{iCell, k-2}].theta_m, cr[{iCell, k-1}].theta_m, cr[{iCell, k}].theta_m, 
-      --                 cr[{iCell, k+1}].theta_m, cr[{iCell, k}].rw, constants.config_coef_3rd_order )
-      --wdtz[k] += (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw)
-      --           * (vert_r[k].fzm * cr[{iCell, k}].theta_m_save + vert_r[k].fzp * cr[{iCell, k-1}].theta_m_save)  -- rtheta_pp redefinition
+      wdtz[k] = flux3( cr[{iCell, k-2}].theta_m, cr[{iCell, k-1}].theta_m, cr[{iCell, k}].theta_m, 
+                       cr[{iCell, k+1}].theta_m, cr[{iCell, k}].rw, constants.config_coef_3rd_order )
+      wdtz[k] += (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw)
+                 * (vert_r[k].fzm * cr[{iCell, k}].theta_m_save + vert_r[k].fzp * cr[{iCell, k-1}].theta_m_save)  -- rtheta_pp redefinition
     end
     k = nVertLevels - 1
     wdtz[k] =  cr[{iCell, k}].rw_save * (vert_r[k].fzm * cr[{iCell, k}].theta_m_save 
