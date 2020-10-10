@@ -701,10 +701,10 @@ end
 --    tend_w_euler, theta_m_save, delsq_theta, tend_theta_euler, tend_rtheta_physics
 --    er: tend_u_euler, delsq_u, tend_ru_physics
 --    vr: delsq_vorticity
--- I also was unable to find dt.
 -- Variable c_s appears to be a renaming of constants.config_smagorinsky_coef.
 -- Some pieces of code were inside an #ifdef CURVATURE. I have ignored the ifdefs and put the code in 
 -- unconditionally.
+-- Some config values should be configurable, rather than constants. These are currently in constants.rg.
 -- I have also used previous conventions like removing "_RKIND", looping over all cells instead of 
 -- cellSolveStart to cellStartEnd, using cmath.copysign and cmath.fabs for sign and abs, etc.
 
@@ -713,6 +713,7 @@ task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
                                vr : region(ispace(int2d), vertex_fs),
                                vert_r : region(ispace(int1d), vertical_fs),
                                rk_step : int,
+                               dt : double,
                                config_horiz_mixing : regentlib.string,
                                config_mpas_cam_coef : double,
                                config_mix_full : bool,
@@ -720,7 +721,7 @@ task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
 where reads writes (cr, er, vr, vert_r) do
   var prandtl_inv = 1.0 / constants.prandtl
   -- Can't find dt
-  --var invDt = 1.0 / dt
+  var invDt = 1.0 / dt
   var r_earth = constants.sphere_radius
   var inv_r_earth = 1.0 / r_earth
 
@@ -758,10 +759,9 @@ where reads writes (cr, er, vr, vert_r) do
           -- followed by imposition of an upper bound on the eddy viscosity
 
           -- Original: kdiff(k,iCell) = min((c_s * config_len_disp)**2 * sqrt(d_diag(k)**2 + d_off_diag(k)**2),(0.01*config_len_disp**2) * invDt)
-          -- Missing: invDt (from beginning of function)
-          --cr[{iCell, k}].kdiff = min(cmath.pow(c_s * constants.config_len_disp, 2.0) 
-          --                           * cmath.pow(cmath.pow(d_diag[k], 2.0) + cmath.pow(d_off_diag[k], 2.0), 0.5),
-          --                           (0.01 * cmath.pow(constants.config_len_disp, 2.0)) * invDt)
+          cr[{iCell, k}].kdiff = min(cmath.pow(c_s * constants.config_len_disp, 2.0) 
+                                     * cmath.pow(cmath.pow(d_diag[k], 2.0) + cmath.pow(d_off_diag[k], 2.0), 0.5),
+                                     (0.01 * cmath.pow(constants.config_len_disp, 2.0)) * invDt)
         end
       end
 
@@ -1424,13 +1424,14 @@ task atm_compute_dyn_tend(cr : region(ispace(int2d), cell_fs),
                           vr : region(ispace(int2d), vertex_fs),
                           vert_r : region(ispace(int1d), vertical_fs),
                           rk_step : int,
+                          dt : double,
                           config_horiz_mixing : regentlib.string,
                           config_mpas_cam_coef : double,
                           config_mix_full : bool,
                           config_rayleigh_damp_u : bool)
 where reads writes (cr, er, vr, vert_r) do
   cio.printf("computing dynamic tendencies\n")
-  atm_compute_dyn_tend_work(cr, er, vr, vert_r, rk_step, config_horiz_mixing, config_mpas_cam_coef, config_mix_full, config_rayleigh_damp_u)
+  atm_compute_dyn_tend_work(cr, er, vr, vert_r, rk_step, dt, config_horiz_mixing, config_mpas_cam_coef, config_mix_full, config_rayleigh_damp_u)
 end
 
 task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),

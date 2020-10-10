@@ -88,7 +88,7 @@ where reads writes (cr, er, vr, vert_r) do
       atm_compute_vert_imp_coefs(cr, vert_r, rk_sub_timestep[rk_step])
     end
 
-    atm_compute_dyn_tend(cr, er, vr, vert_r, rk_sub_timestep[rk_step], constants.config_horiz_mixing, constants.config_mpas_cam_coef, constants.config_mix_full, constants.config_rayleigh_damp_u)
+    atm_compute_dyn_tend(cr, er, vr, vert_r, rk_sub_timestep[rk_step], dt, constants.config_horiz_mixing, constants.config_mpas_cam_coef, constants.config_mix_full, constants.config_rayleigh_damp_u)
 
     atm_set_smlstep_pert_variables(cr, er, vert_r)
 
