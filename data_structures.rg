@@ -168,7 +168,7 @@ fspace cell_fs {
 
     rw : double,  --"rho*omega/zz carried at w points". dimensions="nVertLevelsP1 nCells Time"
     rw_p : double, --"acoustic perturbation rho*omega/zz carried at w points" "nVertLevelsP1 nCells Time"
-    rw_save: double, --"predicted value of rho*omega/zz, saved before acoustic steps" dimensions="nVertLevelsP1 nCells Time" units="kg m^{-2} s^{-1}"
+    rw_save : double, --"predicted value of rho*omega/zz, saved before acoustic steps" dimensions="nVertLevelsP1 nCells Time" units="kg m^{-2} s^{-1}"
     wwAvg : double, --"time-averaged rho*omega/zz used in scalar transport" "nVertLevelsP1 nCells Time"
     invAreaCell : double, --"Inverse of Voronoi cell area"
     theta_m : double, --"Moist potential temperature: theta*(1+q_v*R_v/R_d)" --nVertLevels nCells Time"
@@ -252,6 +252,14 @@ fspace cell_fs {
     rt_diabatic_tend : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K s^{-1}" description="Tendency of coupled potential temperature from physics"
     t_init : double, --type="real" dimensions="nVertLevels nCells" units="K" description="theta reference profile"
     tend_rtheta_physics : double, --Note: not found in Registry.xml
+
+    --vars first seen in atm_rk_integration_setup--
+    rtheta_p_save : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="predicted value rtheta_p, saved before acoustic steps"
+    rho_p_save : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="predicted value rho_p, saved before acoustic steps" 
+    w_2 : double, --Note: not found in Registry.xml. Predicted value of w, saved before acoustic steps
+    theta_m_2 : double, --Note: not found in Registry.xml. Predicted value of theta_m, saved before acoustic steps
+    rho_zz_2 : double, --Note: not found in Registry.xml. Predicted value of rho_zz, saved before acoustic steps
+    rho_zz_old_split : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="rho/zz"
 }
 
 
@@ -353,6 +361,9 @@ fspace edge_fs {
     delsq_u : double, --Note: not found in Registry.xml
     tend_ru_physics : double, --Note: not found in Registry.xml
     ru_save : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-2} s^{-1}" description="predicted value of horizontal momentum, saved before acoustic steps"
+
+    -- vars first seen in atm_rk_integration_setup --
+    u_2 : double, --Note: not found in Registry.xml. Predicted value of u, saved before acoustic steps
 }
 
 
