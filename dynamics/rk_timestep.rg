@@ -63,8 +63,8 @@ where reads writes (cr, er, vr, vert_r) do
   number_sub_steps[2] = number_of_sub_steps -- index indicates current rk_step val, num_sub_steps[2] is number for the 3rd rk_step
 
 
-  -- rk_integration_setup: saves state pre-loop
-  rk_integration_setup()
+  -- atm_rk_integration_setup: saves state pre-loop
+  atm_rk_integration_setup(cr, er)
 
   atm_compute_moist_coefficients(cr, er)
 
