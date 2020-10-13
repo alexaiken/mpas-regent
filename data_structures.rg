@@ -260,6 +260,9 @@ fspace cell_fs {
     theta_m_2 : double, --Note: not found in Registry.xml. Predicted value of theta_m, saved before acoustic steps
     rho_zz_2 : double, --Note: not found in Registry.xml. Predicted value of rho_zz, saved before acoustic steps
     rho_zz_old_split : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="rho/zz"
+
+    --vars first seen in atm_rk_dynamics_substep_finish--
+    wwAvg_split : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="kg m^{-2} s^{-1}" description="time-averaged rho*omega/zz used in scalar transport"
 }
 
 
@@ -364,6 +367,9 @@ fspace edge_fs {
 
     -- vars first seen in atm_rk_integration_setup --
     u_2 : double, --Note: not found in Registry.xml. Predicted value of u, saved before acoustic steps
+
+    -- vars first seen in atm_rk_dynamics_substep_finish --
+    ruAvg_split : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-2} s^{-1}" description="time-averaged rho*u/zz used in scalar transport"
 }
 
 
