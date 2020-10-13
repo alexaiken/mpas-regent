@@ -55,6 +55,7 @@ constants.config_del4u_div_factor = terralib.constant(double, 10.0)
 constants.config_number_rayleigh_damp_u_levels = 6
 constants.config_rayleigh_damp_u_timescale_days = terralib.constant(double, 5.0)
 constants.config_coef_3rd_order = 0.25
+constants.config_dynamics_split_steps = 1 --Default value is 3, but we will temporarily use 1 for simplicity
 
 --Not sure about these as they seem to be parameters:
 constants.config_horiz_mixing = "2d_smagorinsky"

@@ -42,7 +42,7 @@ where reads writes (cr, er, vr, vert_r) do
   var number_of_sub_steps = 2
 
   -- assume no dynamics transport, if transport was option, this would be conditionally set
-  var dynamics_split = 1
+  var dynamics_split = constants.config_dynamics_split_steps
   var dt_dynamics = dt
 
 
@@ -128,7 +128,7 @@ where reads writes (cr, er, vr, vert_r) do
 
   --SKIPPING if (dynamics_substep < dynamics_split) @ 1282
 
-  atm_rk_dynamics_substep_finish()
+  atm_rk_dynamics_substep_finish(cr, er, 1, dynamics_split) --Third argument is dynamics_substep, which should eventually go in a loop
 
   --------------DYNAMICS SUB STEP LOOP WOULD END HERE-----------------
 

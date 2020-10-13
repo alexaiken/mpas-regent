@@ -1683,8 +1683,57 @@ task atm_recover_large_step_variables()
   cio.printf("recovering large step vars\n")
 end
 
-task atm_rk_dynamics_substep_finish()
+task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
+                                    er: region(ispace(int2d), edge_fs),
+                                    dynamics_substep : int,
+                                    dynamics_split : int)
+where reads writes (cr, er) do
   cio.printf("finishing substep\n")
+  var inv_dynamics_split = 1.0 / [double](dynamics_split)
+  var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
+  var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
+
+  if (dynamics_substep < dynamics_split) then
+    for i in edge_range do
+      er[i].ru_save = er[i].ru
+      er[i].u = er[i].u_2
+    end
+    for i in cell_range do
+      cr[i].rw_save = cr[i].rw
+      cr[i].rtheta_p_save = cr[i].rtheta_p
+      cr[i].rho_p_save = cr[i].rho_p
+
+      cr[i].w = cr[i].w_2
+      cr[i].theta_m = cr[i].theta_m_2
+      cr[i].rho_zz = cr[i].rho_zz_2
+    end
+  end
+
+  if (dynamics_substep == 1) then
+    for i in edge_range do
+      er[i].ruAvg_split = er[i].ruAvg
+    end
+    for i in cell_range do
+      cr[i].wwAvg_split = cr[i].wwAvg
+    end
+  else
+    for i in edge_range do
+      er[i].ruAvg_split = er[i].ruAvg + er[i].ruAvg_split
+    end
+    for i in cell_range do
+      cr[i].wwAvg_split = cr[i].wwAvg + cr[i].wwAvg_split
+    end
+  end
+
+  if (dynamics_substep == dynamics_split) then
+    for i in edge_range do
+      er[i].ruAvg = er[i].ruAvg_split * inv_dynamics_split
+    end
+    for i in cell_range do
+      cr[i].wwAvg = cr[i].wwAvg_split * inv_dynamics_split
+      cr[i].rho_zz = cr[i].rho_zz_old_split
+    end
+  end
 end
 
 --__demand(__cuda)
