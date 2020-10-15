@@ -1148,7 +1148,7 @@ where reads writes (cr, er, vr, vert_r) do
                                              + vert_r[k].fzp * cr[{iCell, k-1}].ur_cell, 2.0)
                                   + cmath.pow(vert_r[k].fzm * cr[{iCell, k}].vr_cell
                                              + vert_r[k].fzp * cr[{iCell, k-1}].vr_cell, 2.0) ) / r_earth
-                               + 2.0 * constants.omega * cmath.cos(cr[{iCell, 0}].latCell)
+                               + 2.0 * constants.omega * cmath.cos(cr[{iCell, 0}].lat)
                                * (vert_r[k].fzm * cr[{iCell, k}].ur_cell 
                                   + vert_r[k].fzp * cr[{iCell, k-1}].ur_cell)
                                * (cr[{iCell, k}].rho_zz * vert_r[k].fzm 

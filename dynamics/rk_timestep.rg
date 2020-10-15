@@ -4,6 +4,7 @@ require "data_structures"
 require "dynamics_tasks"
 
 local constants = require("constants")
+local format = require("std/format")
 
 
 local nCells = 2562
@@ -18,14 +19,348 @@ local nVertLevels = 1
 
 
 local cio = terralib.includec("stdio.h")
+local cmath = terralib.includec("math.h")
 
 
 task rk_integration_setup()
   cio.printf("saving state pre-RK loop\n")
 end
 
-task summarize_timestep()
-  cio.printf("summarizing step\n")
+__demand(__inline)
+task mpas_dmpar_minattributes_real(localAttributes : double[5], globalAttributes : double[5])
+  for i = 0, 5 do
+    globalAttributes[i] = localAttributes[i]
+  end
+end
+
+__demand(__inline)
+task mpas_dmpar_maxattributes_real(localAttributes : double[5], globalAttributes : double[5])
+  for i = 0, 5 do
+    globalAttributes[i] = localAttributes[i]
+  end
+end
+
+--Comments for summarize_timestep
+--Unsure what associated(block) is. Also found in atm_srk3 but ignored
+--nCellsSolve, nEdgesSolve: not sure what these are
+--Scalars
+--Helper functions are confusing
+--Translated latCell and lonCell as lat and lon
+task summarize_timestep(cr : region(ispace(int2d), cell_fs),
+                        er: region(ispace(int2d), edge_fs),
+                        config_print_detailed_minmax_vel : bool,
+                        config_print_global_minmax_vel : bool,
+                        config_print_global_minmax_sca : bool)
+where reads writes (cr, er) do
+  format.println("summarizing timestep")
+
+  --Variables declared at beginning of function
+  var localVals : double[5]
+  var globalVals : double[5]
+  var pi_const = 2.0 * cmath.asin(1.0) --How does this differ from pi?
+  var scalar_min : double
+  var scalar_max : double
+  var global_scalar_min : double
+  var global_scalar_max : double
+
+  --This config needs to be configurable at some point
+  if (constants.config_print_detailed_minmax_vel) then
+    format.println("")
+
+    -- What is this???
+    --block => domain % blocklist
+    --do while (associated(block))
+
+      scalar_min = 1.0e20
+      var indexMax = -1
+      var kMax = -1
+      var latMax = 0.0
+      var lonMax = 0.0
+      -- What is nCellsSolve?
+      -- Originally: do iCell = 1, nCellsSolve
+      for iCell = 0, nCells do --TODO: Replace with nCellsSolve when resolved
+        for k = 0, nVertLevels do
+          if (cr[{iCell, k}].w < scalar_min) then
+            scalar_min = cr[{iCell, k}].w
+            indexMax = iCell
+            kMax = k
+            latMax = cr[{iCell, 0}].lat
+            lonMax = cr[{iCell, 0}].lon
+          end
+        end
+      end
+      localVals[0] = scalar_min
+      localVals[1] = [double](indexMax)
+      localVals[2] = [double](kMax)
+      localVals[3] = latMax
+      localVals[4] = lonMax
+
+      format.println("Local vals: {}, {}, {}, {}, {}", localVals[0], localVals[1], localVals[2], localVals[3], localVals[4])
+
+      --Original: call mpas_dmpar_minattributes_real(domain % dminfo, scalar_min, localVals, globalVals)
+      mpas_dmpar_minattributes_real(localVals, globalVals)
+      --Check that global vals is actually being set:
+      format.println("Global vals: {}, {}, {}, {}, {}", globalVals[0], globalVals[1], globalVals[2], globalVals[3], globalVals[4])
+
+      global_scalar_min = globalVals[0]
+      var indexMax_global = [int](globalVals[1])
+      var kMax_global = [int](globalVals[2])
+      var latMax_global = globalVals[3]
+      var lonMax_global = globalVals[4]
+      latMax_global *= 180.0 / pi_const
+      lonMax_global *= 180.0 / pi_const
+      if (lonMax_global > 180.0) then
+        lonMax_global -= 360.0
+      end
+      -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
+      --Is this a print statement?
+      --call mpas_log_write(' global min w: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
+      --                    realArgs=(/global_scalar_min, latMax_global, lonMax_global/))
+
+      scalar_max = -1.0e20
+      indexMax = -1
+      kMax = -1
+      latMax = 0.0
+      lonMax = 0.0
+      --Original: do iCell = 1, nCellsSolve
+      for iCell = 0, nCells do --TODO: replace with nCellsSolve when resolved
+        for k = 0, nVertLevels do
+          if (cr[{iCell, k}].w > scalar_max) then
+            scalar_max = cr[{iCell, k}].w
+            indexMax = iCell
+            kMax = k
+            latMax = cr[{iCell, k}].lat
+            lonMax = cr[{iCell, k}].lon
+          end
+        end
+      end
+      localVals[0] = scalar_max
+      localVals[1] = [double](indexMax)
+      localVals[2] = [double](kMax)
+      localVals[3] = latMax
+      localVals[4] = lonMax
+      --Original: call mpas_dmpar_maxattributes_real(domain % dminfo, scalar_max, localVals, globalVals)
+      mpas_dmpar_maxattributes_real(localVals, globalVals)
+      global_scalar_max = globalVals[0]
+      indexMax_global = [int](globalVals[1])
+      kMax_global = [int](globalVals[2])
+      latMax_global = globalVals[3]
+      lonMax_global = globalVals[4]
+      latMax_global *= 180.0 / pi_const
+      lonMax_global *= 180.0 / pi_const
+      if (lonMax_global > 180.0) then
+        lonMax_global -= 360.0
+      end
+      -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
+      --call mpas_log_write(' global max w: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
+      --                    realArgs=(/global_scalar_max, latMax_global, lonMax_global/))
+
+      scalar_min = 1.0e20
+      indexMax = -1
+      kMax = -1
+      latMax = 0.0
+      lonMax = 0.0
+      -- nEdgesSolve?
+      -- Original: do iEdge = 1, nEdgesSolve
+      for iEdge = 0, nEdges do -- TODO: Replace with nEdgesSolve when resolved
+        for k = 0, nVertLevels do
+          if (er[{iEdge, k}].u < scalar_min) then
+            scalar_min = er[{iEdge, k}].u
+            indexMax = iEdge
+            kMax = k
+            latMax = er[{iEdge, 0}].lat
+            lonMax = er[{iEdge, 0}].lon
+          end
+        end
+      end
+      localVals[0] = scalar_min
+      localVals[1] = [double](indexMax)
+      localVals[2] = [double](kMax)
+      localVals[3] = latMax
+      localVals[4] = lonMax
+      --call mpas_dmpar_minattributes_real(domain % dminfo, scalar_min, localVals, globalVals)
+      mpas_dmpar_minattributes_real(localVals, globalVals)
+
+      global_scalar_min = globalVals[0]
+      indexMax_global = [int](globalVals[1])
+      kMax_global = [int](globalVals[2])
+      latMax_global = globalVals[3]
+      lonMax_global = globalVals[4]
+      latMax_global *= 180.0 / pi_const
+      lonMax_global *= 180.0 / pi_const
+      if (lonMax_global > 180.0) then
+        lonMax_global -= 360.0
+      end
+      -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
+      --call mpas_log_write(' global min u: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
+      --                    realArgs=(/global_scalar_max, latMax_global, lonMax_global/))
+
+      scalar_max = -1.0e20
+      indexMax = -1
+      kMax = -1
+      latMax = 0.0
+      lonMax = 0.0
+      --Original: do iEdge = 1, nEdgesSolve
+      for iEdge = 0, nEdges do --TODO: replace with nEdgesSolve when resolved
+        for k = 0, nVertLevels do
+          if (er[{iEdge, k}].u > scalar_max) then
+            scalar_max = er[{iEdge, k}].u
+            indexMax = iEdge
+            kMax = k
+            latMax = er[{iEdge, k}].lat
+            lonMax = er[{iEdge, k}].lon
+          end
+        end
+      end
+      localVals[0] = scalar_max
+      localVals[1] = [double](indexMax)
+      localVals[2] = [double](kMax)
+      localVals[3] = latMax
+      localVals[4] = lonMax
+      --Original: call mpas_dmpar_maxattributes_real(domain % dminfo, scalar_max, localVals, globalVals)
+      mpas_dmpar_maxattributes_real(localVals, globalVals)
+
+      global_scalar_max = globalVals[0]
+      indexMax_global = [int](globalVals[1])
+      kMax_global = [int](globalVals[2])
+      latMax_global = globalVals[3]
+      lonMax_global = globalVals[4]
+      latMax_global *= 180.0 / pi_const
+      lonMax_global *= 180.0 / pi_const
+      if (lonMax_global > 180.0) then
+        lonMax_global -= 360.0
+      end
+      -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
+      --call mpas_log_write(' global max u: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
+      --                    realArgs=(/global_scalar_max, latMax_global, lonMax_global/))
+
+      scalar_max = -1.0e20
+      indexMax = -1
+      kMax = -1
+      latMax = 0.0
+      lonMax = 0.0
+      --Original: do iEdge = 1, nEdgesSolve
+      for iEdge = 0, nEdges do -- TODO: Replace with nEdgesSolve when resolved
+        for k = 0, nVertLevels do
+          var spd = cmath.sqrt(cmath.pow(er[{iEdge, k}].u, 2) + cmath.pow(er[{iEdge, k}].v, 2))
+          if (spd > scalar_max) then
+            scalar_max = spd
+            indexMax = iEdge
+            kMax = k
+            latMax = er[{iEdge, 0}].lat
+            lonMax = er[{iEdge, 0}].lon
+          end
+        end
+      end
+      localVals[0] = scalar_max
+      localVals[1] = [double](indexMax)
+      localVals[2] = [double](kMax)
+      localVals[3] = latMax
+      localVals[4] = lonMax
+      mpas_dmpar_maxattributes_real(localVals, globalVals)
+
+      global_scalar_max = globalVals[0]
+      indexMax_global = [int](globalVals[1])
+      kMax_global = [int](globalVals[2])
+      latMax_global = globalVals[3]
+      lonMax_global = globalVals[4]
+      latMax_global *= 180.0 / pi_const
+      lonMax_global *= 180.0 / pi_const
+      if (lonMax_global > 180.0) then
+          lonMax_global -= 360.0
+      end
+      -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
+      --call mpas_log_write(' global max wsp: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
+      --                    realArgs=(/global_scalar_max, latMax_global, lonMax_global/))
+
+      -- Check for NaNs
+      --Original: do iCell = 1, nCellsSolve
+      for iCell = 0, nCells do -- TODO: Replace with nCellsSolve when resolved
+        for k = 0, nVertLevels do
+          -- TODO: Find cmath equivalent of ieee_is_nan
+          --if (ieee_is_nan(cr[{iCell, k}].w)) then
+          --  call mpas_log_write('NaN detected in ''w'' field.', messageType=MPAS_LOG_CRIT)
+          --end
+        end
+      end
+
+      --Original: do iEdge = 1, nEdgesSolve
+      for iEdge = 0, nEdges do -- TODO: replace with nEdgesSolve when resolved
+        for k = 0, nVertLevels do
+          -- TODO: Find cmath equivalent of ieee_is_nan
+          --if (ieee_is_nan(er[{iEdge, k}].u)) then
+          --  call mpas_log_write('NaN detected in ''u'' field.', messageType=MPAS_LOG_CRIT)
+          --end
+        end
+      end
+
+      -- What is this ????
+      -- block => block % next
+    --end
+  end
+
+  if (config_print_global_minmax_vel) then
+    format.println("")
+
+    --block => domain % blocklist
+    --do while (associated(block))
+
+      scalar_min = 0.0
+      scalar_max = 0.0
+      --Original: do iCell = 1, nCellsSolve
+      for iCell = 0, nCells do -- TODO: replace with nCellsSolve when resolved
+        for k = 0, nVertLevels do
+          scalar_min = min(scalar_min, cr[{iCell, k}].w)
+          scalar_max = max(scalar_max, cr[{iCell, k}].w)
+        end
+      end
+      --call mpas_dmpar_min_real(domain % dminfo, scalar_min, global_scalar_min)
+      --call mpas_dmpar_max_real(domain % dminfo, scalar_max, global_scalar_max)
+      --call mpas_log_write('global min, max w $r $r', realArgs=(/global_scalar_min, global_scalar_max/))
+
+      scalar_min = 0.0
+      scalar_max = 0.0
+      --Original: do iEdge = 1, nEdgesSolve
+      for iEdge = 0, nEdges do -- TODO: replace with nEdgesSolve when resolved
+        for k = 0, nVertLevels do
+          scalar_min = min(scalar_min, er[{iEdge, k}].u)
+          scalar_max = max(scalar_max, er[{iEdge, k}].u)
+        end
+      end
+      --call mpas_dmpar_min_real(domain % dminfo, scalar_min, global_scalar_min)
+      --call mpas_dmpar_max_real(domain % dminfo, scalar_max, global_scalar_max)
+      --call mpas_log_write('global min, max u $r $r', realArgs=(/global_scalar_min, global_scalar_max/))
+
+      --block => block % next
+    --end
+  end
+
+  if (config_print_global_minmax_sca) then
+    if (not (config_print_global_minmax_vel or config_print_detailed_minmax_vel)) then
+      --call mpas_log_write('')
+      format.println("")
+    end
+
+    --block => domain % blocklist
+    --do while (associated(block))
+
+      --do iScalar = 1, num_scalars
+        --scalar_min = 0.0
+        --scalar_max = 0.0
+        --do iCell = 1, nCellsSolve
+          --do k = 1, nVertLevels
+            --scalar_min = min(scalar_min, scalars(iScalar,k,iCell))
+            --scalar_max = max(scalar_max, scalars(iScalar,k,iCell))
+          --end do
+        --end do
+        --call mpas_dmpar_min_real(domain % dminfo, scalar_min, global_scalar_min)
+        --call mpas_dmpar_max_real(domain % dminfo, scalar_max, global_scalar_max)
+        --call mpas_log_write(' global min, max scalar $i $r $r', intArgs=(/iScalar/), realArgs=(/global_scalar_min, global_scalar_max/))
+      --end do
+
+      --block => block % next
+    --end
+  end
 end
 
 task atm_srk3(cr : region(ispace(int2d), cell_fs),
@@ -140,7 +475,7 @@ where reads writes (cr, er, vr, vert_r) do
   -- SKIPPING physics @ line 1610
   -- SKIPPING if(config_apply_lbcs @ line 1672 & 1714)
 
-  summarize_timestep()
+  summarize_timestep(cr, er, constants.config_print_detailed_minmax_vel, constants.config_print_global_minmax_vel, constants.config_print_global_minmax_sca)
 
   --for iCell = 0, nCells do
   --  cio.printf("Surface pressure at Cell %d is %f\n", iCell, cr[{iCell, 0}].pressure_p)

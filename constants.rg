@@ -62,6 +62,9 @@ constants.config_horiz_mixing = "2d_smagorinsky"
 constants.config_mpas_cam_coef = terralib.constant(double, 0.0)
 constants.config_mix_full = false
 constants.config_rayleigh_damp_u = false
+constants.config_print_detailed_minmax_vel = false
+constants.config_print_global_minmax_vel = false
+constants.config_print_global_minmax_sca = false
 
 
 
