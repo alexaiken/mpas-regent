@@ -19,9 +19,29 @@ local nVertLevels = 1
 
 local cio = terralib.includec("stdio.h")
 
-
-task rk_integration_setup()
+task atm_rk_integration_setup(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs))
+where reads writes (cr, er) do
   cio.printf("saving state pre-RK loop\n")
+  var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
+  var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
+
+  for i in edge_range do
+    er[i].ru_save = er[i].ru
+    er[i].u_2 = er[i].u
+  end
+
+  for i in cell_range do
+    cr[i].rw_save = cr[i].rw
+    cr[i].rtheta_p_save = cr[i].rtheta_p
+    cr[i].rho_p_save = cr[i].rho_p
+
+    cr[i].w_2 = cr[i].w
+    cr[i].theta_m_2 = cr[i].theta_m
+    cr[i].rho_zz_2 = cr[i].rho_zz
+    cr[i].rho_zz_old_split = cr[i].rho_zz
+    --Not sure how to translate scalars
+    --scalars_2(:,:,cellStart:cellEnd) = scalars_1(:,:,cellStart:cellEnd)
+  end
 end
 
 task summarize_timestep()
