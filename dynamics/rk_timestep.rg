@@ -26,28 +26,13 @@ task rk_integration_setup()
   cio.printf("saving state pre-RK loop\n")
 end
 
-__demand(__inline)
-task mpas_dmpar_minattributes_real(localAttributes : double[5], globalAttributes : double[5])
-  for i = 0, 5 do
-    globalAttributes[i] = localAttributes[i]
-  end
-end
-
-__demand(__inline)
-task mpas_dmpar_maxattributes_real(localAttributes : double[5], globalAttributes : double[5])
-  for i = 0, 5 do
-    globalAttributes[i] = localAttributes[i]
-  end
-end
-
 --Comments for summarize_timestep
 --Unsure what associated(block) is. Also found in atm_srk3 but ignored
 --nCellsSolve, nEdgesSolve: not sure what these are
 --Scalars
---Helper functions are confusing
 --Translated latCell and lonCell as lat and lon
 task summarize_timestep(cr : region(ispace(int2d), cell_fs),
-                        er: region(ispace(int2d), edge_fs),
+                        er : region(ispace(int2d), edge_fs),
                         config_print_detailed_minmax_vel : bool,
                         config_print_global_minmax_vel : bool,
                         config_print_global_minmax_sca : bool)
@@ -71,6 +56,7 @@ where reads writes (cr, er) do
     --block => domain % blocklist
     --do while (associated(block))
 
+---- GLOBAL MIN W ----
       scalar_min = 1.0e20
       var indexMax = -1
       var kMax = -1
@@ -94,13 +80,9 @@ where reads writes (cr, er) do
       localVals[2] = [double](kMax)
       localVals[3] = latMax
       localVals[4] = lonMax
-
-      format.println("Local vals: {}, {}, {}, {}, {}", localVals[0], localVals[1], localVals[2], localVals[3], localVals[4])
-
-      --Original: call mpas_dmpar_minattributes_real(domain % dminfo, scalar_min, localVals, globalVals)
-      mpas_dmpar_minattributes_real(localVals, globalVals)
-      --Check that global vals is actually being set:
-      format.println("Global vals: {}, {}, {}, {}, {}", globalVals[0], globalVals[1], globalVals[2], globalVals[3], globalVals[4])
+      for i = 0, 5 do
+        globalVals[i] = localVals[i]
+      end
 
       global_scalar_min = globalVals[0]
       var indexMax_global = [int](globalVals[1])
@@ -116,7 +98,9 @@ where reads writes (cr, er) do
       --Is this a print statement?
       --call mpas_log_write(' global min w: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
       --                    realArgs=(/global_scalar_min, latMax_global, lonMax_global/))
+      format.println("global min w: {} k={}, {} lat, {} lon", kMax_global, global_scalar_min, latMax_global, lonMax_global)
 
+---- GLOBAL MAX W ----
       scalar_max = -1.0e20
       indexMax = -1
       kMax = -1
@@ -139,8 +123,9 @@ where reads writes (cr, er) do
       localVals[2] = [double](kMax)
       localVals[3] = latMax
       localVals[4] = lonMax
-      --Original: call mpas_dmpar_maxattributes_real(domain % dminfo, scalar_max, localVals, globalVals)
-      mpas_dmpar_maxattributes_real(localVals, globalVals)
+      for i = 0, 5 do
+        globalVals[i] = localVals[i]
+      end
       global_scalar_max = globalVals[0]
       indexMax_global = [int](globalVals[1])
       kMax_global = [int](globalVals[2])
@@ -154,7 +139,9 @@ where reads writes (cr, er) do
       -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
       --call mpas_log_write(' global max w: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
       --                    realArgs=(/global_scalar_max, latMax_global, lonMax_global/))
+      format.println("global max w: {} k={}, {} lat, {} lon", kMax_global, global_scalar_max, latMax_global, lonMax_global)
 
+---- GLOBAL MIN U ----
       scalar_min = 1.0e20
       indexMax = -1
       kMax = -1
@@ -178,8 +165,9 @@ where reads writes (cr, er) do
       localVals[2] = [double](kMax)
       localVals[3] = latMax
       localVals[4] = lonMax
-      --call mpas_dmpar_minattributes_real(domain % dminfo, scalar_min, localVals, globalVals)
-      mpas_dmpar_minattributes_real(localVals, globalVals)
+      for i = 0, 5 do
+        globalVals[i] = localVals[i]
+      end
 
       global_scalar_min = globalVals[0]
       indexMax_global = [int](globalVals[1])
@@ -194,7 +182,9 @@ where reads writes (cr, er) do
       -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
       --call mpas_log_write(' global min u: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
       --                    realArgs=(/global_scalar_max, latMax_global, lonMax_global/))
+      format.println("global min u: {} k={}, {} lat, {} lon", kMax_global, global_scalar_max, latMax_global, lonMax_global)
 
+---- GLOBAL MAX U ----
       scalar_max = -1.0e20
       indexMax = -1
       kMax = -1
@@ -218,7 +208,9 @@ where reads writes (cr, er) do
       localVals[3] = latMax
       localVals[4] = lonMax
       --Original: call mpas_dmpar_maxattributes_real(domain % dminfo, scalar_max, localVals, globalVals)
-      mpas_dmpar_maxattributes_real(localVals, globalVals)
+      for i = 0, 5 do
+        globalVals[i] = localVals[i]
+      end
 
       global_scalar_max = globalVals[0]
       indexMax_global = [int](globalVals[1])
@@ -233,7 +225,9 @@ where reads writes (cr, er) do
       -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
       --call mpas_log_write(' global max u: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
       --                    realArgs=(/global_scalar_max, latMax_global, lonMax_global/))
+      format.println("global max u: {} k={}, {} lat, {} lon", kMax_global, global_scalar_max, latMax_global, lonMax_global)
 
+---- GLOBAL MAX WSP ----
       scalar_max = -1.0e20
       indexMax = -1
       kMax = -1
@@ -257,7 +251,9 @@ where reads writes (cr, er) do
       localVals[2] = [double](kMax)
       localVals[3] = latMax
       localVals[4] = lonMax
-      mpas_dmpar_maxattributes_real(localVals, globalVals)
+      for i = 0, 5 do
+        globalVals[i] = localVals[i]
+      end
 
       global_scalar_max = globalVals[0]
       indexMax_global = [int](globalVals[1])
@@ -267,30 +263,29 @@ where reads writes (cr, er) do
       latMax_global *= 180.0 / pi_const
       lonMax_global *= 180.0 / pi_const
       if (lonMax_global > 180.0) then
-          lonMax_global -= 360.0
+        lonMax_global -= 360.0
       end
       -- format statement should be '(a,f9.4,a,i4,a,f7.3,a,f8.3,a)'
       --call mpas_log_write(' global max wsp: $r k=$i, $r lat, $r lon', intArgs=(/kMax_global/), &
       --                    realArgs=(/global_scalar_max, latMax_global, lonMax_global/))
+      format.println("global max wsp: {} k={}, {} lat, {} lon", kMax_global, global_scalar_max, latMax_global, lonMax_global)
 
       -- Check for NaNs
       --Original: do iCell = 1, nCellsSolve
       for iCell = 0, nCells do -- TODO: Replace with nCellsSolve when resolved
         for k = 0, nVertLevels do
-          -- TODO: Find cmath equivalent of ieee_is_nan
-          --if (ieee_is_nan(cr[{iCell, k}].w)) then
-          --  call mpas_log_write('NaN detected in ''w'' field.', messageType=MPAS_LOG_CRIT)
-          --end
+          if (cmath.isnan(cr[{iCell, k}].w) ~= 0) then
+            format.println("NaN detected in w field.")
+          end
         end
       end
 
       --Original: do iEdge = 1, nEdgesSolve
       for iEdge = 0, nEdges do -- TODO: replace with nEdgesSolve when resolved
         for k = 0, nVertLevels do
-          -- TODO: Find cmath equivalent of ieee_is_nan
-          --if (ieee_is_nan(er[{iEdge, k}].u)) then
-          --  call mpas_log_write('NaN detected in ''u'' field.', messageType=MPAS_LOG_CRIT)
-          --end
+          if (cmath.isnan(er[{iEdge, k}].u) ~= 0) then
+            format.println("NaN detected in u field.")
+          end
         end
       end
 
@@ -317,6 +312,7 @@ where reads writes (cr, er) do
       --call mpas_dmpar_min_real(domain % dminfo, scalar_min, global_scalar_min)
       --call mpas_dmpar_max_real(domain % dminfo, scalar_max, global_scalar_max)
       --call mpas_log_write('global min, max w $r $r', realArgs=(/global_scalar_min, global_scalar_max/))
+      format.println("global min, max w {} {}", global_scalar_min, global_scalar_max)
 
       scalar_min = 0.0
       scalar_max = 0.0
@@ -330,6 +326,7 @@ where reads writes (cr, er) do
       --call mpas_dmpar_min_real(domain % dminfo, scalar_min, global_scalar_min)
       --call mpas_dmpar_max_real(domain % dminfo, scalar_max, global_scalar_max)
       --call mpas_log_write('global min, max u $r $r', realArgs=(/global_scalar_min, global_scalar_max/))
+      format.println("global min, max u {} {}", global_scalar_min, global_scalar_max)
 
       --block => block % next
     --end
@@ -337,13 +334,13 @@ where reads writes (cr, er) do
 
   if (config_print_global_minmax_sca) then
     if (not (config_print_global_minmax_vel or config_print_detailed_minmax_vel)) then
-      --call mpas_log_write('')
       format.println("")
     end
 
     --block => domain % blocklist
     --do while (associated(block))
 
+      --This block of code has not been translated yet
       --do iScalar = 1, num_scalars
         --scalar_min = 0.0
         --scalar_max = 0.0
@@ -356,6 +353,7 @@ where reads writes (cr, er) do
         --call mpas_dmpar_min_real(domain % dminfo, scalar_min, global_scalar_min)
         --call mpas_dmpar_max_real(domain % dminfo, scalar_max, global_scalar_max)
         --call mpas_log_write(' global min, max scalar $i $r $r', intArgs=(/iScalar/), realArgs=(/global_scalar_min, global_scalar_max/))
+        --format.println("global min, max scalar {} {} {}", iScalar, global_scalar_min, global_scalar_max)
       --end do
 
       --block => block % next
