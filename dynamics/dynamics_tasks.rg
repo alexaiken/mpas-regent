@@ -1624,7 +1624,7 @@ end
 -- 1.0_RKIND and 2.0_RKIND translated as 1.0 and 2.0
 -- This function also contains nCellsSolve, which has not been resolved yet
 task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
-                               er: region(ispace(int2d), edge_fs),
+                               er : region(ispace(int2d), edge_fs),
                                dts : double)
 where reads writes (cr, er) do
   cio.printf("update horizontal momentum\n")
@@ -1659,7 +1659,7 @@ task atm_recover_large_step_variables()
 end
 
 task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
-                                    er: region(ispace(int2d), edge_fs),
+                                    er : region(ispace(int2d), edge_fs),
                                     dynamics_substep : int,
                                     dynamics_split : int)
 where reads writes (cr, er) do
