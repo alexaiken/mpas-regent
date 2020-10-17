@@ -15,8 +15,6 @@ task main()
   ----- DEFINE INDEX SPACES AND REGIONS -----
   -------------------------------------------
 
--test
-
   -- Define index spaces for cell IDs, vertex IDs and edge IDs
   var cell_id_space = ispace(int2d, {constants.nCells, constants.nVertLevels + 1})
   var edge_id_space = ispace(int2d, {constants.nEdges, constants.nVertLevels + 1})
