@@ -1158,7 +1158,7 @@ where reads writes (cr, er, vr, vert_r) do
                                              + vert_r[k].fzp * cr[{iCell, k-1}].ur_cell, 2.0)
                                   + cmath.pow(vert_r[k].fzm * cr[{iCell, k}].vr_cell
                                              + vert_r[k].fzp * cr[{iCell, k-1}].vr_cell, 2.0) ) / r_earth
-                               + 2.0 * constants.omega * cmath.cos(cr[{iCell, 0}].latCell)
+                               + 2.0 * constants.omega * cmath.cos(cr[{iCell, 0}].lat)
                                * (vert_r[k].fzm * cr[{iCell, k}].ur_cell 
                                   + vert_r[k].fzp * cr[{iCell, k-1}].ur_cell)
                                * (cr[{iCell, k}].rho_zz * vert_r[k].fzm 
@@ -1661,7 +1661,7 @@ end
 -- 1.0_RKIND and 2.0_RKIND translated as 1.0 and 2.0
 -- This function also contains nCellsSolve, which has not been resolved yet
 task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
-                               er: region(ispace(int2d), edge_fs),
+                               er : region(ispace(int2d), edge_fs),
                                dts : double)
 where reads writes (cr, er) do
   format.println("Calling atm_divergence_damping_3d...")
@@ -1696,7 +1696,7 @@ task atm_recover_large_step_variables()
 end
 
 task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
-                                    er: region(ispace(int2d), edge_fs),
+                                    er : region(ispace(int2d), edge_fs),
                                     dynamics_substep : int,
                                     dynamics_split : int)
 where reads writes (cr, er) do

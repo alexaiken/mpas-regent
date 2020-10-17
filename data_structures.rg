@@ -239,7 +239,6 @@ fspace cell_fs {
     delsq_divergence : double, --Note: not found in Registry.xml
     ur_cell : double, --Note: not found in Registry.xml
     vr_cell : double, --Note: not found in Registry.xml
-    latCell : double, --type="real" dimensions="nCells" units="rad" description="Latitude of cells"
     tend_w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-2}" description="Tendency of w from dynamics"
     delsq_w : double, --Note: not found in Registry.xml
     tend_w_euler : double, --Note: not found in Registry.xml
