@@ -126,125 +126,133 @@ task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
 where reads writes(er), reads(cr) do
     format.println("Calling atm_adv_coef_compression...")
 
-    var cell_list : int[maxEdges]
+  var cell_list : int[maxEdges]
 
-    for iEdge = 0, nEdges do
-        er[{iEdge, 0}].nAdvCellsForEdge = 0
-        var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-        var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+  for iEdge = 0, nEdges do
+    er[{iEdge, 0}].nAdvCellsForEdge = 0
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
-         --
-         -- do only if this edge flux is needed to update owned cells
-         --
-        if (cell1 <= nCells or cell2 <= nCells) then
-            cell_list[0] = cell1
-            cell_list[1] = cell2
-            var n = 2 -- n is number of cells currently in list
+      --
+      -- do only if this edge flux is needed to update owned cells
+      --
+    if (cell1 <= nCells or cell2 <= nCells) then
+      cell_list[0] = cell1
+      cell_list[1] = cell2
+      var n = 1 -- n is index of cells currently in list
 
-          --  add cells surrounding cell 1.  n is number of cells currently in list
-            for i = 0, cr[{cell1, 0}].nEdgesOnCell do
-               if (cr[{cell1, 0}].cellsOnCell[i] ~= cell2) then
-                  n = n + 1
-                  cell_list[n] = cr[{cell1, 0}].cellsOnCell[i]
-               end
-            end
+      --  add cells surrounding cell 1.  n is number of cells currently in list
+      for i = 0, cr[{cell1, 0}].nEdgesOnCell do
+        if (cr[{cell1, 0}].cellsOnCell[i] ~= cell2) then
+          n += 1
+          cell_list[n] = cr[{cell1, 0}].cellsOnCell[i]
+        end
+      end
 
-          --  add cells surrounding cell 2 (brute force approach)
-            for iCell = 0, cr[{cell2, 0}].nEdgesOnCell do
-               var addcell = true
-               for i=0, n do
-                  if (cell_list[i] == cr[{cell2, 0}].cellsOnCell[iCell]) then addcell = false end
-               end
-               if (addcell) then
-                  n = n+1
-                  cell_list[n] = cr[{cell2, 0}].cellsOnCell[iCell]
-               end
-            end
+      --  add cells surrounding cell 2 (brute force approach)
+      for iCell = 0, cr[{cell2, 0}].nEdgesOnCell do
+        var addcell = true
+        for i = 0, n do
+          if (cell_list[i] == cr[{cell2, 0}].cellsOnCell[iCell]) then
+            addcell = false
+          end
+        end
+        if (addcell and n < maxEdges - 1) then -- Temporary solution to avoid segfault: n can go out of bounds
+          n += 1
+          cell_list[n] = cr[{cell2, 0}].cellsOnCell[iCell]
+        end
+      end
 
+      er[{iEdge, 0}].nAdvCellsForEdge = n
+      for iCell = 0, er[{iEdge, 0}].nAdvCellsForEdge do
+        er[{iEdge, 0}].advCellsForEdge[iCell] = cell_list[iCell]
+      end
 
-            er[{iEdge, 0}].nAdvCellsForEdge = n
-            for iCell = 0, er[{iEdge, 0}].nAdvCellsForEdge do
-               er[{iEdge, 0}].advCellsForEdge[iCell] = cell_list[iCell]
-            end
+      -- we have the ordered list, now construct coefficients
+      for coef = 0, FIFTEEN do
+        er[{iEdge, 0}].adv_coefs[coef] = 0.0
+        er[{iEdge, 0}].adv_coefs_3rd[coef] = 0.0
+      end -- initialize list to 0
 
-          -- we have the ordered list, now construct coefficients
-            for coef = 0, FIFTEEN do
-                er[{iEdge, 0}].adv_coefs[coef] = 0.0
-                er[{iEdge, 0}].adv_coefs_3rd[coef] = 0.0
-            end -- initialize list to 0
+      -- pull together third and fourth order contributions to the flux
+      -- first from cell1
 
-          -- pull together third and fourth order contributions to the flux
-          -- first from cell1
+      var j_in = 0
+      for j = 0, n do
+        if (cell_list[j] == cell1) then
+          j_in = j
+        end
+      end
+      er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[0]
+      er[{iEdge, 0}].adv_coefs_3rd[j_in] = er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[0]
 
-            var j_in = 0
-            for j=0, n do
-               if (cell_list[j] == cell1 ) then j_in = j end
-            end
-            er[{iEdge, 0}].adv_coefs[j_in]= er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[0]
-            er[{iEdge, 0}].adv_coefs_3rd[j_in]= er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[0]
+      for iCell = 0, cr[{cell1, 0}].nEdgesOnCell do
+        j_in = 0
+        for j = 0, n do
+          if (cell_list[j] == cr[{cell1, 0}].cellsOnCell[iCell]) then
+            j_in = j
+          end
+        end
+        er[{iEdge, 0}].adv_coefs[j_in] += er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 0]
+        er[{iEdge, 0}].adv_coefs_3rd[j_in] += er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 0]
+      end
 
-            for iCell = 0, cr[{cell1, 0}].nEdgesOnCell do
-               j_in = 0
-               for j=0, n do
-                 if( cell_list[j] == cr[{cell1, 0}].cellsOnCell[iCell]) then j_in = j end
-               end
-               er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 0]
-               er[{iEdge, 0}].adv_coefs_3rd[j_in] = er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 0]
-            end
+      -- pull together third and fourth order contributions to the flux
+      -- now from cell2
 
-          -- pull together third and fourth order contributions to the flux
-          -- now from cell2
+      j_in = 0
+      for j = 0, n do
+        if (cell_list[j] == cell2) then
+          j_in = j
+        end
+      end
+      er[{iEdge, 0}].adv_coefs[j_in] += er[{iEdge, 0}].deriv_two[1]
+      er[{iEdge, 0}].adv_coefs_3rd[j_in] += er[{iEdge, 0}].deriv_two[1]
 
-            j_in = 0
-            for j=0, n do
-               if( cell_list[j] == cell2 ) then j_in = j end
-            end
-              er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[1]
-              er[{iEdge, 0}].adv_coefs_3rd[j_in] = er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[1]
+      for iCell = 0, cr[{cell2, 0}].nEdgesOnCell do
+        j_in = 0
+        for j = 0, n do
+          if (cell_list[j] == cr[{cell2, 0}].cellsOnCell[iCell]) then
+            j_in = j
+          end
+        end
+        er[{iEdge, 0}].adv_coefs[j_in] += er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 1]
+        er[{iEdge, 0}].adv_coefs_3rd[j_in] += er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 1]
+      end
 
-            for iCell = 0, cr[{cell2, 0}].nEdgesOnCell do
-               j_in = 0
-               for j=0, n do
-                  if( cell_list[j] == cr[{cell2, 0}].cellsOnCell[iCell] ) then j_in = j end
-               end
-               er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 1]
-               er[{iEdge, 0}].adv_coefs_3rd[j_in] = er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 1]
-            end
+      for j = 0, n do
+        er[{iEdge, 0}].adv_coefs[j] =  -1.0 * cmath.pow(er[{iEdge, 0}].dcEdge, 2) * er[{iEdge, 0}].adv_coefs[j] / 12 -- this should be a negative number
+        er[{iEdge, 0}].adv_coefs_3rd[j] =  -1.0 * cmath.pow(er[{iEdge, 0}].dcEdge, 2) * er[{iEdge, 0}].adv_coefs_3rd[j] / 12
+        er[{iEdge, 0}].adv_coefs[j]     = - cmath.pow(er[{iEdge, 0}].dcEdge, 2) * er[{iEdge, 0}].adv_coefs[j]     / 12.
+        er[{iEdge, 0}].adv_coefs_3rd[j] = - cmath.pow(er[{iEdge, 0}].dcEdge, 2) * er[{iEdge, 0}].adv_coefs_3rd[j] / 12.
+      end
 
-            for j = 0,n do
-              -- TODO: how to calculate exponent?
-              -- er[{iEdge, 0}].adv_coefs[j] =  -1.0 * er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs[j] / 12 -- this should be a negative number
-              -- er[{iEdge, 0}].adv_coefs_3rd[j] =  -1.0 * er[{iEdge, 0}].dcEdge**2 * er[{iEdge, 0}].adv_coefs_3rd[j] / 12
---               adv_coefs    (j,iEdge) = - (dcEdge(iEdge) **2) * adv_coefs    (j,iEdge) / 12.
---               adv_coefs_3rd(j,iEdge) = - (dcEdge(iEdge) **2) * adv_coefs_3rd(j,iEdge) / 12.
-            end
+      -- 2nd order centered contribution - place this in the main flux weights
 
-          -- 2nd order centered contribution - place this in the main flux weights
+      j_in = 0
+      for j = 0, n do
+        if (cell_list[j] == cell1) then
+          j_in = j
+        end
+      end
+      er[{iEdge, 0}].adv_coefs[j_in] += 0.5
 
-            j_in = 0
-            for j=0, n do
-               if( cell_list[j] == cell1 ) then j_in = j end
-            end
-            er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + 0.5
+      j_in = 0
+      for j = 0, n do
+        if (cell_list[j] == cell2) then
+          j_in = j
+        end
+      end
+      er[{iEdge, 0}].adv_coefs[j_in] += 0.5
 
-            j_in = 0
-            for j=0, n do
-               if( cell_list[j] == cell2 ) then j_in = j end
-            end
-            er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + 0.5
+      --  multiply by edge length - thus the flux is just dt*ru times the results of the vector-vector multiply
 
-          --  multiply by edge length - thus the flux is just dt*ru times the results of the vector-vector multiply
-
-            for j=0,n do
-               er[{iEdge, 0}].adv_coefs[j] = er[{iEdge, 0}].dvEdge * er[{iEdge, 0}].adv_coefs[j]
-               er[{iEdge, 0}].adv_coefs_3rd[j] = er[{iEdge, 0}].dvEdge * er[{iEdge, 0}].adv_coefs_3rd[j]
-            end
-
-         end  -- only do for edges of owned-cells
-
-    end -- end loop over edges
-
-
+      for j = 0, n do
+        er[{iEdge, 0}].adv_coefs[j] = er[{iEdge, 0}].dvEdge * er[{iEdge, 0}].adv_coefs[j]
+        er[{iEdge, 0}].adv_coefs_3rd[j] = er[{iEdge, 0}].dvEdge * er[{iEdge, 0}].adv_coefs_3rd[j]
+      end
+    end  -- only do for edges of owned-cells
+  end -- end loop over edges
 end
 
 
@@ -1758,8 +1766,7 @@ where reads writes (cr, er, vr, vert_r) do
 
   atm_compute_signs_pt2(cr, er, vr)
 
-  --CURRENTLY CAUSES A SEGFAULT
-  --atm_adv_coef_compression(cr, er)
+  atm_adv_coef_compression(cr, er)
 
   --config_coef_3rd_order = 0.25 in namelist
   atm_couple_coef_3rd_order(0.25, cr, er)
