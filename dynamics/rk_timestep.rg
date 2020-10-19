@@ -487,8 +487,7 @@ where reads writes (cr, er, vr, vert_r) do
 
   -- SKIPPING if (config_scalar_advection .and. config_split_dynamics_transport) @ 1355
 
-  --TODO: where is this defined in MPAS
-  --mpas_reconstruct
+  mpas_reconstruct_2d(cr, er, false, true) --bools are includeHalos and on_a_sphere
 
   -- SKIPPING physics @ line 1610
   -- SKIPPING if(config_apply_lbcs @ line 1672 & 1714)

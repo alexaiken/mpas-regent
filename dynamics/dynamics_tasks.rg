@@ -1703,6 +1703,73 @@ task atm_recover_large_step_variables()
   cio.printf("recovering large step vars\n")
 end
 
+-- Comments on mpas_reconstruct
+-- In Fortran, mpas_reconstruct is an interface with 1d and 2d versions.
+-- The program decides which to call based on the types of the arguments passed in.
+-- In the dynamics loop, only the 2d version is called.
+task mpas_reconstruct_2d(cr : region(ispace(int2d), cell_fs),
+                         er : region(ispace(int2d), edge_fs),
+                         includeHalos : bool,
+                         on_a_sphere : bool)
+where reads writes (cr, er) do
+  format.println("Calling mpas_reconstruct_2d...")
+
+  -- The Fortran code has includeHalos as an optional argument. For now, we will make it mandatory,
+  -- and pass in false whenever it is not passed in in the Fortran code.
+  var includeHalosLocal = includeHalos
+  var n_cells = nCells
+  --if (includeHalosLocal) then
+  --  n_cells = nCellsSolve
+  --end
+
+  -- initialize the reconstructed vectors
+  fill(cr.uReconstructX, 0.0)
+  fill(cr.uReconstructY, 0.0)
+  fill(cr.uReconstructZ, 0.0)
+  for iCell = 0, n_cells do
+    -- a more efficient reconstruction where rbf_values*matrix_reconstruct
+    -- has been precomputed in coeffs_reconstruct
+    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+      for k = 0, nVertLevels do
+        cr[{iCell, k}].uReconstructX += cr[{iCell, 0}].coeffs_reconstruct[i][0] * er[{iEdge, k}].u
+        cr[{iCell, k}].uReconstructY += cr[{iCell, 0}].coeffs_reconstruct[i][1] * er[{iEdge, k}].u
+        cr[{iCell, k}].uReconstructZ += cr[{iCell, 0}].coeffs_reconstruct[i][2] * er[{iEdge, k}].u
+      end
+    end
+  end -- iCell
+
+  --Original code: Synchronize threads
+  --call mpas_threading_barrier()
+
+  if (on_a_sphere) then
+    -- !$omp do schedule(runtime)
+    for iCell = 0, n_cells do
+      var clat = cmath.cos(cr[{iCell, 0}].lat)
+      var slat = cmath.sin(cr[{iCell, 0}].lat)
+      var clon = cmath.cos(cr[{iCell, 0}].lon)
+      var slon = cmath.sin(cr[{iCell, 0}].lon)
+      for k = 0, nVertLevels do
+      cr[{iCell, k}].uReconstructZonal = -cr[{iCell, k}].uReconstructX * slon + 
+                                          cr[{iCell, k}].uReconstructY * clon
+      cr[{iCell, k}].uReconstructMeridional = -(cr[{iCell, k}].uReconstructX * clon
+                                              + cr[{iCell, k}].uReconstructY * slon) * slat
+                                              + cr[{iCell, k}].uReconstructZ * clat
+      end
+    end
+    -- !$omp end do
+  else
+    -- !$omp do schedule(runtime)
+    for iCell = 0, n_cells do
+      for k = 0, nVertLevels do
+        cr[{iCell, k}].uReconstructZonal = cr[{iCell, k}].uReconstructX
+        cr[{iCell, k}].uReconstructMeridional = cr[{iCell, k}].uReconstructY
+      end
+    end
+    -- !$omp end do
+  end
+end
+
 task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     dynamics_substep : int,
@@ -1775,7 +1842,7 @@ where reads writes (cr, er, vr, vert_r) do
 
   atm_compute_solve_diagnostics(cr, er, vr, false) --last param is hollingsworth
 
-  --mpas_reconstruct()
+  mpas_reconstruct_2d(cr, er, false, true) --bools are includeHalos and on_a_sphere
 
   atm_compute_mesh_scaling(cr, er, true)
 

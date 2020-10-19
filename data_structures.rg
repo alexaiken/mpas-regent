@@ -262,6 +262,14 @@ fspace cell_fs {
 
     --vars first seen in atm_rk_dynamics_substep_finish--
     wwAvg_split : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="kg m^{-2} s^{-1}" description="time-averaged rho*omega/zz used in scalar transport"
+
+    --vars first seen in mpas_reconstruct--
+    uReconstructX : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Cartesian x-component of reconstructed horizontal velocity at cell centers"
+    uReconstructY : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Cartesian y-component of reconstructed horizontal velocity at cell centers"
+    uReconstructZ : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Cartesian z-component of reconstructed horizontal velocity at cell centers"
+    coeffs_reconstruct : double[constants.maxEdges][3], --type="real" dimensions="R3 maxEdges nCells" units="unitless" description="Coefficients to reconstruct velocity vectors at cell centers"
+    uReconstructZonal : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Zonal component of reconstructed horizontal velocity at cell centers"
+    uReconstructMeridional : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Meridional component of reconstructed horizontal velocity at cell centers"
 }
 
 
