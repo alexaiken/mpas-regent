@@ -38,6 +38,7 @@ task atm_compute_signs_pt1(cr : region(ispace(int2d), cell_fs),
                         er : region(ispace(int2d), edge_fs),
                         vr : region(ispace(int2d), vertex_fs))
 where reads writes(vr, cr), reads (er) do
+  format.println("Calling atm_compute_signs_pt1...")
 
     var range = rect2d { int2d {0, 0}, int2d {nVertices - 1, 0} }
     for iVtx in range do
@@ -62,6 +63,7 @@ task atm_compute_signs_pt2(cr : region(ispace(int2d), cell_fs),
                           er : region(ispace(int2d), edge_fs),
                           vr : region(ispace(int2d), vertex_fs))
 where reads writes(vr, cr), reads (er) do
+  format.println("Calling atm_compute_signs_pt2...")
 
 
       for iCell=0,nCells do
@@ -122,6 +124,7 @@ end
 task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs))
 where reads writes(er), reads(cr) do
+    format.println("Calling atm_adv_coef_compression...")
 
   var cell_list : int[maxEdges]
 
@@ -256,6 +259,7 @@ end
 --config_zd: default 22000.0, config_xnutr: default 0.2. From config
 task atm_compute_damping_coefs(config_zd : double, config_xnutr : double, cr : region(ispace(int2d), cell_fs))
 where reads writes (cr) do
+  format.println("Calling atm_compute_damping_coefs...")
   var m1 = -1.0
   var pii = cmath.acos(m1) -- find equivelelt transformation in Regent for acos()
   --cio.printf("pii = %f\n", pii)
@@ -280,6 +284,7 @@ task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
                                cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs))
 where reads writes (er, cr) do
+  format.println("Calling atm_couple_coef_3rd_order...")
   for iEdge = 0, nEdges do
     for i = 0, FIFTEEN do
       er[{iEdge, 0}].adv_coefs_3rd[i] = config_coef_3rd_order * er[{iEdge, 0}].adv_coefs_3rd[i]
@@ -299,7 +304,7 @@ end
 task atm_compute_solve_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), hollingsworth : bool)
 where reads writes(vr, cr, er) do
 
-  cio.printf("computing solve diagnostics\n")
+  format.println("Calling atm_compute_solve_diagnostics...")
 
   for iEdge = 0, nEdges do
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
@@ -441,7 +446,7 @@ task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs))
 where reads writes(cr, er) do 
 
-  cio.printf("computing moist coefficients\n")
+  format.println("Calling atm_compute_moist_coefficients...")
 
   for iCell = 0, nCells do
     for k = 0, nVertLevels do
@@ -491,6 +496,7 @@ task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
                                 vert_r : region(ispace(int1d), vertical_fs),
                                 dts : double)
 where reads writes (cr, vert_r) do
+      format.println("Calling atm_compute_vert_imp_coefs...")
       --  set coefficients
       var dtseps = .5 * dts * (1.0 + constants.config_epssm)
       var rgas = constants.rgas
@@ -555,6 +561,8 @@ end
 task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), config_h_ScaleWithMesh : bool)
 where reads writes (cr, er) do
 
+  format.println("Calling atm_compute_mesh_scaling...")
+
   for iEdge = 0, nEdges do
     er[{iEdge, 0}].meshScalingDel2 = 1.0
     er[{iEdge, 0}].meshScalingDel4 = 1.0
@@ -595,7 +603,7 @@ end
 
 task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs))
 where reads writes (cr, er, vert_r) do
-  cio.printf("initializing coupled diagnostics\n")
+  format.println("Calling atm_init_coupled_diagnostics...")
   var rgas = constants.rgas
   var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
@@ -679,6 +687,7 @@ end
 --__demand(__cuda)
 task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs))
 where reads writes (cr) do
+  format.println("Calling atm_compute_output_diagnostics...")
 
   for iCell = 1, nCells do
     for k = 0, nVertLevels do
@@ -692,7 +701,7 @@ end
 
 task atm_rk_integration_setup(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs))
 where reads writes (cr, er) do
-  format.println("setting up rk integration")
+  format.println("Calling atm_rk_integration_setup...")
   var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
 
@@ -752,6 +761,7 @@ task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
                                config_mix_full : bool,
                                config_rayleigh_damp_u : bool)
 where reads writes (cr, er, vr, vert_r) do
+  format.println("Calling atm_compute_dyn_tend_work...")
   var prandtl_inv = 1.0 / constants.prandtl
   -- Can't find dt
   var invDt = 1.0 / dt
@@ -1463,7 +1473,7 @@ task atm_compute_dyn_tend(cr : region(ispace(int2d), cell_fs),
                           config_mix_full : bool,
                           config_rayleigh_damp_u : bool)
 where reads writes (cr, er, vr, vert_r) do
-  cio.printf("computing dynamic tendencies\n")
+  format.println("Calling atm_compute_dyn_tend_work...")
   atm_compute_dyn_tend_work(cr, er, vr, vert_r, rk_step, dt, config_horiz_mixing, config_mpas_cam_coef, config_mix_full, config_rayleigh_damp_u)
 end
 
@@ -1471,6 +1481,7 @@ task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
                                          er : region(ispace(int2d), edge_fs),
                                          vert_r : region(ispace(int1d), vertical_fs))
 where reads writes (cr, er, vert_r) do
+  format.println("Calling atm_set_smlstep_pert_variables_work...")
 
   for iCell = 0, nCells do
     if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
@@ -1506,6 +1517,7 @@ end
 
 task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), dts : double, small_step : int) -- nCellsSolve : int)
 where reads writes (er, cr, vert_r) do
+  format.println("Calling atm_advance_acoustic_step_work...")
   var epssm = constants.config_epssm
   var rgas = constants.rgas
   var rcv = rgas / (constants.cp - rgas)
@@ -1660,7 +1672,7 @@ task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
                                dts : double)
 where reads writes (cr, er) do
-  cio.printf("update horizontal momentum\n")
+  format.println("Calling atm_divergence_damping_3d...")
 
   var smdiv = constants.config_smdiv
   var rdts = 1.0 / dts
@@ -1696,7 +1708,8 @@ task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
                                     dynamics_substep : int,
                                     dynamics_split : int)
 where reads writes (cr, er) do
-  cio.printf("finishing substep\n")
+
+  format.println("Calling atm_rk_dynamics_substep_finish...")
   var inv_dynamics_split = 1.0 / [double](dynamics_split)
   var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
@@ -1747,6 +1760,7 @@ end
 --__demand(__cuda)
 task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs))
 where reads writes (cr, er, vr, vert_r) do
+  format.println("Calling atm_core_init...")
 
   atm_compute_signs_pt1(cr, er, vr)
 
