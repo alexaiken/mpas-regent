@@ -24,7 +24,9 @@ task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
                       er : region(ispace(int2d), edge_fs),
                       vr : region(ispace(int2d), vertex_fs),
                       vertr : region(ispace(int1d), vertical_fs))
-where reads writes(vr, er, cr, vertr) do
+where reads (cr.lat, er.cellsOnEdge, er.edgesOnEdge_ECP, er.lat, er.lon, er.nEdgesOnEdge, er.verticesOnEdge, er.weightsOnEdge, vr.lat, vr.lon),
+writes (cr.qsat, cr.relhum, cr.rho, cr.rtheta_base, cr.rtheta_p, cr.surface_pressure, cr.theta, cr.w, er.fEdge, er.zxu, vr.fVertex, vertr.rdzu, vertr.rdzw),
+reads writes (cr.areaCell, cr.dss, cr.exner, cr.hx, cr.pressure_base, cr.pressure_p, cr.qv, cr.rho_base, cr.rho_p, cr.rho_zz, cr.rw, cr.surface_pressure, cr.theta_base, cr.theta_m, cr.x, cr.y, cr.z, cr.zgrid, cr.zz, er.dvEdge, er.dcEdge, er.ru, er.u, er.v, er.x, er.y, er.z, er.zb, er.zb3, vr.areaTriangle, vr.kiteAreasOnVertex, vr.x, vr.y, vr.z, vertr.dzu, vertr.fzm, vertr.fzp) do
 
 -- local vars/constants defined at beginning of subroutine
   var cp = constants.cp

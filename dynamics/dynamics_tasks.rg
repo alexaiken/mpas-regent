@@ -37,7 +37,8 @@ __demand(__cuda)
 task atm_compute_signs_pt1(cr : region(ispace(int2d), cell_fs),
                         er : region(ispace(int2d), edge_fs),
                         vr : region(ispace(int2d), vertex_fs))
-where reads writes(vr, cr), reads (er) do
+where reads (er.verticesOnEdge, vr.edgesOnVertex), 
+writes (vr.edgesOnVertexSign) do
   format.println("Calling atm_compute_signs_pt1...")
 
     var range = rect2d { int2d {0, 0}, int2d {nVertices - 1, 0} }
@@ -62,7 +63,8 @@ end
 task atm_compute_signs_pt2(cr : region(ispace(int2d), cell_fs),
                           er : region(ispace(int2d), edge_fs),
                           vr : region(ispace(int2d), vertex_fs))
-where reads writes(vr, cr), reads (er) do
+where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge, er.zb, er.zb3, vr.cellsOnVertex),
+writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell) do
   format.println("Calling atm_compute_signs_pt2...")
 
 
@@ -123,8 +125,10 @@ end
 
 task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs))
-where reads writes(er), reads(cr) do
-    format.println("Calling atm_adv_coef_compression...")
+where reads (cr.cellsOnCell, cr.nEdgesOnCell, er.cellsOnEdge, er.dcEdge, er.deriv_two, er.dvEdge),
+writes (er.advCellsForEdge),
+reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
+  format.println("Calling atm_adv_coef_compression...")
 
   var cell_list : int[maxEdges]
 
@@ -258,7 +262,8 @@ end
 
 --config_zd: default 22000.0, config_xnutr: default 0.2. From config
 task atm_compute_damping_coefs(config_zd : double, config_xnutr : double, cr : region(ispace(int2d), cell_fs))
-where reads writes (cr) do
+where reads (cr.meshDensity, cr.zgrid),
+reads writes (cr.dss) do
   format.println("Calling atm_compute_damping_coefs...")
   var m1 = -1.0
   var pii = cmath.acos(m1) -- find equivelelt transformation in Regent for acos()
@@ -283,7 +288,7 @@ end
 task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
                                cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs))
-where reads writes (er, cr) do
+where reads writes (cr.zb3_cell, er.adv_coefs_3rd) do
   format.println("Calling atm_couple_coef_3rd_order...")
   for iEdge = 0, nEdges do
     for i = 0, FIFTEEN do
@@ -302,9 +307,10 @@ where reads writes (er, cr) do
 end
 
 task atm_compute_solve_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), hollingsworth : bool)
-where reads writes(vr, cr, er) do
-
-  format.println("Calling atm_compute_solve_diagnostics...")
+where reads (cr.edgesOnCell, cr.edgesOnCellSign, cr.h, cr.invAreaCell, cr.kiteForCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge, er.dcEdge, er.dvEdge, er.edgesOnEdge_ECP, er.nEdgesOnEdge, er.u, er.verticesOnEdge, er.weightsOnEdge, vr.edgesOnVertex, vr.edgesOnVertexSign, vr.fVertex, vr.invAreaTriangle, vr.kiteAreasOnVertex),
+writes (er.h_edge, er.pv_edge),
+reads writes (cr.divergence, cr.ke, er.ke_edge, er.v, vr.ke_vertex, vr.pv_vertex, vr.vorticity) do
+format.println("Calling atm_compute_solve_diagnostics...")
 
   for iEdge = 0, nEdges do
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
@@ -323,7 +329,7 @@ where reads writes(vr, cr, er) do
 
   for iVertex = 0, nVertices do
     for j = 0, nVertLevels do
-      vr[{iVertex, j}].vorticity
+      vr[{iVertex, j}].vorticity = 0.0
     end
     for i = 0, vertexDegree do
       var iEdge = vr[{iVertex, 0}].edgesOnVertex[i]
@@ -444,7 +450,9 @@ end
 -- which we are currently not sure how to translate 
 task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs), 
                                     er : region(ispace(int2d), edge_fs))
-where reads writes(cr, er) do 
+where reads (er.cellsOnEdge),
+writes(cr.cqw, er.cqu),
+reads writes (cr.qtot) do 
 
   format.println("Calling atm_compute_moist_coefficients...")
 
@@ -465,7 +473,6 @@ where reads writes(cr, er) do
     for k = 1, nVertLevels do
       var qtotal = 0.5 * (cr[{iCell, k}].qtot + cr[{iCell, k - 1}].qtot)
       cr[{iCell, k}].cqw = 1.0 / (1.0 + qtotal)
-      cio.printf("cr[{%d, %d}].cqw = %f", iCell, k, cr[{iCell, k}].cqw)
     end
   end
 
@@ -495,7 +502,8 @@ end
 task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
                                 vert_r : region(ispace(int1d), vertical_fs),
                                 dts : double)
-where reads writes (cr, vert_r) do
+where reads (cr.cqw, cr.exner, cr.exner_base, cr.qtot, cr.rho_base, cr.rtheta_base, cr.rtheta_p, cr.theta_m, cr.zz, vert_r.rdzu, vert_r.rdzw, vert_r.fzm, vert_r.fzp),
+reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr.gamma_tri, vert_r.cofrz) do
       format.println("Calling atm_compute_vert_imp_coefs...")
       --  set coefficients
       var dtseps = .5 * dts * (1.0 + constants.config_epssm)
@@ -559,7 +567,8 @@ end
 
 
 task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), config_h_ScaleWithMesh : bool)
-where reads writes (cr, er) do
+where reads (cr.meshDensity, er.cellsOnEdge), 
+writes (cr.meshScalingRegionalCell, er.meshScalingDel2, er.meshScalingDel4, er.meshScalingRegionalEdge) do
 
   format.println("Calling atm_compute_mesh_scaling...")
 
@@ -602,7 +611,9 @@ end
 --sign(1.0_RKIND,flux) translated as cmath.copysign(1.0, flux)
 
 task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs))
-where reads writes (cr, er, vert_r) do
+where reads (cr.edgesOnCell, cr.edgesOnCellSign, cr.nEdgesOnCell, cr.rho_base, cr.theta, cr.theta_base, cr.theta_m, cr.w, cr.zb_cell, cr.zb3_cell, cr.zz, er.cellsOnEdge, er.u, vert_r.fzm, vert_r.fzp),
+writes (cr.pressure_base, cr.pressure_p),
+reads writes (cr.exner, cr.exner_base, cr.rho_p, cr.rho_zz, cr.rtheta_base, cr.rtheta_p, cr.rw, cr.theta_m, er.ru) do
   format.println("Calling atm_init_coupled_diagnostics...")
   var rgas = constants.rgas
   var rcv = rgas / (constants.cp - rgas)
@@ -686,7 +697,8 @@ end
 --Not sure how to translate: scalars(index_qv,k,iCell)
 --__demand(__cuda)
 task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs))
-where reads writes (cr) do
+where reads (cr.pressure_base, cr.pressure_p, cr.rho_zz, cr.theta_m, cr.zz), 
+writes (cr.pressure, cr.rho, cr.theta) do
   format.println("Calling atm_compute_output_diagnostics...")
 
   for iCell = 1, nCells do
@@ -700,7 +712,8 @@ where reads writes (cr) do
 end
 
 task atm_rk_integration_setup(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs))
-where reads writes (cr, er) do
+where reads (cr.rho_p, cr.rho_zz, cr.rtheta_p, cr.rw, cr.theta_m, cr.w, er.ru, er.u), 
+writes (cr.rho_p_save, cr.rho_zz_2, cr.rho_zz_old_split, cr.rtheta_p_save, cr.rw_save, cr.theta_m_2, cr.w_2, er.ru_save, er.u_2) do
   format.println("Calling atm_rk_integration_setup...")
   var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
@@ -760,7 +773,12 @@ task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
                                config_mpas_cam_coef : double,
                                config_mix_full : bool,
                                config_rayleigh_damp_u : bool)
-where reads writes (cr, er, vr, vert_r) do
+where reads (cr.cqw, cr.defc_a, cr.defc_b, cr.divergence, cr.edgesOnCell, cr.edgesOnCell_sign, cr.invAreaCell, cr.ke, cr.lat, cr.nEdgesOnCell, cr.pp, cr.qtot, cr.rb, cr.rho_zz, cr.rr_save, cr.rt_diabatic_tend, cr.rw, cr.rw_save, cr.t_init, cr.tend_rho_physics, cr.tend_rtheta_physics, cr.theta_m, cr.theta_m_save, cr.ur_cell, cr.vr_cell, cr.w, cr.zgrid, cr.zz, 
+er.advCellsForEdge, er.adv_coefs, er.adv_coefs_3rd, er.angleEdge, er.cellsOnEdge, er.cqu, er.dcEdge, er.dvEdge, er.edgesOnEdge, er.invDcEdge, er.invDvEdge, er.lat, er.meshScalingDel2, er.meshScalingDel4, er.nAdvCellsForEdge, er.nEdgesOnEdge, er.pv_edge, er.rho_edge, er.ru, er.ru_save, er.tend_ru_physics, er.u, er.v, er.verticesOnEdge, er.weightsOnEdge, er.zxu,
+vr.edgesOnVertex, vr.edgesOnVertex_sign, vr.invAreaTriangle, vr.vorticity, 
+vert_r.fzm, vert_r.fzp, vert_r.rdzu, vert_r.rdzw, vert_r.u_init, vert_r.v_init),
+writes (cr.rthdynten, cr.tend_rho, cr.tend_rtheta_adv),
+reads writes (cr.delsq_divergence, cr.delsq_theta, cr.delsq_w, cr.dpdz, cr.h_divergence, cr.kdiff, cr.tend_theta, cr.tend_theta_euler, cr.tend_w, cr.tend_w_euler, er.delsq_u, er.tend_u, er.tend_u_euler, vr.delsq_vorticity) do
   format.println("Calling atm_compute_dyn_tend_work...")
   var prandtl_inv = 1.0 / constants.prandtl
   -- Can't find dt
@@ -803,7 +821,7 @@ where reads writes (cr, er, vr, vert_r) do
 
           -- Original: kdiff(k,iCell) = min((c_s * config_len_disp)**2 * sqrt(d_diag(k)**2 + d_off_diag(k)**2),(0.01*config_len_disp**2) * invDt)
           cr[{iCell, k}].kdiff = min(cmath.pow(c_s * constants.config_len_disp, 2.0) 
-                                     * cmath.pow(cmath.pow(d_diag[k], 2.0) + cmath.pow(d_off_diag[k], 2.0), 0.5),
+                                     * cmath.sqrt(cmath.pow(d_diag[k], 2.0) + cmath.pow(d_off_diag[k], 2.0)),
                                      (0.01 * cmath.pow(constants.config_len_disp, 2.0)) * invDt)
         end
       end
@@ -939,7 +957,7 @@ where reads writes (cr, er, vr, vert_r) do
       -- #ifdef CURVATURE
       -- curvature terms for the sphere
       er[{iEdge, k}].tend_u -= ( 2.0 * constants.omega * cmath.cos(er[{iEdge, 0}].angleEdge) 
-                               * cmath.cos(er[{iEdge, 0}].latEdge) * er[{iEdge, k}].rho_edge 
+                               * cmath.cos(er[{iEdge, 0}].lat) * er[{iEdge, k}].rho_edge 
                                * 0.25 * (cr[{cell1, k}].w + cr[{cell1, k + 1}].w 
                                + cr[{cell2, k}].w + cr[{cell2, k + 1}].w) )
                                - ( er[{iEdge, k}].u * 0.25 * (cr[{cell1, k}].w + cr[{cell1, k + 1}].w 
@@ -1480,7 +1498,8 @@ end
 task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
                                          er : region(ispace(int2d), edge_fs),
                                          vert_r : region(ispace(int1d), vertical_fs))
-where reads writes (cr, er, vert_r) do
+where reads (cr.bdyMaskCell, cr.edgesOnCell, cr.edgesOnCell_sign, cr.nEdgesOnCell, cr.zb_cell, cr.zb3_cell, cr.zz, er.u_tend, vert_r.fzm, vert_r.fzp),
+reads writes (cr.w_tend) do
   format.println("Calling atm_set_smlstep_pert_variables_work...")
 
   for iCell = 0, nCells do
@@ -1515,8 +1534,17 @@ end
 --Tendency variables: tend_rw, tend_rt, tend_rho (added to CR), tend_ru (added to ER). Not in registry
 --Other variables not in registry: rs, ts: added to CR as part of vertical grid, ru_Avg (added to ER)
 
-task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), dts : double, small_step : int) -- nCellsSolve : int)
-where reads writes (er, cr, vert_r) do
+task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs),
+                                    er : region(ispace(int2d), edge_fs),
+                                    vert_r : region(ispace(int1d), vertical_fs),
+                                    dts : double,
+                                    small_step : int)
+                                    -- nCellsSolve : int)
+where reads (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr.dss, cr.edgesOnCell, cr.edgesOnCellSign, cr.exner, cr.gamma_tri, cr.invAreaCell, cr.nEdgesOnCell, cr.rho_pp, cr.rho_zz, cr.rtheta_pp, cr.rw, cr.rw_save, cr.specZoneMaskCell, cr.tend_rho, cr.tend_rt, cr.tend_rw, cr.theta_m, cr.w, cr.zz, 
+er.cellsOnEdge, er.cqu, er.dvEdge, er.invDcEdge, er.specZoneMaskEdge, er.tend_ru, er.zxu, 
+vert_r.cofrz, vert_r.fzm, vert_r.fzp, vert_r.rdzw),
+writes (cr.rtheta_pp_old), 
+reads writes (cr.rho_pp, cr.rtheta_pp, cr.rw_p, cr.wwAvg, er.ruAvg, er.ru_p) do
   format.println("Calling atm_advance_acoustic_step_work...")
   var epssm = constants.config_epssm
   var rgas = constants.rgas
@@ -1671,7 +1699,8 @@ end
 task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
                                dts : double)
-where reads writes (cr, er) do
+where reads (cr.rtheta_pp, cr.rtheta_pp_old, cr.theta_m, er.cellsOnEdge, er.specZoneMaskEdge),
+reads writes (er.ru_p) do
   format.println("Calling atm_divergence_damping_3d...")
 
   var smdiv = constants.config_smdiv
@@ -1691,7 +1720,7 @@ where reads writes (cr, er) do
         -- scaled 3d divergence damping
         var divCell1 = -(cr[{cell1, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp_old)
         var divCell2 = -(cr[{cell2, k}].rtheta_pp - cr[{cell2, k}].rtheta_pp_old)
-        er[{iEdge, k}].ru_p = er[{iEdge, k}].ru_p + coef_divdamp * (divCell2 - divCell1) * 
+        er[{iEdge, k}].ru_p += coef_divdamp * (divCell2 - divCell1) * 
                               (1.0 - er[{iEdge, 0}].specZoneMaskEdge) 
                               / (cr[{cell1, k}].theta_m + cr[{cell2, k}].theta_m)
       end
@@ -1711,7 +1740,9 @@ task mpas_reconstruct_2d(cr : region(ispace(int2d), cell_fs),
                          er : region(ispace(int2d), edge_fs),
                          includeHalos : bool,
                          on_a_sphere : bool)
-where reads writes (cr, er) do
+where reads (cr.coeffs_reconstruct, cr.edgesOnCell, cr.lat, cr.lon, cr.nEdgesOnCell, er.u),
+writes (cr.uReconstructMeridional, cr.uReconstructZonal),
+reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
   format.println("Calling mpas_reconstruct_2d...")
 
   -- The Fortran code has includeHalos as an optional argument. For now, we will make it mandatory,
@@ -1774,7 +1805,9 @@ task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     dynamics_substep : int,
                                     dynamics_split : int)
-where reads writes (cr, er) do
+where reads (cr.rho_p, cr.rho_zz_2, cr.rho_zz_old_split, cr.rtheta_p, cr.rw, cr.theta_m_2, cr.w_2, er.ru, er.u_2),
+writes (cr.rho_p_save, cr.rho_zz, cr.rtheta_p_save, cr.rw_save, cr.theta_m, cr.w, er.ru_save, er.u),
+reads writes (cr.wwAvg, cr.wwAvg_split, er.ruAvg, er.ruAvg_split) do
 
   format.println("Calling atm_rk_dynamics_substep_finish...")
   var inv_dynamics_split = 1.0 / [double](dynamics_split)
