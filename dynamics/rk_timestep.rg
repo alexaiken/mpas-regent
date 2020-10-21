@@ -22,7 +22,8 @@ local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
 task atm_rk_integration_setup(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs))
-where reads writes (cr, er) do
+where reads (cr.rho_p, cr.rho_zz, cr.rtheta_p, cr.rw, cr.theta_m, cr.w, er.ru, er.u), 
+writes (cr.rho_p_save, cr.rho_zz_2, cr.rho_zz_old_split, cr.rtheta_p_save, cr.rw_save, cr.theta_m_2, cr.w_2, er.ru_save, er.u_2) do
   cio.printf("saving state pre-RK loop\n")
   var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
@@ -56,7 +57,7 @@ task summarize_timestep(cr : region(ispace(int2d), cell_fs),
                         config_print_detailed_minmax_vel : bool,
                         config_print_global_minmax_vel : bool,
                         config_print_global_minmax_sca : bool)
-where reads writes (cr, er) do
+where reads (cr.lat, cr.lon, cr.w, er.lat, er.lon, er.u, er.v) do
   format.println("summarizing timestep")
 
   --Variables declared at beginning of function
