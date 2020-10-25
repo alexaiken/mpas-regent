@@ -1,4 +1,4 @@
-import "regent"
+mport "regent"
 require "data_structures"
 
 local constants = require("constants")
@@ -35,91 +35,90 @@ local cmath = terralib.includec("math.h")
 
 __demand(__cuda)
 task atm_compute_signs_pt1(cr : region(ispace(int2d), cell_fs),
-                        er : region(ispace(int2d), edge_fs),
-                        vr : region(ispace(int2d), vertex_fs))
+                           er : region(ispace(int2d), edge_fs),
+                           vr : region(ispace(int2d), vertex_fs))
 where reads (er.verticesOnEdge, vr.edgesOnVertex), 
 writes (vr.edgesOnVertexSign) do
   format.println("Calling atm_compute_signs_pt1...")
 
-    var range = rect2d { int2d {0, 0}, int2d {nVertices - 1, 0} }
-    for iVtx in range do
-      for i = 0, vertexDegree do
-        if (vr[iVtx].edgesOnVertex[i] <= nEdges) then
-          if (iVtx.x == er[{vr[iVtx].edgesOnVertex[i], 0}].verticesOnEdge[1]) then
-            vr[iVtx].edgesOnVertexSign[i] = 1.0
-          else
-            vr[iVtx].edgesOnVertexSign[i] = -1.0
-          end
-
+  var range = rect2d { int2d {0, 0}, int2d {nVertices - 1, 0} }
+  for iVtx in range do
+    for i = 0, vertexDegree do
+      if (vr[iVtx].edgesOnVertex[i] <= nEdges) then
+        if (iVtx.x == er[{vr[iVtx].edgesOnVertex[i], 0}].verticesOnEdge[1]) then
+          vr[iVtx].edgesOnVertexSign[i] = 1.0
         else
-          vr[iVtx].edgesOnVertexSign[i] = 0.0
+          vr[iVtx].edgesOnVertexSign[i] = -1.0
         end
 
+      else
+        vr[iVtx].edgesOnVertexSign[i] = 0.0
       end
+
     end
+  end
 end
 
 
 task atm_compute_signs_pt2(cr : region(ispace(int2d), cell_fs),
-                          er : region(ispace(int2d), edge_fs),
-                          vr : region(ispace(int2d), vertex_fs))
+                           er : region(ispace(int2d), edge_fs),
+                           vr : region(ispace(int2d), vertex_fs))
 where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge, er.zb, er.zb3, vr.cellsOnVertex),
 writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell) do
   format.println("Calling atm_compute_signs_pt2...")
 
+  for iCell = 0, nCells do
+    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+      if (cr[{iCell, 0}].edgesOnCell[i] <= nEdges) then
+        if (iCell == er[{cr[{iCell, 0}].edgesOnCell[i], 0}].cellsOnEdge[0]) then
+          cr[{iCell, 0}].edgesOnCellSign[i] = 1.0
+          --VERTICAL STRUCTURE ACCESSED--
+          for vLevel = 0, nVertLevels + 1 do
 
-      for iCell=0,nCells do
-         for i=0, cr[{iCell, 0}].nEdgesOnCell do
-            if (cr[{iCell, 0}].edgesOnCell[i] <= nEdges) then
-              if (iCell == er[{cr[{iCell, 0}].edgesOnCell[i], 0}].cellsOnEdge[0]) then
-                  cr[{iCell, 0}].edgesOnCellSign[i] = 1.0
-                  --VERTICAL STRUCTURE ACCESSED--
-                  for vLevel = 0, nVertLevels + 1 do
+            cr[{iCell, vLevel}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb[0]
+            cr[{iCell, vLevel}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb3[0]
 
-                    cr[{iCell, vLevel}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb[0]
-                    cr[{iCell, vLevel}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb3[0]
+            --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb_cell[i])
+            --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb3_cell[i])
 
-                    --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb_cell[i])
-                    --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb3_cell[i])
+          end
 
-                  end
+        else
+          cr[{iCell, 0}].edgesOnCellSign[i] = -1.0
+          --VERTICAL--
+          for vLevel = 0, nVertLevels + 1 do
 
-               else
-                  cr[{iCell, 0}].edgesOnCellSign[i] = -1.0
-                  --VERTICAL--
-                  for vLevel = 0, nVertLevels + 1 do
+            cr[{iCell, vLevel}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb[1]
+            cr[{iCell, vLevel}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb3[1]
+            --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb_cell[i])
+            --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb3_cell[i])
 
-                    cr[{iCell, vLevel}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb[1]
-                    cr[{iCell, vLevel}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], vLevel}].zb3[1]
-                    --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb_cell[i])
-                    --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, vLevel, i, cr[{iCell, vLevel}].zb3_cell[i])
-
-                  end
-               end
-            else
-               cr[{iCell, 0}].edgesOnCellSign[i] = 0.0
-            end
-         end
-      end
-
-
-    for iCell=0, nCells do
-        for i=0, cr[{iCell, 0}].nEdgesOnCell do
-            var iVtx = cr[{iCell, 0}].verticesOnCell[i]
-            if (iVtx <= nVertices) then
-                for j=1,vertexDegree do
-                    if (iCell == vr[{iVtx, 0}].cellsOnVertex[j]) then
-                        cr[{iCell, 0}].kiteForCell[i] = j
-                        break
-                    end
-                end
-                -- trimmed a log statement here
-            else
-                cr[{iCell, 0}].kiteForCell[i] = 1
-            end
-            --cio.printf("cr[{%d, 0}].kiteForCell[%d] is %f \n", iCell, i, cr[{iCell, 0}].kiteForCell[i])
+          end
         end
+      else
+        cr[{iCell, 0}].edgesOnCellSign[i] = 0.0
+      end
     end
+  end
+
+
+  for iCell=0, nCells do
+    for i=0, cr[{iCell, 0}].nEdgesOnCell do
+      var iVtx = cr[{iCell, 0}].verticesOnCell[i]
+      if (iVtx <= nVertices) then
+        for j=1,vertexDegree do
+          if (iCell == vr[{iVtx, 0}].cellsOnVertex[j]) then
+            cr[{iCell, 0}].kiteForCell[i] = j
+            break
+          end
+        end
+      -- trimmed a log statement here
+      else
+        cr[{iCell, 0}].kiteForCell[i] = 1
+      end
+      --cio.printf("cr[{%d, 0}].kiteForCell[%d] is %f \n", iCell, i, cr[{iCell, 0}].kiteForCell[i])
+    end
+  end
 end
 
 
@@ -261,7 +260,9 @@ end
 
 
 --config_zd: default 22000.0, config_xnutr: default 0.2. From config
-task atm_compute_damping_coefs(config_zd : double, config_xnutr : double, cr : region(ispace(int2d), cell_fs))
+task atm_compute_damping_coefs(config_zd : double,
+                               config_xnutr : double,
+                               cr : region(ispace(int2d), cell_fs))
 where reads (cr.meshDensity, cr.zgrid),
 reads writes (cr.dss) do
   format.println("Calling atm_compute_damping_coefs...")
@@ -306,7 +307,10 @@ where reads writes (cr.zb3_cell, er.adv_coefs_3rd) do
   end
 end
 
-task atm_compute_solve_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), hollingsworth : bool)
+task atm_compute_solve_diagnostics(cr : region(ispace(int2d), cell_fs),
+                                   er : region(ispace(int2d), edge_fs),
+                                   vr : region(ispace(int2d), vertex_fs),
+                                   hollingsworth : bool)
 where reads (cr.edgesOnCell, cr.edgesOnCellSign, cr.h, cr.invAreaCell, cr.kiteForCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge, er.dcEdge, er.dvEdge, er.edgesOnEdge_ECP, er.nEdgesOnEdge, er.u, er.verticesOnEdge, er.weightsOnEdge, vr.edgesOnVertex, vr.edgesOnVertexSign, vr.fVertex, vr.invAreaTriangle, vr.kiteAreasOnVertex),
 writes (er.h_edge, er.pv_edge),
 reads writes (cr.divergence, cr.ke, er.ke_edge, er.v, vr.ke_vertex, vr.pv_vertex, vr.vorticity) do
@@ -451,7 +455,7 @@ end
 task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs), 
                                     er : region(ispace(int2d), edge_fs))
 where reads (er.cellsOnEdge),
-writes(cr.cqw, er.cqu),
+writes (cr.cqw, er.cqu),
 reads writes (cr.qtot) do 
 
   format.println("Calling atm_compute_moist_coefficients...")
@@ -566,7 +570,9 @@ reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr
 end
 
 
-task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), config_h_ScaleWithMesh : bool)
+task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs),
+                              er : region(ispace(int2d), edge_fs),
+                              config_h_ScaleWithMesh : bool)
 where reads (cr.meshDensity, er.cellsOnEdge), 
 writes (cr.meshScalingRegionalCell, er.meshScalingDel2, er.meshScalingDel4, er.meshScalingRegionalEdge) do
 
@@ -610,7 +616,9 @@ end
 --Not sure how to translate: scalars(index_qv,k,iCell)
 --sign(1.0_RKIND,flux) translated as cmath.copysign(1.0, flux)
 
-task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs))
+task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs),
+                                  er : region(ispace(int2d), edge_fs),
+                                  vert_r : region(ispace(int1d), vertical_fs))
 where reads (cr.edgesOnCell, cr.edgesOnCellSign, cr.nEdgesOnCell, cr.rho_base, cr.theta, cr.theta_base, cr.theta_m, cr.w, cr.zb_cell, cr.zb3_cell, cr.zz, er.cellsOnEdge, er.u, vert_r.fzm, vert_r.fzp),
 writes (cr.pressure_base, cr.pressure_p),
 reads writes (cr.exner, cr.exner_base, cr.rho_p, cr.rho_zz, cr.rtheta_base, cr.rtheta_p, cr.rw, cr.theta_m, er.ru) do
@@ -711,7 +719,8 @@ writes (cr.pressure, cr.rho, cr.theta) do
 
 end
 
-task atm_rk_integration_setup(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs))
+task atm_rk_integration_setup(cr : region(ispace(int2d), cell_fs),
+                              er : region(ispace(int2d), edge_fs))
 where reads (cr.rho_p, cr.rho_zz, cr.rtheta_p, cr.rw, cr.theta_m, cr.w, er.ru, er.u), 
 writes (cr.rho_p_save, cr.rho_zz_2, cr.rho_zz_old_split, cr.rtheta_p_save, cr.rw_save, cr.theta_m_2, cr.w_2, er.ru_save, er.u_2) do
   format.println("Calling atm_rk_integration_setup...")
@@ -1686,7 +1695,12 @@ reads writes (cr.rho_pp, cr.rtheta_pp, cr.rw_p, cr.wwAvg, er.ruAvg, er.ru_p) do
   end
 end
 
-task atm_advance_acoustic_step(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vert_r : region(ispace(int1d), vertical_fs), dts : double, small_step : int) -- nCellsSolve : int)
+task atm_advance_acoustic_step(cr : region(ispace(int2d), cell_fs),
+                               er : region(ispace(int2d), edge_fs),
+                               vert_r : region(ispace(int1d), vertical_fs),
+                               dts : double,
+                               small_step : int)
+                               -- nCellsSolve : int)
 where reads writes (er, cr, vert_r) do
   cio.printf("advancing acoustic step\n")
   atm_advance_acoustic_step_work(cr, er, vert_r, dts, small_step)
@@ -1858,7 +1872,10 @@ reads writes (cr.wwAvg, cr.wwAvg_split, er.ruAvg, er.ruAvg_split) do
 end
 
 --__demand(__cuda)
-task atm_core_init(cr : region(ispace(int2d), cell_fs), er : region(ispace(int2d), edge_fs), vr : region(ispace(int2d), vertex_fs), vert_r : region(ispace(int1d), vertical_fs))
+task atm_core_init(cr : region(ispace(int2d), cell_fs),
+                   er : region(ispace(int2d), edge_fs),
+                   vr : region(ispace(int2d), vertex_fs),
+                   vert_r : region(ispace(int1d), vertical_fs))
 where reads writes (cr, er, vr, vert_r) do
   format.println("Calling atm_core_init...")
 
@@ -1883,3 +1900,4 @@ where reads writes (cr, er, vr, vert_r) do
   atm_compute_damping_coefs(22000, 0.2, cr)
 
 end
+
