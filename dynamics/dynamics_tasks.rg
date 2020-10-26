@@ -1,4 +1,4 @@
-mport "regent"
+import "regent"
 require "data_structures"
 
 local constants = require("constants")
