@@ -703,22 +703,23 @@ reads writes (cr.exner, cr.exner_base, cr.rho_p, cr.rho_zz, cr.rtheta_base, cr.r
 end
 
 --Not sure how to translate: scalars(index_qv,k,iCell)
---__demand(__cuda)
+__demand(__cuda)
 task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs))
 where reads (cr.pressure_base, cr.pressure_p, cr.rho_zz, cr.theta_m, cr.zz), 
 writes (cr.pressure, cr.rho, cr.theta) do
   format.println("Calling atm_compute_output_diagnostics...")
 
-  for iCell = 1, nCells do
-    for k = 0, nVertLevels do
-      --cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1 + constants.rvord * scalars(index_qv,k,iCell))
-      cr[{iCell, k}].rho = cr[{iCell, k}].rho_zz * cr[{iCell, k}].zz
-      cr[{iCell, k}].pressure = cr[{iCell, k}].pressure_base + cr[{iCell, k}].pressure_p
-    end
+  var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
+  for i in cell_range do
+    --Original contains scalars(index_qv,k,iCell). Currently translating as follows
+    --cr[i].theta = cr[i].theta_m / (1 + constants.rvord * cr[i].scalars[index_qv])
+    cr[i].rho = cr[i].rho_zz * cr[i].zz
+    cr[i].pressure = cr[i].pressure_base + cr[i].pressure_p
   end
 
 end
 
+__demand(__cuda)
 task atm_rk_integration_setup(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs))
 where reads (cr.rho_p, cr.rho_zz, cr.rtheta_p, cr.rw, cr.theta_m, cr.w, er.ru, er.u), 
@@ -1750,6 +1751,7 @@ end
 -- In Fortran, mpas_reconstruct is an interface with 1d and 2d versions.
 -- The program decides which to call based on the types of the arguments passed in.
 -- In the dynamics loop, only the 2d version is called.
+--__demand(__cuda)
 task mpas_reconstruct_2d(cr : region(ispace(int2d), cell_fs),
                          er : region(ispace(int2d), edge_fs),
                          includeHalos : bool,
@@ -1761,17 +1763,17 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
 
   -- The Fortran code has includeHalos as an optional argument. For now, we will make it mandatory,
   -- and pass in false whenever it is not passed in in the Fortran code.
-  var includeHalosLocal = includeHalos
-  var n_cells = nCells
-  --if (includeHalosLocal) then
-  --  n_cells = nCellsSolve
+  var nCellsReconstruct = nCells
+  --if (includeHalos) then
+  --  nCellsReconstruct = nCellsSolve
   --end
+  var cell_range = rect2d { int2d {0, 0}, int2d {nCellsReconstruct - 1, nVertLevels - 1} }
 
   -- initialize the reconstructed vectors
   fill(cr.uReconstructX, 0.0)
   fill(cr.uReconstructY, 0.0)
   fill(cr.uReconstructZ, 0.0)
-  for iCell = 0, n_cells do
+  for iCell = 0, nCellsReconstruct do
     -- a more efficient reconstruction where rbf_values*matrix_reconstruct
     -- has been precomputed in coeffs_reconstruct
     for i = 0, cr[{iCell, 0}].nEdgesOnCell do
@@ -1784,37 +1786,29 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
     end
   end -- iCell
 
-  --Original code: Synchronize threads
-  --call mpas_threading_barrier()
-
   if (on_a_sphere) then
-    -- !$omp do schedule(runtime)
-    for iCell = 0, n_cells do
+    for iCell = 0, nCellsReconstruct do
       var clat = cmath.cos(cr[{iCell, 0}].lat)
       var slat = cmath.sin(cr[{iCell, 0}].lat)
       var clon = cmath.cos(cr[{iCell, 0}].lon)
       var slon = cmath.sin(cr[{iCell, 0}].lon)
       for k = 0, nVertLevels do
-      cr[{iCell, k}].uReconstructZonal = -cr[{iCell, k}].uReconstructX * slon + 
-                                          cr[{iCell, k}].uReconstructY * clon
-      cr[{iCell, k}].uReconstructMeridional = -(cr[{iCell, k}].uReconstructX * clon
-                                              + cr[{iCell, k}].uReconstructY * slon) * slat
-                                              + cr[{iCell, k}].uReconstructZ * clat
+        cr[{iCell, k}].uReconstructZonal = -cr[{iCell, k}].uReconstructX * slon + 
+                                            cr[{iCell, k}].uReconstructY * clon
+        cr[{iCell, k}].uReconstructMeridional = -(cr[{iCell, k}].uReconstructX * clon
+                                                + cr[{iCell, k}].uReconstructY * slon) * slat
+                                                + cr[{iCell, k}].uReconstructZ * clat
       end
     end
-    -- !$omp end do
   else
-    -- !$omp do schedule(runtime)
-    for iCell = 0, n_cells do
-      for k = 0, nVertLevels do
-        cr[{iCell, k}].uReconstructZonal = cr[{iCell, k}].uReconstructX
-        cr[{iCell, k}].uReconstructMeridional = cr[{iCell, k}].uReconstructY
-      end
+    for i in cell_range do
+      cr[i].uReconstructZonal = cr[i].uReconstructX
+      cr[i].uReconstructMeridional = cr[i].uReconstructY
     end
-    -- !$omp end do
   end
 end
 
+__demand(__cuda)
 task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     dynamics_substep : int,
