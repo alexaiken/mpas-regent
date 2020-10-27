@@ -1654,9 +1654,97 @@ where reads writes (cr, er) do
   end
 end
 
-task atm_recover_large_step_variables()
-  cio.printf("recovering large step vars\n")
+
+
+task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
+                                    er : region(ispace(int2d), edge_fs),
+                                    ns : int,
+                                    vert_r : region(ispace(int1d)),
+                                    rk_step : int,
+                                    dt : double)
+  var rgas = constants.rgas
+  var rcv = rgas / (constants.cp - rgas)
+  var p0 = 100000
+
+  for iCell = 0, nCells do
+    for k = 1, nVertLevels do
+      cr[{iCell+1, k}].rho_zz = 1.0
+	  end
+  end
+
+	var invNs = 1 / [double](ns)
+	
+	for iCell = 0, nCells do
+		for k = 1, nVertLevels do
+      cr[{iCell, k}].rho_p = cr[{iCell, k}].rho_p_save + cr[{iCell, k}].rho_pp
+			cr[{iCell, k}].rho_zz = cr[{iCell, k}].rho_p + cr[{iCell, k}].rho_base
+		end
+
+    cr[{iCell, 1}].w = 0.0
+		for k = 2, nVertLevels do
+			cr[{iCell, k}].wwAvg = cr[{iCell, k}].rw_save + (cr[{iCell, k}].wwAvg * invNs)
+      cr[{iCell, k}].rw = cr[{iCell, k}].rw_save + cr[{iCell, k}].rw_p
+      cr[{iCell, k}].w = cr[{iCell, k}].rw / (vert_r[k].fzm*cr[{iCell, k}].zz + vert_r[k].fzp*cr[{iCell, k-1}].zz)
+		end
+
+    cr[{iCell, nVertLevels+1}].w = 0.0
+		if (rk_step == 3) then
+			for k = 1, nVertLevels do
+        cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp & -dt * cr[{iCell, k}].rho_zz * cr[{iCell, k}].rt_diabatic_tend
+        cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
+        cr[{iCell, k}].exner = cr[{iCell, k}].zz * (rgas/p0) * cmath.pow((cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base), rcv)
+        cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz*rgas * (cr[{iCell, k}].exner*cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
+			end
+		else
+			for k = 1, nVertLevels do
+        cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp
+				cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
+			end
+		end 
+	end
+
+  for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+    var iEdge = cr[{iCell, 0}].edgesOnCell[i]   
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+		for k = 1, nVertLevels do
+      er[{iEdge, k}].ruAvg = er[{iEdge, k}].ru_save + (er[{iEdge, k}].ruAvg * invNs)
+			er[{iEdge, k}].ru = er[{iEdge, k}].ru_save * er[{iEdge, k}].ru_p
+			er[{iEdge, k}].u = 2.*er[{iEdge, k}].ru / (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
+		end
+	end
+	
+	for iCell = 0, nCells do
+		if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
+			for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+				var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+				var flux = (cf1*er[{iEdge, 1}].ru + cf2*er[{iEdge, 2}].ru+ cf3*er[{iEdge, 3}].ru)
+        cr[{iCell, 1}].w = cr[{iCell, 1}].w + cr[{iCell, i}].edgesOnCell_sign * &(cr[{iCell, i}].zb_cell[0] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[0])*flux
+				for k = 1, nVertLevels do
+					var flux = vert_r[k].fzm*er[{iEdge, k}].ru * (vert_r[k].fzp * er[{iEdge, k-1}].ru)
+          cr[{iCell, 1}].w = cr[{iCell, k}].w + cr[{iCell, i}].edgesOnCell_sign *& (cr[{iCell, i}].zb_cell[k] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[k])*flux
+				end
+			end
+
+      cr[{iCell, 1}].w = cr[{iCell, 1}].w / (cf1*cr[{iCell, 1}].rho_zz + cf2*cr[{iCell, 2}].rho_zz + cf3*cr[{iCell, 3}].rho_zz) 
+		
+			for k = 1, nVertLevels do
+        cr[{iCell, k}].w = cr[{iCell, k}].w / (vert_r[k].fzm*cr[{iCell, k}].rho_zz + vert_r[k].fzp*cr[{iCell, k-1}].rho_zz)
+			end
+
+		end
+	end
 end
+
+
+task atm_recover_large_step_variables(cr : region(ispace(int2d), cell_fs),
+                                    er: region(ispace(int2d), edge_fs))
+  cio.printf("recovering large step vars\n")
+  atm_recover_large_step_variables_work(cr, er)
+end
+
+
+
 
 task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
                                     er: region(ispace(int2d), edge_fs),
