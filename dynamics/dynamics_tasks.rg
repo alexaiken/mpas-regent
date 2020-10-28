@@ -1659,9 +1659,20 @@ end
 task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     ns : int,
-                                    vert_r : region(ispace(int1d)),
+                                    vert_r : region(ispace(int1d), vertical_fs),
                                     rk_step : int,
-                                    dt : double)
+                                    dt : double,
+                                    cf1 : double,
+                                    cf2 : double,
+                                    cf3 : double)
+where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.rtheta_p, cr.rtheta_pp, cr.rtheta_p_save, cr.rho_p_save, 
+cr.rho_pp, cr.rho_p, cr.rho_base, cr.rw_save, cr.rt_diabatic_tend, cr.rho_zz, cr.wwAvg, cr.rw_p, cr.rw, 
+vert_r.fzm, cr.zz, vert_r.fzp, cr.rtheta_base, cr.exner, cr.exner_base, er.cellsOnEdge, er.ru_save, er.ruAvg,
+er.ru_p, er.ru, cr.bdyMaskCell, cr.w, cr.edgesOnCell_sign, cr.zb_cell, cr.zb3_cell),
+
+writes (cr.theta_m, cr.rho_zz, cr.rho_p, cr.w, cr.wwAvg, cr.rw, cr.rw_p, cr.rtheta_p, cr.exner, 
+cr.pressure_p, er.ruAvg, er.ru, er.u) do
+
   var rgas = constants.rgas
   var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
@@ -1690,7 +1701,7 @@ task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
     cr[{iCell, nVertLevels+1}].w = 0.0
 		if (rk_step == 3) then
 			for k = 1, nVertLevels do
-        cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp & -dt * cr[{iCell, k}].rho_zz * cr[{iCell, k}].rt_diabatic_tend
+        cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp -dt * cr[{iCell, k}].rho_zz * cr[{iCell, k}].rt_diabatic_tend
         cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
         cr[{iCell, k}].exner = cr[{iCell, k}].zz * (rgas/p0) * cmath.pow((cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base), rcv)
         cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz*rgas * (cr[{iCell, k}].exner*cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
@@ -1703,8 +1714,7 @@ task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
 		end 
 	end
 
-  for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-    var iEdge = cr[{iCell, 0}].edgesOnCell[i]   
+  for iEdge = 0, nEdges do
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 		for k = 1, nVertLevels do
@@ -1719,7 +1729,7 @@ task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
 			for i = 0, cr[{iCell, 0}].nEdgesOnCell do
 				var iEdge = cr[{iCell, 0}].edgesOnCell[i]
 				var flux = (cf1*er[{iEdge, 1}].ru + cf2*er[{iEdge, 2}].ru+ cf3*er[{iEdge, 3}].ru)
-        cr[{iCell, 1}].w = cr[{iCell, 1}].w + cr[{iCell, i}].edgesOnCell_sign * &(cr[{iCell, i}].zb_cell[0] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[0])*flux
+        cr[{iCell, 1}].w = cr[{iCell, 1}].w + cr[{iCell, i}].edgesOnCell_sign * (cr[{iCell, i}].zb_cell[0] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[0])*flux
 				for k = 1, nVertLevels do
 					var flux = vert_r[k].fzm*er[{iEdge, k}].ru * (vert_r[k].fzp * er[{iEdge, k-1}].ru)
           cr[{iCell, 1}].w = cr[{iCell, k}].w + cr[{iCell, i}].edgesOnCell_sign *& (cr[{iCell, i}].zb_cell[k] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[k])*flux
@@ -1738,9 +1748,23 @@ end
 
 
 task atm_recover_large_step_variables(cr : region(ispace(int2d), cell_fs),
-                                    er: region(ispace(int2d), edge_fs))
+                                    er : region(ispace(int2d), edge_fs),
+                                    ns : int,
+                                    vert_r : region(ispace(int1d)),
+                                    rk_step : int,
+                                    dt : double,
+                                    cf1 : double,
+                                    cf2 : double,
+                                    cf3 : double)
+where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.rtheta_p, cr.rtheta_pp, cr.rtheta_p_save, cr.rho_p_save, 
+cr.rho_pp, cr.rho_p, cr.rho_base, cr.rw_save, cr.rt_diabatic_tend, cr.rho_zz, cr.wwAvg, cr.rw_p, cr.rw, 
+vert_r.fzm, cr.zz, vert_r.fzp, cr.rtheta_base, cr.exner, cr.exner_base, er.cellsOnEdge, er.ru_save, er.ruAvg,
+er.ru_p, er.ru, cr.bdyMaskCell, cr.w, cr.edgesOnCell_sign, cr.zb_cell, cr.zb3_cell),
+
+writes (cr.theta_m, cr.rho_zz, cr.rho_p, cr.w, cr.wwAvg, cr.rw, cr.rw_p, cr.rtheta_p, cr.exner, 
+cr.pressure_p, er.ruAvg, er.ru, er.u) do
   cio.printf("recovering large step vars\n")
-  atm_recover_large_step_variables_work(cr, er)
+  atm_recover_large_step_variables_work(cr, er, ns, vert_r, rk_step, dt, cf1, cf2, cf3)
 end
 
 
