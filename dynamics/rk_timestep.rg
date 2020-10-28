@@ -7,15 +7,15 @@ local constants = require("constants")
 local format = require("std/format")
 
 
-local nCells = 2562
-local nEdges = 7680
-local nVertices = 5120
-local maxEdges = 10
-local maxEdges2 = 20
-local TWO = 2
-local FIFTEEN = 15
-local vertexDegree = 3
-local nVertLevels = 1
+local nCells = constants.nCells
+local nEdges = constants.nEdges
+local nVertices = constants.nVertices
+local maxEdges = constants.maxEdges
+local maxEdges2 = constants.maxEdges2
+local TWO = constants.TWO
+local FIFTEEN = constants.FIFTEEN
+local vertexDegree = constants.vertexDegree
+local nVertLevels = constants.nVertLevels
 
 
 local cio = terralib.includec("stdio.h")

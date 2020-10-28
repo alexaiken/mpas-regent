@@ -3,17 +3,17 @@ require "data_structures"
 
 local constants = require("constants")
 
-local nCells = 2562
-local nEdges = 7680
-local nVertices = 5120
-local maxEdges = 10
-local maxEdges2 = 20
-local TWO = 2
-local FIFTEEN = 15
-local vertexDegree = 3
-local nVertLevels = 1
-local sphere_radius = 6371229.0 --from ncdump of the grid, default is 1.0, but set to "a" from constants.F in init_atm_core.F
-local nlat = 721
+local nCells = constants.nCells
+local nEdges = constants.nEdges
+local nVertices = constants.nVertices
+local maxEdges = constants.maxEdges
+local maxEdges2 = constants.maxEdges2
+local TWO = constants.TWO
+local FIFTEEN = constants.FIFTEEN
+local vertexDegree = constants.vertexDegree
+local nVertLevels = constants.nVertLevels
+local sphere_radius = constants.sphere_radius
+local nlat = constants.nlat
 
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
