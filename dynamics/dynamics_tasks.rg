@@ -1677,37 +1677,36 @@ cr.pressure_p, er.ruAvg, er.ru, er.u) do
   var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
 
-  for iCell = 0, nCells do
-    for k = 1, nVertLevels do
-      cr[{iCell+1, k}].rho_zz = 1.0
-	  end
-  end
+
+  for k = 0, nVertLevels do
+    cr[{nCells, k}].rho_zz = 1.0
+	end
 
 	var invNs = 1 / [double](ns)
 	
 	for iCell = 0, nCells do
-		for k = 1, nVertLevels do
+		for k = 0, nVertLevels do
       cr[{iCell, k}].rho_p = cr[{iCell, k}].rho_p_save + cr[{iCell, k}].rho_pp
 			cr[{iCell, k}].rho_zz = cr[{iCell, k}].rho_p + cr[{iCell, k}].rho_base
 		end
 
-    cr[{iCell, 1}].w = 0.0
-		for k = 2, nVertLevels do
+    cr[{iCell, 0}].w = 0.0
+		for k = 1, nVertLevels do
 			cr[{iCell, k}].wwAvg = cr[{iCell, k}].rw_save + (cr[{iCell, k}].wwAvg * invNs)
       cr[{iCell, k}].rw = cr[{iCell, k}].rw_save + cr[{iCell, k}].rw_p
       cr[{iCell, k}].w = cr[{iCell, k}].rw / (vert_r[k].fzm*cr[{iCell, k}].zz + vert_r[k].fzp*cr[{iCell, k-1}].zz)
 		end
 
-    cr[{iCell, nVertLevels+1}].w = 0.0
+    cr[{iCell, nVertLevels}].w = 0.0
 		if (rk_step == 3) then
-			for k = 1, nVertLevels do
+			for k = 0, nVertLevels do
         cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp -dt * cr[{iCell, k}].rho_zz * cr[{iCell, k}].rt_diabatic_tend
         cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
         cr[{iCell, k}].exner = cr[{iCell, k}].zz * (rgas/p0) * cmath.pow((cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base), rcv)
         cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz*rgas * (cr[{iCell, k}].exner*cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
 			end
 		else
-			for k = 1, nVertLevels do
+			for k = 0, nVertLevels do
         cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp
 				cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
 			end
@@ -1717,7 +1716,7 @@ cr.pressure_p, er.ruAvg, er.ru, er.u) do
   for iEdge = 0, nEdges do
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
-		for k = 1, nVertLevels do
+		for k = 0, nVertLevels do
       er[{iEdge, k}].ruAvg = er[{iEdge, k}].ru_save + (er[{iEdge, k}].ruAvg * invNs)
 			er[{iEdge, k}].ru = er[{iEdge, k}].ru_save * er[{iEdge, k}].ru_p
 			er[{iEdge, k}].u = 2.*er[{iEdge, k}].ru / (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
@@ -1728,11 +1727,11 @@ cr.pressure_p, er.ruAvg, er.ru, er.u) do
 		if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
 			for i = 0, cr[{iCell, 0}].nEdgesOnCell do
 				var iEdge = cr[{iCell, 0}].edgesOnCell[i]
-				var flux = (cf1*er[{iEdge, 1}].ru + cf2*er[{iEdge, 2}].ru+ cf3*er[{iEdge, 3}].ru)
-        cr[{iCell, 1}].w = cr[{iCell, 1}].w + cr[{iCell, i}].edgesOnCell_sign * (cr[{iCell, i}].zb_cell[0] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[0])*flux
+				var flux = (cf1*er[{iEdge, 0}].ru + cf2*er[{iEdge, 1}].ru+ cf3*er[{iEdge, 2}].ru)
+        cr[{iCell, 0}].w = cr[{iCell, 0}].w + cr[{iCell, i}].edgesOnCell_sign * (cr[{iCell, i}].zb_cell[0] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[0])*flux
 				for k = 1, nVertLevels do
 					var flux = vert_r[k].fzm*er[{iEdge, k}].ru * (vert_r[k].fzp * er[{iEdge, k-1}].ru)
-          cr[{iCell, 1}].w = cr[{iCell, k}].w + cr[{iCell, i}].edgesOnCell_sign *& (cr[{iCell, i}].zb_cell[k] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[k])*flux
+          cr[{iCell, 1}].w = cr[{iCell, k}].w + cr[{iCell, i}].edgesOnCell_sign * (cr[{iCell, i}].zb_cell[k] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[k])*flux
 				end
 			end
 
