@@ -59,6 +59,7 @@ writes (vr.edgesOnVertexSign) do
   end
 end
 
+--__demand(__cuda)
 task atm_compute_signs_pt2(cr : region(ispace(int2d), cell_fs),
                            er : region(ispace(int2d), edge_fs),
                            vr : region(ispace(int2d), vertex_fs))
@@ -66,7 +67,7 @@ where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge,
 writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell) do
   format.println("Calling atm_compute_signs_pt2...")
 
-  --var cell_range = rect1d { 0, nCells - 1 }
+  var cell_range = rect1d { 0, nCells - 1 }
 
   --for iCell in cell_range do
   for iCell = 0, nCells do
@@ -189,8 +190,8 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
           j_in = j
         end
       end
-      er[{iEdge, 0}].adv_coefs[j_in] = er[{iEdge, 0}].adv_coefs[j_in] + er[{iEdge, 0}].deriv_two[0]
-      er[{iEdge, 0}].adv_coefs_3rd[j_in] = er[{iEdge, 0}].adv_coefs_3rd[j_in] + er[{iEdge, 0}].deriv_two[0]
+      er[{iEdge, 0}].adv_coefs[j_in] += er[{iEdge, 0}].deriv_two[0]
+      er[{iEdge, 0}].adv_coefs_3rd[j_in] += er[{iEdge, 0}].deriv_two[0]
 
       for iCell = 0, cr[{cell1, 0}].nEdgesOnCell do
         j_in = 0
@@ -254,8 +255,8 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
       --  multiply by edge length - thus the flux is just dt*ru times the results of the vector-vector multiply
 
       for j = 0, n do
-        er[{iEdge, 0}].adv_coefs[j] = er[{iEdge, 0}].dvEdge * er[{iEdge, 0}].adv_coefs[j]
-        er[{iEdge, 0}].adv_coefs_3rd[j] = er[{iEdge, 0}].dvEdge * er[{iEdge, 0}].adv_coefs_3rd[j]
+        er[{iEdge, 0}].adv_coefs[j] *= er[{iEdge, 0}].dvEdge
+        er[{iEdge, 0}].adv_coefs_3rd[j] *= er[{iEdge, 0}].dvEdge
       end
     end  -- only do for edges of owned-cells
   end -- end loop over edges
@@ -263,27 +264,31 @@ end
 
 
 --config_zd: default 22000.0, config_xnutr: default 0.2. From config
+--__demand(__cuda)
 task atm_compute_damping_coefs(config_zd : double,
                                config_xnutr : double,
                                cr : region(ispace(int2d), cell_fs))
 where reads (cr.meshDensity, cr.zgrid),
 reads writes (cr.dss) do
   format.println("Calling atm_compute_damping_coefs...")
+
+  var cell_range = rect1d { 0, nCells - 1 }
+
   var m1 = -1.0
-  var pii = cmath.acos(m1) -- find equivelelt transformation in Regent for acos()
+  var pii = cmath.acos(m1) -- find equivelent transformation in Regent for acos()
   --cio.printf("pii = %f\n", pii)
 
   var dx_scale_power = 1.0
   fill(cr.dss, 0)
   --cio.printf("cr[{%d, %d}].dss is %f\n", 10, 3, cr[{10, 3}].dss)
 
-  for iCell = 0, nCells do
+  for iCell in cell_range do
     var zt = cr[{iCell, nVertLevels}].zgrid
     for k = 0, nVertLevels do
       var z = 0.5 * (cr[{iCell, k}].zgrid + cr[{iCell, k+1}].zgrid)
       if (z > config_zd) then
         cr[{iCell, k}].dss = config_xnutr * cmath.pow(cmath.sin(0.5 * pii * (z-config_zd)/(zt-config_zd)), 2.0)
-        cr[{iCell, k}].dss = cr[{iCell, k}].dss / cmath.pow(cr[{iCell, 0}].meshDensity, (0.25*dx_scale_power))
+        cr[{iCell, k}].dss /= cmath.pow(cr[{iCell, 0}].meshDensity, (0.25*dx_scale_power))
       end
     end
   end
@@ -296,21 +301,22 @@ task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
 where reads writes (cr.zb3_cell, er.adv_coefs_3rd) do
   format.println("Calling atm_couple_coef_3rd_order...")
 
-  var edge_range = rect2d { int2d {0, 0}, int2d{nEdges - 1, 0} }
+  var edge_range = rect1d { 0, nEdges - 1 }
   for iEdge in edge_range do
     for i = 0, FIFTEEN do
-      er[iEdge].adv_coefs_3rd[i] = config_coef_3rd_order * er[iEdge].adv_coefs_3rd[i]
+      er[{iEdge, 0}].adv_coefs_3rd[i] *= config_coef_3rd_order
     end
   end
 
-  var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
-  for i in cell_range do
+  var cell_range = rect1d { 0, nCells - 1 }
+  for iCell in cell_range do
     for j = 0, maxEdges do
-      cr[i].zb3_cell[j] = config_coef_3rd_order * cr[i].zb3_cell[j]
+      cr[{iCell, 0}].zb3_cell[j] *= config_coef_3rd_order
     end
   end
 end
 
+--__demand(__cuda)
 task atm_compute_solve_diagnostics(cr : region(ispace(int2d), cell_fs),
                                    er : region(ispace(int2d), edge_fs),
                                    vr : region(ispace(int2d), vertex_fs),
@@ -320,7 +326,11 @@ writes (er.h_edge, er.pv_edge),
 reads writes (cr.divergence, cr.ke, er.ke_edge, er.v, vr.ke_vertex, vr.pv_vertex, vr.vorticity) do
 format.println("Calling atm_compute_solve_diagnostics...")
 
-  for iEdge = 0, nEdges do
+  var cell_range = rect1d { 0, nCells - 1 }
+  var edge_range = rect1d { 0, nEdges - 1 }
+  var vertex_range = rect1d { 0, nVertices - 1 }
+
+  for iEdge in edge_range do
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
@@ -335,7 +345,7 @@ format.println("Calling atm_compute_solve_diagnostics...")
     end
   end
 
-  for iVertex = 0, nVertices do
+  for iVertex in vertex_range do
     for j = 0, nVertLevels do
       vr[{iVertex, j}].vorticity = 0.0
     end
@@ -353,7 +363,7 @@ format.println("Calling atm_compute_solve_diagnostics...")
     end
   end
 
-  for iCell = 0, nCells do
+  for iCell in cell_range do
     for j = 0, nVertLevels do
       cr[{iCell, j}].divergence = 0
     end
@@ -371,7 +381,7 @@ format.println("Calling atm_compute_solve_diagnostics...")
     end
   end
 
-  for iCell = 0, nCells do
+  for iCell in cell_range do
     for j = 1, nVertLevels do
       cr[{iCell, j}].ke = 0
     end
@@ -388,7 +398,7 @@ format.println("Calling atm_compute_solve_diagnostics...")
   end
 
   if (hollingsworth) then
-    for iVertex = 0, nVertices do
+    for iVertex in vertex_range do
       var r = 0.25 * vr[{iVertex, 0}].invAreaTriangle
       for k = 0, nVertLevels do
         vr[{iVertex, k}].ke_vertex = (er[{vr[{iVertex, 0}].edgesOnVertex[0], k}].ke_edge + er[{vr[{iVertex, 0}].edgesOnVertex[1], k}].ke_edge + er[{vr[{iVertex, 0}].edgesOnVertex[2], k}].ke_edge)*r
@@ -397,13 +407,13 @@ format.println("Calling atm_compute_solve_diagnostics...")
 
     var ke_fact = 1.0 - 0.375
 
-    for iCell = 0, nCells do
+    for iCell in cell_range do
       for k = 0, nVertLevels do
         cr[{iCell, k}].ke = ke_fact * cr[{iCell, k}].ke
       end
     end
 
-    for iCell = 0, nCells do
+    for iCell in cell_range do
       var r = cr[{iCell, 0}].invAreaCell
       for i = 0, cr[{iCell, 0}].nEdgesOnCell do
        var iVertex = cr[{iCell, 0}].verticesOnCell[i]
@@ -423,8 +433,8 @@ format.println("Calling atm_compute_solve_diagnostics...")
   --  if(rk_step /= 3) reconstruct_v = .false.
   --end if
 
-  if(reconstruct_v) then
-    for iEdge = 0, nEdges do
+  if (reconstruct_v) then
+    for iEdge in edge_range do
       for j = 0, nVertLevels do
         er[{iEdge, j}].v = 0
       end
@@ -438,14 +448,14 @@ format.println("Calling atm_compute_solve_diagnostics...")
     end
   end
 
-  for iVertex = 0, nVertices do
+  for iVertex in vertex_range do
     for k = 0, nVertLevels do
       vr[{iVertex, k}].pv_vertex = vr[{iVertex, 0}].fVertex + vr[{iVertex, k}].vorticity
     end
   end
 
-  for iEdge = 0, nEdges do
-    for k =0, nVertLevels do
+  for iEdge in edge_range do
+    for k = 0, nVertLevels do
       er[{iEdge, k}].pv_edge =  0.5 * (vr[{er[{iEdge, 0}].verticesOnEdge[0],k}].pv_vertex + vr[{er[{iEdge, 0}].verticesOnEdge[1],k}].pv_vertex)
     end
   end
@@ -456,6 +466,7 @@ end
 -- Comments:
 -- This function contains nCellsSolve, moist_start, moist_end, and scalars,
 -- which we are currently not sure how to translate 
+--__demand(__cuda)
 task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs), 
                                     er : region(ispace(int2d), edge_fs))
 where reads (er.cellsOnEdge),
@@ -464,27 +475,28 @@ reads writes (cr.qtot) do
 
   format.println("Calling atm_compute_moist_coefficients...")
 
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].qtot = 0.0
-    end
+  var cell_range = rect1d { 0, nCells - 1 }
+  var edge_range = rect1d { 0, nEdges - 1 }
+
+  fill(cr.qtot, 0.0)
+  for iCell in cell_range do
     for k = 0, nVertLevels do
       --TODO: What should we use instead of moist_start/moist_end?
       --for iq = moist_start, moist_end do
         --TODO: not sure how to translate: scalars(iq, k, iCell)
-        --cr[{iCell, k}].qtot = cr[{iCell, k}].qtot + scalars(iq, k, iCell)
+        --cr[{iCell, k}].qtot += scalars(iq, k, iCell)
       --end
     end
   end
 
-  for iCell = 0, nCells do
+  for iCell in cell_range do
     for k = 1, nVertLevels do
       var qtotal = 0.5 * (cr[{iCell, k}].qtot + cr[{iCell, k - 1}].qtot)
       cr[{iCell, k}].cqw = 1.0 / (1.0 + qtotal)
     end
   end
 
-  for iEdge = 0, nEdges do
+  for iEdge in edge_range do
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
     --if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
@@ -569,7 +581,7 @@ reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr
   end -- loop over cells
 end
 
-__demand(__cuda)
+--__demand(__cuda)
 task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs),
                               config_h_ScaleWithMesh : bool)
@@ -1507,12 +1519,15 @@ where reads writes (cr, er, vr, vert_r) do
   atm_compute_dyn_tend_work(cr, er, vr, vert_r, rk_step, dt, config_horiz_mixing, config_mpas_cam_coef, config_mix_full, config_rayleigh_damp_u)
 end
 
+--__demand(__cuda)
 task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
                                          er : region(ispace(int2d), edge_fs),
                                          vert_r : region(ispace(int1d), vertical_fs))
 where reads (cr.bdyMaskCell, cr.edgesOnCell, cr.edgesOnCell_sign, cr.nEdgesOnCell, cr.zb_cell, cr.zb3_cell, cr.zz, er.u_tend, vert_r.fzm, vert_r.fzp),
 reads writes (cr.w_tend) do
   format.println("Calling atm_set_smlstep_pert_variables_work...")
+
+  var cell_range = rect1d { 0, nCells - 1 }
 
   for iCell = 0, nCells do
     if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
@@ -1713,6 +1728,7 @@ end
 -- dts is passed in as double - in code, passed in as rk_sub_timestep(rk_step)
 -- 1.0_RKIND and 2.0_RKIND translated as 1.0 and 2.0
 -- This function also contains nCellsSolve, which has not been resolved yet
+__demand(__cuda)
 task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
                                dts : double)
@@ -1724,7 +1740,9 @@ reads writes (er.ru_p) do
   var rdts = 1.0 / dts
   var coef_divdamp = 2.0 * smdiv * constants.config_len_disp * rdts
 
-  for iEdge = 0, nEdges do
+  var edge_range = rect1d { 0, nEdges - 1 }
+
+  for iEdge in edge_range do
 
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
@@ -1769,13 +1787,14 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
   --if (includeHalos) then
   --  nCellsReconstruct = nCellsSolve
   --end
-  var cell_range = rect2d { int2d {0, 0}, int2d {nCellsReconstruct - 1, nVertLevels - 1} }
+  var cell_range_1d = rect1d { 0, nCellsReconstruct - 1}
+  var cell_range_2d = rect2d { int2d {0, 0}, int2d {nCellsReconstruct - 1, nVertLevels - 1} }
 
   -- initialize the reconstructed vectors
   fill(cr.uReconstructX, 0.0)
   fill(cr.uReconstructY, 0.0)
   fill(cr.uReconstructZ, 0.0)
-  for iCell = 0, nCellsReconstruct do
+  for iCell in cell_range_1d do
     -- a more efficient reconstruction where rbf_values*matrix_reconstruct
     -- has been precomputed in coeffs_reconstruct
     for i = 0, cr[{iCell, 0}].nEdgesOnCell do
@@ -1789,7 +1808,7 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
   end -- iCell
 
   if (on_a_sphere) then
-    for iCell = 0, nCellsReconstruct do
+    for iCell in cell_range_1d do
       var clat = cmath.cos(cr[{iCell, 0}].lat)
       var slat = cmath.sin(cr[{iCell, 0}].lat)
       var clon = cmath.cos(cr[{iCell, 0}].lon)
@@ -1803,7 +1822,7 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
       end
     end
   else
-    for i in cell_range do
+    for i in cell_range_2d do
       cr[i].uReconstructZonal = cr[i].uReconstructX
       cr[i].uReconstructMeridional = cr[i].uReconstructY
     end
