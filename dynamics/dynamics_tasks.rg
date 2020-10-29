@@ -1731,7 +1731,7 @@ cr.pressure_p, er.ruAvg, er.ru, er.u) do
         cr[{iCell, 0}].w = cr[{iCell, 0}].w + cr[{iCell, i}].edgesOnCell_sign * (cr[{iCell, i}].zb_cell[0] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[0])*flux
 				for k = 1, nVertLevels do
 					var flux = vert_r[k].fzm*er[{iEdge, k}].ru * (vert_r[k].fzp * er[{iEdge, k-1}].ru)
-          cr[{iCell, 1}].w = cr[{iCell, k}].w + cr[{iCell, i}].edgesOnCell_sign * (cr[{iCell, i}].zb_cell[k] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[k])*flux
+          cr[{iCell, k}].w = cr[{iCell, k}].w + cr[{iCell, i}].edgesOnCell_sign * (cr[{iCell, i}].zb_cell[k] + cmath.copysign(1.0, flux)*cr[{iCell, i}].zb3_cell[k])*flux
 				end
 			end
 
