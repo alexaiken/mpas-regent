@@ -125,7 +125,7 @@ writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell) do
   end
 end
 
-
+--__demand(__cuda)
 task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs))
 where reads (cr.cellsOnCell, cr.nEdgesOnCell, er.cellsOnEdge, er.dcEdge, er.deriv_two, er.dvEdge),
@@ -133,9 +133,11 @@ writes (er.advCellsForEdge),
 reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
   format.println("Calling atm_adv_coef_compression...")
 
+  var edge_range = rect1d { 0, nEdges - 1 }
+
   var cell_list : int[maxEdges]
 
-  for iEdge = 0, nEdges do
+  for iEdge in edge_range do
     er[{iEdge, 0}].nAdvCellsForEdge = 0
     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
@@ -341,7 +343,7 @@ format.println("Calling atm_compute_solve_diagnostics...")
     var efac = er[{iEdge, 0}].dcEdge * er[{iEdge, 0}].dvEdge
 
     for k = 0, nVertLevels do
-      er[{iEdge, k}].ke_edge = efac * cmath.pow(er[{k, iEdge}].u, 2)
+      er[{iEdge, k}].ke_edge = efac * cmath.pow(er[{iEdge, k}].u, 2)
     end
   end
 
