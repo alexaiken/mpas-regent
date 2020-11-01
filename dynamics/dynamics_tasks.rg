@@ -508,65 +508,61 @@ task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
                                 dts : double)
 where reads (cr.cqw, cr.exner, cr.exner_base, cr.qtot, cr.rho_base, cr.rtheta_base, cr.rtheta_p, cr.theta_m, cr.zz, vert_r.rdzu, vert_r.rdzw, vert_r.fzm, vert_r.fzp),
 reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr.gamma_tri, vert_r.cofrz) do
-      format.println("Calling atm_compute_vert_imp_coefs...")
-      --  set coefficients
-      var dtseps = .5 * dts * (1.0 + constants.config_epssm)
-      var rgas = constants.rgas
-      var rcv = rgas / (constants.cp - rgas)
-      var c2 = constants.cp * rcv
+  format.println("Calling atm_compute_vert_imp_coefs...")
+  --  set coefficients
+  var dtseps = .5 * dts * (1.0 + constants.config_epssm)
+  var rgas = constants.rgas
+  var rcv = rgas / (constants.cp - rgas)
+  var c2 = constants.cp * rcv
 
-      var qtotal : double
-      var b_tri : double[nVertLevels]
-      var c_tri : double[nVertLevels]
+  var qtotal : double
+  var b_tri : double[nVertLevels]
+  var c_tri : double[nVertLevels]
 
 
--- MGD bad to have all threads setting this variable?
-      for k = 0, nVertLevels do
-         vert_r[k].cofrz= dtseps * vert_r[k].rdzw
-      end
+  -- MGD bad to have all threads setting this variable?
+  for k = 0, nVertLevels do
+      vert_r[k].cofrz = dtseps * vert_r[k].rdzw
+  end
 
-      for iCell = 0, nCells do --  we only need to do cells we are solving for, not halo cells
+  for iCell = 0, nCells do --  we only need to do cells we are solving for, not halo cells
 
---DIR$ IVDEP
-         for k=1, nVertLevels do
-            cr[{iCell, k}].cofwr = .5 * dtseps * constants.gravity * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz)
-         end
-         cr[{iCell, 0}].coftz = 0.0 --coftz(1,iCell) = 0.0
---DIR$ IVDEP
-         for k=1, nVertLevels do
-            cr[{iCell, k}].cofwz = dtseps * c2 * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz) * vert_r[k].rdzu * cr[{iCell, k}].cqw * (vert_r[k].fzm * cr[{iCell, k}].exner + vert_r[k].fzp * cr[{iCell, k-1}].exner)
-            cr[{iCell, k}].coftz = dtseps * (vert_r[k].fzm * cr[{iCell, k}].theta_m + vert_r[k].fzp * cr[{iCell, k-1}].theta_m)
-         end
-         cr[{iCell, nVertLevels}].coftz = 0.0 -- coftz(nVertLevels+1,iCell)
---DIR$ IVDEP
-         for k=0, nVertLevels do
+    for k = 1, nVertLevels do
+      cr[{iCell, k}].cofwr = .5 * dtseps * constants.gravity * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz)
+    end
+    cr[{iCell, 0}].coftz = 0.0 --coftz(1,iCell) = 0.0
+    for k = 1, nVertLevels do
+      cr[{iCell, k}].cofwz = dtseps * c2 * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz) * vert_r[k].rdzu * cr[{iCell, k}].cqw * (vert_r[k].fzm * cr[{iCell, k}].exner + vert_r[k].fzp * cr[{iCell, k-1}].exner)
+      cr[{iCell, k}].coftz = dtseps * (vert_r[k].fzm * cr[{iCell, k}].theta_m + vert_r[k].fzp * cr[{iCell, k-1}].theta_m)
+    end
+    cr[{iCell, nVertLevels}].coftz = 0.0 -- coftz(nVertLevels+1,iCell)
+    for k = 0, nVertLevels do
 
-            qtotal = cr[{iCell, k}].qtot
+      qtotal = cr[{iCell, k}].qtot
 
-            cr[{iCell, k}].cofwt = .5 * dtseps * rcv * cr[{iCell, k}].zz * constants.gravity * cr[{iCell, k}].rho_base / ( 1.0 + qtotal) * cr[{iCell, k}].exner / ((cr[{iCell, k}].rtheta_base + cr[{iCell, k}].rtheta_p) * cr[{iCell, k}].exner_base)
-         end
+      cr[{iCell, k}].cofwt = .5 * dtseps * rcv * cr[{iCell, k}].zz * constants.gravity * cr[{iCell, k}].rho_base / ( 1.0 + qtotal) * cr[{iCell, k}].exner / ((cr[{iCell, k}].rtheta_base + cr[{iCell, k}].rtheta_p) * cr[{iCell, k}].exner_base)
+    end
 
-         cr[{iCell, 0}].a_tri = 0.0 --a_tri(1,iCell) = 0.  -- note, this value is never used
-         b_tri[0] = 1.0    -- note, this value is never used
-         c_tri[0] = 0.0    -- note, this value is never used
-         cr[{iCell, 0}].gamma_tri = 0.0
-         cr[{iCell, 0}].alpha_tri = 0.0  -- note, this value is never used
+    cr[{iCell, 0}].a_tri = 0.0 --a_tri(1,iCell) = 0.  -- note, this value is never used
+    b_tri[0] = 1.0    -- note, this value is never used
+    c_tri[0] = 0.0    -- note, this value is never used
+    cr[{iCell, 0}].gamma_tri = 0.0
+    cr[{iCell, 0}].alpha_tri = 0.0  -- note, this value is never used
 
---DIR$ IVDEP
-         for k=1, nVertLevels do --k=2,nVertLevels
-            cr[{iCell,k}].a_tri = -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k-1}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz + cr[{iCell, k}].cofwr * vert_r[k-1].cofrz - cr[{iCell, k-1}].cofwt * cr[{iCell, k-1}].coftz * vert_r[k-1].rdzw
+    for k = 1, nVertLevels do --k=2,nVertLevels
+      cr[{iCell,k}].a_tri = -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k-1}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz + cr[{iCell, k}].cofwr * vert_r[k-1].cofrz - cr[{iCell, k-1}].cofwt * cr[{iCell, k-1}].coftz * vert_r[k-1].rdzw
 
-            b_tri[k] = 1.0 + cr[{iCell, k}].cofwz * (cr[{iCell, k}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz +  cr[{iCell, k}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz) -  cr[{iCell, k}].coftz * (cr[{iCell, k}].cofwt * vert_r[k].rdzw - cr[{iCell, k-1}].cofwt * vert_r[k-1].rdzw) + cr[{iCell, k}].cofwr * ((vert_r[k].cofrz- vert_r[k-1].cofrz))
+      b_tri[k] = 1.0 + cr[{iCell, k}].cofwz * (cr[{iCell, k}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz +  cr[{iCell, k}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz) -  cr[{iCell, k}].coftz * (cr[{iCell, k}].cofwt * vert_r[k].rdzw - cr[{iCell, k-1}].cofwt * vert_r[k-1].rdzw) + cr[{iCell, k}].cofwr * ((vert_r[k].cofrz- vert_r[k-1].cofrz))
 
-            c_tri[k] =   -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k+1}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz - cr[{iCell, k}].cofwr * vert_r[k].cofrz+ cr[{iCell, k}].cofwt * cr[{iCell, k+1 }].coftz * vert_r[k].rdzw
-         end
---MGD VECTOR DEPENDENCE
-         for k=1, nVertLevels do -- k=2, nVertLevels
-            cr[{iCell, k}].alpha_tri = 1.0/ (b_tri[k]-cr[{iCell, k}].a_tri * cr[{iCell, k-1}].gamma_tri)
-            cr[{iCell, k}].gamma_tri = c_tri[k] * cr[{iCell, k}].alpha_tri
-         end
+      c_tri[k] =   -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k+1}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz - cr[{iCell, k}].cofwr * vert_r[k].cofrz+ cr[{iCell, k}].cofwt * cr[{iCell, k+1 }].coftz * vert_r[k].rdzw
+    end
+    --MGD VECTOR DEPENDENCE
+    for k = 1, nVertLevels do -- k=2, nVertLevels
+      cr[{iCell, k}].alpha_tri = 1.0/ (b_tri[k]-cr[{iCell, k}].a_tri * cr[{iCell, k-1}].gamma_tri)
+      cr[{iCell, k}].gamma_tri = c_tri[k] * cr[{iCell, k}].alpha_tri
+    end
 
-      end -- loop over cells
+  end -- loop over cells
 end
 
 
