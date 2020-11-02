@@ -6,6 +6,7 @@ require "mesh_loading"
 require "init_atm_cases"
 require "dynamics_tasks"
 require "rk_timestep"
+require "atm_core"
 local constants = require("constants")
 
 terralib.linklibrary("/share/software/user/open/netcdf/4.4.1.1/lib/libnetcdf.so")
