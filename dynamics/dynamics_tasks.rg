@@ -34,14 +34,17 @@ local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
 __demand(__cuda)
-task atm_compute_signs_pt1(cr : region(ispace(int2d), cell_fs),
+task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
                            er : region(ispace(int2d), edge_fs),
                            vr : region(ispace(int2d), vertex_fs))
-where reads (er.verticesOnEdge, vr.edgesOnVertex), 
-writes (vr.edgesOnVertexSign) do
-  format.println("Calling atm_compute_signs_pt1...")
+where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge, er.verticesOnEdge, er.zb, er.zb3, vr.cellsOnVertex, vr.edgesOnVertex), 
+writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell, vr.edgesOnVertexSign) do
+  format.println("Calling atm_compute_signs...")
 
   var vertex_range = rect2d { int2d {0, 0}, int2d {nVertices - 1, 0} }
+  var cell_range_2d = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels} } -- Loop goes to nVertLevels + 1
+  var cell_range_1d = rect2d { int2d {0, 0}, int2d {nCells - 1, 0} }
+
   for iVtx in vertex_range do
     for i = 0, vertexDegree do
       if (vr[iVtx].edgesOnVertex[i] <= nEdges) then
@@ -57,68 +60,59 @@ writes (vr.edgesOnVertexSign) do
 
     end
   end
-end
 
---__demand(__cuda)
-task atm_compute_signs_pt2(cr : region(ispace(int2d), cell_fs),
-                           er : region(ispace(int2d), edge_fs),
-                           vr : region(ispace(int2d), vertex_fs))
-where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge, er.zb, er.zb3, vr.cellsOnVertex),
-writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell) do
-  format.println("Calling atm_compute_signs_pt2...")
-
-  var cell_range = rect1d { 0, nCells - 1 }
-
-  --for iCell in cell_range do
-  for iCell = 0, nCells do
-    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-      if (cr[{iCell, 0}].edgesOnCell[i] <= nEdges) then
-        if (iCell == er[{cr[{iCell, 0}].edgesOnCell[i], 0}].cellsOnEdge[0]) then
-          cr[{iCell, 0}].edgesOnCellSign[i] = 1.0
-          --VERTICAL STRUCTURE ACCESSED--
-          for k = 0, nVertLevels + 1 do
-
-            cr[{iCell, k}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], k}].zb[0]
-            cr[{iCell, k}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], k}].zb3[0]
-
-            --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, k, i, cr[{iCell, k}].zb_cell[i])
-            --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, k, i, cr[{iCell, k}].zb3_cell[i])
-
-          end
-
+  for iCell in cell_range_1d do
+    for i = 0, cr[iCell].nEdgesOnCell do
+      if (cr[iCell].edgesOnCell[i] <= nEdges) then
+        if (iCell.x == er[{cr[iCell].edgesOnCell[i], 0}].cellsOnEdge[0]) then
+          cr[iCell].edgesOnCellSign[i] = 1.0
         else
-          cr[{iCell, 0}].edgesOnCellSign[i] = -1.0
-          --VERTICAL--
-          for k = 0, nVertLevels + 1 do
-
-            cr[{iCell, k}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], k}].zb[1]
-            cr[{iCell, k}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], k}].zb3[1]
-            --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, k, i, cr[{iCell, k}].zb_cell[i])
-            --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, k, i, cr[{iCell, k}].zb3_cell[i])
-
-          end
+          cr[iCell].edgesOnCellSign[i] = -1.0
         end
       else
-        cr[{iCell, 0}].edgesOnCellSign[i] = 0.0
+        cr[iCell].edgesOnCellSign[i] = 0.0
+      end
+    end
+  end
+
+  for iCell in cell_range_2d do
+    for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
+      if (cr[{iCell.x, 0}].edgesOnCell[i] <= nEdges) then
+        if (iCell.x == er[{cr[{iCell.x, 0}].edgesOnCell[i], 0}].cellsOnEdge[0]) then
+          --VERTICAL STRUCTURE ACCESSED--
+          cr[iCell].zb_cell[i] = er[{cr[{iCell.x, 0}].edgesOnCell[i], iCell.y}].zb[0]
+          cr[iCell].zb3_cell[i] = er[{cr[{iCell.x, 0}].edgesOnCell[i], iCell.y}].zb3[0]
+
+          --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell.x, iCell.y, i, cr[iCell].zb_cell[i])
+          --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell.x, iCell.y, i, cr[iCell].zb3_cell[i])
+
+        else
+          --VERTICAL--
+
+          cr[iCell].zb_cell[i] = er[{cr[{iCell.x, 0}].edgesOnCell[i], iCell.y}].zb[1]
+          cr[iCell].zb3_cell[i] = er[{cr[{iCell.x, 0}].edgesOnCell[i], iCell.y}].zb3[1]
+          --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell.x, iCell.y, i, cr[iCell].zb_cell[i])
+          --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell.x, iCell.y, i, cr[iCell].zb3_cell[i])
+
+        end
       end
     end
   end
 
 
-  --for iCell in cell_range do
-  for iCell = 0, nCells do
-    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-      var iVtx = cr[{iCell, 0}].verticesOnCell[i]
+  for iCell in cell_range_1d do
+    for i = 0, cr[iCell].nEdgesOnCell do
+      var iVtx = cr[iCell].verticesOnCell[i]
       if (iVtx <= nVertices) then
-        for j=1,vertexDegree do
-          if (iCell == vr[{iVtx, 0}].cellsOnVertex[j]) then
-            cr[{iCell, 0}].kiteForCell[i] = j
+        for j = 1, vertexDegree do
+          if (iCell.x == vr[{iVtx, 0}].cellsOnVertex[j]) then
+            cr[iCell].kiteForCell[i] = j
             break
           end
         end
       -- trimmed a log statement here
       else
-        cr[{iCell, 0}].kiteForCell[i] = 1
+        cr[iCell].kiteForCell[i] = 1
       end
       --cio.printf("cr[{%d, 0}].kiteForCell[%d] is %f \n", iCell, i, cr[{iCell, 0}].kiteForCell[i])
     end
@@ -136,6 +130,12 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
   var edge_range = rect1d { 0, nEdges - 1 }
 
   var cell_list : int[maxEdges]
+
+  var dcEdge_squared : double[nEdges]
+
+  for iEdge = 0, nEdges do
+    dcEdge_squared[iEdge] = cmath.pow(er[{iEdge, 0}].dcEdge, 2)
+  end
 
   for iEdge in edge_range do
     er[{iEdge, 0}].nAdvCellsForEdge = 0
@@ -230,10 +230,10 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
       end
 
       for j = 0, n do
-        er[{iEdge, 0}].adv_coefs[j] =  -1.0 * cmath.pow(er[{iEdge, 0}].dcEdge, 2) * er[{iEdge, 0}].adv_coefs[j] / 12 -- this should be a negative number
-        er[{iEdge, 0}].adv_coefs_3rd[j] =  -1.0 * cmath.pow(er[{iEdge, 0}].dcEdge, 2) * er[{iEdge, 0}].adv_coefs_3rd[j] / 12
-        er[{iEdge, 0}].adv_coefs[j]     = - cmath.pow(er[{iEdge, 0}].dcEdge, 2) * er[{iEdge, 0}].adv_coefs[j]     / 12.
-        er[{iEdge, 0}].adv_coefs_3rd[j] = - cmath.pow(er[{iEdge, 0}].dcEdge, 2) * er[{iEdge, 0}].adv_coefs_3rd[j] / 12.
+        er[{iEdge, 0}].adv_coefs[j] =  -1.0 * dcEdge_squared[int64(iEdge)] * er[{iEdge, 0}].adv_coefs[j] / 12 -- this should be a negative number
+        er[{iEdge, 0}].adv_coefs_3rd[j] =  -1.0 * dcEdge_squared[int64(iEdge)] * er[{iEdge, 0}].adv_coefs_3rd[j] / 12
+        er[{iEdge, 0}].adv_coefs[j]     = - dcEdge_squared[int64(iEdge)] * er[{iEdge, 0}].adv_coefs[j]     / 12.
+        er[{iEdge, 0}].adv_coefs_3rd[j] = - dcEdge_squared[int64(iEdge)] * er[{iEdge, 0}].adv_coefs_3rd[j] / 12.
       end
 
       -- 2nd order centered contribution - place this in the main flux weights
@@ -281,10 +281,11 @@ reads writes (cr.dss) do
   --cio.printf("pii = %f\n", pii)
 
   var dx_scale_power = 1.0
-  fill(cr.dss, 0)
-  --cio.printf("cr[{%d, %d}].dss is %f\n", 10, 3, cr[{10, 3}].dss)
 
   for iCell in cell_range do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].dss = 0.0
+    end
     var zt = cr[{iCell, nVertLevels}].zgrid
     for k = 0, nVertLevels do
       var z = 0.5 * (cr[{iCell, k}].zgrid + cr[{iCell, k+1}].zgrid)
@@ -599,6 +600,7 @@ writes (cr.meshScalingRegionalCell, er.meshScalingDel2, er.meshScalingDel4, er.m
   end
 
   if (config_h_ScaleWithMesh) then
+    --__demand(__openmp)
     for i in edge_range do
       var cell1 = er[i].cellsOnEdge[0]
       var cell2 = er[i].cellsOnEdge[1]
@@ -1531,7 +1533,7 @@ reads writes (cr.w_tend) do
 
   var cell_range = rect1d { 0, nCells - 1 }
 
-  for iCell = 0, nCells do
+  for iCell in cell_range do
     if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
       for i = 0, cr[{iCell, 0}].nEdgesOnCell do
         var iEdge = cr[{iCell, 0}].edgesOnCell[i]
@@ -1793,9 +1795,12 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
   var cell_range_2d = rect2d { int2d {0, 0}, int2d {nCellsReconstruct - 1, nVertLevels - 1} }
 
   -- initialize the reconstructed vectors
-  fill(cr.uReconstructX, 0.0)
-  fill(cr.uReconstructY, 0.0)
-  fill(cr.uReconstructZ, 0.0)
+  for iCell in cell_range_2d do
+    cr[iCell].uReconstructX = 0.0
+    cr[iCell].uReconstructY = 0.0
+    cr[iCell].uReconstructZ = 0.0
+  end
+  
   for iCell in cell_range_1d do
     -- a more efficient reconstruction where rbf_values*matrix_reconstruct
     -- has been precomputed in coeffs_reconstruct
@@ -1810,6 +1815,7 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
   end -- iCell
 
   if (on_a_sphere) then
+    --__demand(__openmp)
     for iCell in cell_range_1d do
       var clat = cmath.cos(cr[{iCell, 0}].lat)
       var slat = cmath.sin(cr[{iCell, 0}].lat)
@@ -1896,9 +1902,7 @@ task atm_core_init(cr : region(ispace(int2d), cell_fs),
 where reads writes (cr, er, vr, vert_r) do
   format.println("Calling atm_core_init...")
 
-  atm_compute_signs_pt1(cr, er, vr)
-
-  atm_compute_signs_pt2(cr, er, vr)
+  atm_compute_signs(cr, er, vr)
 
   atm_adv_coef_compression(cr, er)
 
