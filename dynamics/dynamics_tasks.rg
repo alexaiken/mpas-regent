@@ -127,20 +127,14 @@ writes (er.advCellsForEdge),
 reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
   format.println("Calling atm_adv_coef_compression...")
 
-  var edge_range = rect1d { 0, nEdges - 1 }
+  var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, 0} }
 
   var cell_list : int[maxEdges]
 
-  var dcEdge_squared : double[nEdges]
-
-  for iEdge = 0, nEdges do
-    dcEdge_squared[iEdge] = cmath.pow(er[{iEdge, 0}].dcEdge, 2)
-  end
-
   for iEdge in edge_range do
-    er[{iEdge, 0}].nAdvCellsForEdge = 0
-    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    er[iEdge].nAdvCellsForEdge = 0
+    var cell1 = er[iEdge].cellsOnEdge[0]
+    var cell2 = er[iEdge].cellsOnEdge[1]
 
       --
       -- do only if this edge flux is needed to update owned cells
@@ -172,15 +166,15 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
         end
       end
 
-      er[{iEdge, 0}].nAdvCellsForEdge = n
-      for iCell = 0, er[{iEdge, 0}].nAdvCellsForEdge do
-        er[{iEdge, 0}].advCellsForEdge[iCell] = cell_list[iCell]
+      er[iEdge].nAdvCellsForEdge = n
+      for iCell = 0, er[iEdge].nAdvCellsForEdge do
+        er[iEdge].advCellsForEdge[iCell] = cell_list[iCell]
       end
 
       -- we have the ordered list, now construct coefficients
       for coef = 0, FIFTEEN do
-        er[{iEdge, 0}].adv_coefs[coef] = 0.0
-        er[{iEdge, 0}].adv_coefs_3rd[coef] = 0.0
+        er[iEdge].adv_coefs[coef] = 0.0
+        er[iEdge].adv_coefs_3rd[coef] = 0.0
       end -- initialize list to 0
 
       -- pull together third and fourth order contributions to the flux
@@ -192,8 +186,8 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
           j_in = j
         end
       end
-      er[{iEdge, 0}].adv_coefs[j_in] += er[{iEdge, 0}].deriv_two[0]
-      er[{iEdge, 0}].adv_coefs_3rd[j_in] += er[{iEdge, 0}].deriv_two[0]
+      er[iEdge].adv_coefs[j_in] += er[iEdge].deriv_two[0]
+      er[iEdge].adv_coefs_3rd[j_in] += er[iEdge].deriv_two[0]
 
       for iCell = 0, cr[{cell1, 0}].nEdgesOnCell do
         j_in = 0
@@ -202,8 +196,8 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
             j_in = j
           end
         end
-        er[{iEdge, 0}].adv_coefs[j_in] += er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 0]
-        er[{iEdge, 0}].adv_coefs_3rd[j_in] += er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 0]
+        er[iEdge].adv_coefs[j_in] += er[iEdge].deriv_two[iCell * FIFTEEN + 0]
+        er[iEdge].adv_coefs_3rd[j_in] += er[iEdge].deriv_two[iCell * FIFTEEN + 0]
       end
 
       -- pull together third and fourth order contributions to the flux
@@ -215,8 +209,8 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
           j_in = j
         end
       end
-      er[{iEdge, 0}].adv_coefs[j_in] += er[{iEdge, 0}].deriv_two[1]
-      er[{iEdge, 0}].adv_coefs_3rd[j_in] += er[{iEdge, 0}].deriv_two[1]
+      er[iEdge].adv_coefs[j_in] += er[iEdge].deriv_two[1]
+      er[iEdge].adv_coefs_3rd[j_in] += er[iEdge].deriv_two[1]
 
       for iCell = 0, cr[{cell2, 0}].nEdgesOnCell do
         j_in = 0
@@ -225,15 +219,15 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
             j_in = j
           end
         end
-        er[{iEdge, 0}].adv_coefs[j_in] += er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 1]
-        er[{iEdge, 0}].adv_coefs_3rd[j_in] += er[{iEdge, 0}].deriv_two[iCell * FIFTEEN + 1]
+        er[iEdge].adv_coefs[j_in] += er[iEdge].deriv_two[iCell * FIFTEEN + 1]
+        er[iEdge].adv_coefs_3rd[j_in] += er[iEdge].deriv_two[iCell * FIFTEEN + 1]
       end
 
       for j = 0, n do
-        er[{iEdge, 0}].adv_coefs[j] =  -1.0 * dcEdge_squared[int64(iEdge)] * er[{iEdge, 0}].adv_coefs[j] / 12 -- this should be a negative number
-        er[{iEdge, 0}].adv_coefs_3rd[j] =  -1.0 * dcEdge_squared[int64(iEdge)] * er[{iEdge, 0}].adv_coefs_3rd[j] / 12
-        er[{iEdge, 0}].adv_coefs[j]     = - dcEdge_squared[int64(iEdge)] * er[{iEdge, 0}].adv_coefs[j]     / 12.
-        er[{iEdge, 0}].adv_coefs_3rd[j] = - dcEdge_squared[int64(iEdge)] * er[{iEdge, 0}].adv_coefs_3rd[j] / 12.
+        er[iEdge].adv_coefs[j] =  -1.0 * cmath.pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs[j] / 12 -- this should be a negative number
+        er[iEdge].adv_coefs_3rd[j] =  -1.0 * cmath.pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs_3rd[j] / 12
+        er[iEdge].adv_coefs[j]     = - cmath.pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs[j]     / 12.
+        er[iEdge].adv_coefs_3rd[j] = - cmath.pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs_3rd[j] / 12.
       end
 
       -- 2nd order centered contribution - place this in the main flux weights
@@ -244,7 +238,7 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
           j_in = j
         end
       end
-      er[{iEdge, 0}].adv_coefs[j_in] += 0.5
+      er[iEdge].adv_coefs[j_in] += 0.5
 
       j_in = 0
       for j = 0, n do
@@ -252,13 +246,13 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
           j_in = j
         end
       end
-      er[{iEdge, 0}].adv_coefs[j_in] += 0.5
+      er[iEdge].adv_coefs[j_in] += 0.5
 
       --  multiply by edge length - thus the flux is just dt*ru times the results of the vector-vector multiply
 
       for j = 0, n do
-        er[{iEdge, 0}].adv_coefs[j] *= er[{iEdge, 0}].dvEdge
-        er[{iEdge, 0}].adv_coefs_3rd[j] *= er[{iEdge, 0}].dvEdge
+        er[iEdge].adv_coefs[j] *= er[iEdge].dvEdge
+        er[iEdge].adv_coefs_3rd[j] *= er[iEdge].dvEdge
       end
     end  -- only do for edges of owned-cells
   end -- end loop over edges
@@ -329,106 +323,88 @@ writes (er.h_edge, er.pv_edge),
 reads writes (cr.divergence, cr.ke, er.ke_edge, er.v, vr.ke_vertex, vr.pv_vertex, vr.vorticity) do
 format.println("Calling atm_compute_solve_diagnostics...")
 
-  var cell_range = rect1d { 0, nCells - 1 }
-  var edge_range = rect1d { 0, nEdges - 1 }
-  var vertex_range = rect1d { 0, nVertices - 1 }
+  var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
+  var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
+  var vertex_range = rect2d { int2d {0, 0}, int2d {nVertices - 1, nVertLevels - 1} }
 
+  -- Compute height on cell edges at velocity locations
+  --__demand(__openmp)
   for iEdge in edge_range do
-    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge.x, 0}].cellsOnEdge[1]
 
-    for k = 0, nVertLevels do
-      er[{iEdge, k}].h_edge = 0.5 * (cr[{cell1, k}].h + cr[{cell2, k}].h)
-    end
-
-    var efac = er[{iEdge, 0}].dcEdge * er[{iEdge, 0}].dvEdge
-
-    for k = 0, nVertLevels do
-      er[{iEdge, k}].ke_edge = efac * cmath.pow(er[{iEdge, k}].u, 2)
-    end
+    er[iEdge].h_edge = 0.5 * (cr[{cell1, iEdge.y}].h + cr[{cell2, iEdge.y}].h)
+    var efac = er[{iEdge.x, 0}].dcEdge * er[{iEdge.x, 0}].dvEdge
+    er[iEdge].ke_edge = efac * cmath.pow(er[iEdge].u, 2)
   end
 
+  -- Compute circulation and relative vorticity at each vertex
   for iVertex in vertex_range do
-    for j = 0, nVertLevels do
-      vr[{iVertex, j}].vorticity = 0.0
-    end
+    vr[iVertex].vorticity = 0.0
     for i = 0, vertexDegree do
-      var iEdge = vr[{iVertex, 0}].edgesOnVertex[i]
-      var s = vr[{iVertex, 0}].edgesOnVertexSign[i] * er[{iEdge, 0}].dcEdge
+      var iEdge = vr[{iVertex.x, 0}].edgesOnVertex[i]
+      var s = vr[{iVertex.x, 0}].edgesOnVertexSign[i] * er[{iEdge, 0}].dcEdge
 
-      for k = 0, nVertLevels do
-        vr[{iVertex, k}].vorticity = vr[{iVertex, k}].vorticity + s * er[{iEdge, k}].u
-      end
+      vr[iVertex].vorticity += s * er[{iEdge, iVertex.y}].u
     end
 
-    for k = 0, nVertLevels do
-      vr[{iVertex, k}].vorticity = vr[{iVertex, k}].vorticity * vr[{iVertex, 0}].invAreaTriangle
-    end
+    vr[iVertex].vorticity *= vr[{iVertex.x, 0}].invAreaTriangle
   end
 
+  -- Compute the divergence at each cell center
   for iCell in cell_range do
-    for j = 0, nVertLevels do
-      cr[{iCell, j}].divergence = 0
-    end
-    for i = 1, cr[{iCell, 0}].nEdgesOnCell do
-      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
-      var s = cr[{iCell, 0}].edgesOnCellSign[i] * er[{iEdge, 0}].dvEdge
+    cr[iCell].divergence = 0.0
+    for i = 1, cr[{iCell.x, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
+      var s = cr[{iCell.x, 0}].edgesOnCellSign[i] * er[{iEdge, 0}].dvEdge
 
-      for k = 0, nVertLevels do
-        cr[{iCell, k}].divergence = cr[{iCell, k}].divergence + s + er[{iEdge, k}].u
-      end
+      cr[iCell].divergence += s + er[{iEdge, iCell.y}].u
     end
-    var r = cr[{iCell, 0}].invAreaCell
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].divergence = cr[{iCell, k}].divergence * r
-    end
+    var r = cr[{iCell.x, 0}].invAreaCell
+    cr[iCell].divergence *= r
   end
 
+  -- Compute kinetic energy in each cell (Ringler et al JCP 2009)
   for iCell in cell_range do
-    for j = 1, nVertLevels do
-      cr[{iCell, j}].ke = 0
-    end
-    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
-      for k = 0, nVertLevels do
-        cr[{iCell, k}].ke = cr[{iCell, k}].ke + 0.25 * er[{iEdge, k}].ke_edge
-      end
+    cr[iCell].ke = 0.0
+    for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
+      cr[iCell].ke += 0.25 * er[{iEdge, iCell.y}].ke_edge
     end
 
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].ke = cr[{iCell, k}].ke * cr[{iCell,0}].invAreaCell
-    end
+    cr[iCell].ke *= cr[{iCell.x, 0}].invAreaCell
   end
 
   if (hollingsworth) then
+    -- Compute ke at cell vertices - AG's new KE construction, part 1
+    -- *** approximation here because we don't have inner triangle areas
     for iVertex in vertex_range do
-      var r = 0.25 * vr[{iVertex, 0}].invAreaTriangle
-      for k = 0, nVertLevels do
-        vr[{iVertex, k}].ke_vertex = (er[{vr[{iVertex, 0}].edgesOnVertex[0], k}].ke_edge + er[{vr[{iVertex, 0}].edgesOnVertex[1], k}].ke_edge + er[{vr[{iVertex, 0}].edgesOnVertex[2], k}].ke_edge)*r
-      end
+      var r = 0.25 * vr[{iVertex.x, 0}].invAreaTriangle
+      vr[iVertex].ke_vertex = (er[{vr[{iVertex.x, 0}].edgesOnVertex[0], iVertex.y}].ke_edge 
+                              + er[{vr[{iVertex.x, 0}].edgesOnVertex[1], iVertex.y}].ke_edge 
+                              + er[{vr[{iVertex.x, 0}].edgesOnVertex[2], iVertex.y}].ke_edge) * r
     end
 
+    -- adjust ke at cell vertices - AG's new KE construction, part 2
     var ke_fact = 1.0 - 0.375
 
     for iCell in cell_range do
-      for k = 0, nVertLevels do
-        cr[{iCell, k}].ke = ke_fact * cr[{iCell, k}].ke
-      end
+      cr[iCell].ke *= ke_fact
     end
 
     for iCell in cell_range do
-      var r = cr[{iCell, 0}].invAreaCell
-      for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-       var iVertex = cr[{iCell, 0}].verticesOnCell[i]
-       var j = cr[{iCell, 0}].kiteForCell[i]
+      var r = cr[{iCell.x, 0}].invAreaCell
+      for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
+        var iVertex = cr[{iCell.x, 0}].verticesOnCell[i]
+        var j = cr[{iCell.x, 0}].kiteForCell[i]
 
-       for k = 0, nVertLevels do
-        cr[{iCell, k}].ke = cr[{iCell, k}].ke + (1.0 - ke_fact)*vr[{iVertex, 0}].kiteAreasOnVertex[j] * vr[{iVertex, k}].ke_vertex * r
-       end
+        cr[iCell].ke += (1.0 - ke_fact)*vr[{iVertex, 0}].kiteAreasOnVertex[j] * vr[{iVertex, iCell.y}].ke_vertex * r
       end
     end
   end
 
+  -- Compute v (tangential) velocities following Thuburn et al JCP 2009
+  -- The tangential velocity is only used to compute the Smagorinsky coefficient
   var reconstruct_v = true
 
   ----Comment (Arjun): What to do with present(rk_step)?
@@ -438,29 +414,25 @@ format.println("Calling atm_compute_solve_diagnostics...")
 
   if (reconstruct_v) then
     for iEdge in edge_range do
-      for j = 0, nVertLevels do
-        er[{iEdge, j}].v = 0
-      end
-      for i = 1, er[{iEdge, 0}].nEdgesOnEdge do
-        var eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i]
+      er[iEdge].v = 0
+      for i = 1, er[{iEdge.x, 0}].nEdgesOnEdge do
+        var eoe = er[{iEdge.x, 0}].edgesOnEdge_ECP[i]
 
-        for k = 0, nVertLevels do
-          er[{iEdge, k}].v = er[{iEdge, k}].v + er[{iEdge, 0}].weightsOnEdge[i] * er[{eoe, k}].u
-        end
+          er[iEdge].v += er[{iEdge.x, 0}].weightsOnEdge[i] * er[{eoe, iEdge.y}].u
       end
     end
   end
 
+  -- Compute height at vertices, pv at vertices, and average pv to edge locations
+  -- ( this computes pv_vertex at all vertices bounding real cells )
   for iVertex in vertex_range do
-    for k = 0, nVertLevels do
-      vr[{iVertex, k}].pv_vertex = vr[{iVertex, 0}].fVertex + vr[{iVertex, k}].vorticity
-    end
+    vr[iVertex].pv_vertex = vr[{iVertex.x, 0}].fVertex + vr[iVertex].vorticity
   end
 
+  -- Compute pv at the edges
+  --  ( this computes pv_edge at all edges bounding real cells )
   for iEdge in edge_range do
-    for k = 0, nVertLevels do
-      er[{iEdge, k}].pv_edge =  0.5 * (vr[{er[{iEdge, 0}].verticesOnEdge[0],k}].pv_vertex + vr[{er[{iEdge, 0}].verticesOnEdge[1],k}].pv_vertex)
-    end
+    er[iEdge].pv_edge =  0.5 * (vr[{er[{iEdge.x, 0}].verticesOnEdge[0], iEdge.y}].pv_vertex + vr[{er[{iEdge.x, 0}].verticesOnEdge[1], iEdge.y}].pv_vertex)
   end
 
     --SKIPPED: (config_apvm_upwinding > 0.0) then---
@@ -469,7 +441,7 @@ end
 -- Comments:
 -- This function contains nCellsSolve, moist_start, moist_end, and scalars,
 -- which we are currently not sure how to translate 
---__demand(__cuda)
+__demand(__cuda)
 task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs), 
                                     er : region(ispace(int2d), edge_fs))
 where reads (er.cellsOnEdge),
@@ -478,38 +450,37 @@ reads writes (cr.qtot) do
 
   format.println("Calling atm_compute_moist_coefficients...")
 
-  var cell_range = rect1d { 0, nCells - 1 }
-  var edge_range = rect1d { 0, nEdges - 1 }
+  var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
+  var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
 
-  fill(cr.qtot, 0.0)
   for iCell in cell_range do
+    cr[iCell].qtot = 0.0
     for k = 0, nVertLevels do
       --TODO: What should we use instead of moist_start/moist_end?
       --for iq = moist_start, moist_end do
         --TODO: not sure how to translate: scalars(iq, k, iCell)
-        --cr[{iCell, k}].qtot += scalars(iq, k, iCell)
+        --cr[iCell].qtot += cr[iCell].scalars[iq]
       --end
     end
   end
 
+  __demand(__openmp)
   for iCell in cell_range do
-    for k = 1, nVertLevels do
-      var qtotal = 0.5 * (cr[{iCell, k}].qtot + cr[{iCell, k - 1}].qtot)
-      cr[{iCell, k}].cqw = 1.0 / (1.0 + qtotal)
+    if (iCell.y > 0) then -- Original from Fortran: do k = 2, nVertLevels
+      var qtotal = 0.5 * (cr[iCell].qtot + cr[iCell - {0, 1}].qtot)
+      cr[iCell].cqw = 1.0 / (1.0 + qtotal)
     end
   end
 
   for iEdge in edge_range do
-    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge.x, 0}].cellsOnEdge[1]
     --if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
-      --for k = 0, nVertLevels do
-        --var qtotal = 0.0
-        --for iq = moist_start, moist_end do
-          --qtotal = qtotal + 0.5 * ( scalars(iq, k, cell1) + scalars(iq, k, cell2) )
-        --end
-        --er[{iEdge, k}].cqu = 1.0 / (1.0 + qtotal)
+      --var qtotal = 0.0
+      --for iq = moist_start, moist_end do
+        --qtotal += 0.5 * ( cr[cell1, iEdge.y].scalars[iq] + cr[cell2, iEdge.y].scalars[iq] )
       --end
+      --er[iEdge].cqu = 1.0 / (1.0 + qtotal)
     --end
   end
 end
@@ -593,47 +564,49 @@ writes (cr.meshScalingRegionalCell, er.meshScalingDel2, er.meshScalingDel4, er.m
 
   format.println("Calling atm_compute_mesh_scaling...")
 
-  var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, 0} }
-  for i in edge_range do
-    er[i].meshScalingDel2 = 1.0
-    er[i].meshScalingDel4 = 1.0
+  var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, 0} }
+  -- Compute the scaling factors to be used in the del2 and del4 dissipation
+  for iEdge in edge_range do
+    er[iEdge].meshScalingDel2 = 1.0
+    er[iEdge].meshScalingDel4 = 1.0
   end
 
   if (config_h_ScaleWithMesh) then
-    --__demand(__openmp)
-    for i in edge_range do
-      var cell1 = er[i].cellsOnEdge[0]
-      var cell2 = er[i].cellsOnEdge[1]
-      er[i].meshScalingDel2 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
-      er[i].meshScalingDel4 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
+    for iEdge in edge_range do
+      var cell1 = er[iEdge].cellsOnEdge[0]
+      var cell2 = er[iEdge].cellsOnEdge[1]
+      er[iEdge].meshScalingDel2 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+      er[iEdge].meshScalingDel4 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
     end
   end
+
+  -- Compute the scaling factors to be used in relaxation zone of regional configuration
 
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, 0} }
-  for i in cell_range do
-    cr[i].meshScalingRegionalCell = 1.0
+  for iCell in cell_range do
+    cr[iCell].meshScalingRegionalCell = 1.0
   end
 
-  for i in edge_range do
-    er[i].meshScalingRegionalEdge = 1.0
+  for iEdge in edge_range do
+    er[iEdge].meshScalingRegionalEdge = 1.0
   end
 
   if (config_h_ScaleWithMesh) then
-    for i in edge_range do
-      var cell1 = er[i].cellsOnEdge[0]
-      var cell2 = er[i].cellsOnEdge[1]
-      er[i].meshScalingRegionalEdge = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+    for iEdge in edge_range do
+      var cell1 = er[iEdge].cellsOnEdge[0]
+      var cell2 = er[iEdge].cellsOnEdge[1]
+      er[iEdge].meshScalingRegionalEdge = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
     end
 
-    for i in cell_range do
-      cr[i].meshScalingRegionalCell = 1.0/ cmath.pow(cr[i].meshDensity, 0.25)
+    for iCell in cell_range do
+      cr[iCell].meshScalingRegionalCell = 1.0 / cmath.pow(cr[iCell].meshDensity, 0.25)
     end
   end
 end
 
 --Not sure how to translate: scalars(index_qv,k,iCell)
 --sign(1.0_RKIND,flux) translated as cmath.copysign(1.0, flux)
-
+--__demand(__cuda)
 task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs),
                                   er : region(ispace(int2d), edge_fs),
                                   vert_r : region(ispace(int1d), vertical_fs))
@@ -645,79 +618,62 @@ reads writes (cr.exner, cr.exner_base, cr.rho_p, cr.rho_zz, cr.rtheta_base, cr.r
   var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
 
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      --cr[{iCell, k}].theta_m = cr[{iCell, k}].theta * (1.0 + constants.rvord * scalars(index_qv,k,iCell))
-      cr[{iCell, k}].rho_zz = cr[{iCell, k}].rho_zz / cr[{iCell, k}].zz
+  var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
+  var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
+
+  for iCell in cell_range do
+    --cr[iCell].theta_m = cr[iCell].theta * (1.0 + constants.rvord * cr[iCell].scalars[index_qv])
+    cr[iCell].rho_zz /= cr[iCell].zz
+  end
+
+  for iEdge in edge_range do
+    var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge.x, 0}].cellsOnEdge[1]
+    er[iEdge].ru = 0.5 * er[iEdge].u * (cr[{cell1, iEdge.y}].rho_zz + cr[{cell2, iEdge.y}].rho_zz)
+  end
+
+  -- Compute rw (i.e. rho_zz * omega) from rho_zz, w, and ru.
+  -- We are reversing the procedure we use in subroutine atm_recover_large_step_variables.
+  -- first, the piece that depends on w.
+  for iCell in cell_range do
+    cr[iCell].rw = 0
+    if (iCell.y > 0 and iCell.y < nVertLevels) then -- Original Fortran: do k = 2, nVertLevels
+      cr[iCell].rw = cr[iCell].w * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].rho_zz + vert_r[iCell.y].fzm * cr[iCell].rho_zz) 
+                     * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz + vert_r[iCell.y].fzm * cr[iCell].zz)
     end
   end
 
-  for iEdge = 0, nEdges do
-    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
-    for k = 0, nVertLevels do
-      er[{iEdge, k}].ru = 0.5 * er[{iEdge, k}].u * (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
-    end
-  end
-
-  for iCell = 0, nCells do
-    cr[{iCell, 0}].rw = 0
-    cr[{iCell, nVertLevels}].rw = 0
-    for k = 1, nVertLevels do
-      cr[{iCell, k}].rw = cr[{iCell, k}].w * (vert_r[k].fzp * cr[{iCell, k-1}].rho_zz + vert_r[k].fzm * cr[{iCell, k}].rho_zz) * (vert_r[k].fzp * cr[{iCell, k-1}].zz + vert_r[k].fzm * cr[{iCell, k}].zz)
-    end
-  end
-
-  for iCell = 0, nCells do
-    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
-      for k = 1, nVertLevels do
-        var flux = vert_r[k].fzm * er[{iEdge, k}].ru + vert_r[k].fzp * er[{iEdge, k-1}].ru
-        cr[{iCell, k}].rw = cr[{iCell, k}].rw - cr[{iCell, 0}].edgesOnCellSign[i] * (cr[{iCell, k}].zb_cell[i] + cmath.copysign(1.0, flux) * cr[{iCell, k}].zb3_cell[i]) * flux * (vert_r[k].fzp * cr[{iCell, k-1}].zz + vert_r[k].fzm * cr[{iCell, k}].zz)
+  -- next, the piece that depends on ru
+  for iCell in cell_range do
+    for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
+      if (iCell.y > 0) then -- Original Fortran: do k = 2, nVertLevels
+        var flux = vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].ru + vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].ru
+        cr[iCell].rw -= cr[{iCell.x, 0}].edgesOnCellSign[i] 
+                        * (cr[iCell].zb_cell[i] + cmath.copysign(1.0, flux) * cr[iCell].zb3_cell[i]) * flux 
+                        * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz + vert_r[iCell.y].fzm * cr[iCell].zz)
       end
     end
   end
 
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].rho_p = cr[{iCell, k}].rho_zz - cr[{iCell, k}].rho_base
-    end
+  for iCell in cell_range do
+    cr[iCell].rho_p = cr[iCell].rho_zz - cr[iCell].rho_base
+    cr[iCell].rtheta_base = cr[iCell].theta_base * cr[iCell].rho_base
+    cr[iCell].rtheta_p = cr[iCell].theta_m * cr[iCell].rho_p + cr[iCell].rho_base 
+                         * (cr[iCell].theta_m - cr[iCell].theta_base)
+    cr[iCell].exner = cmath.pow(cr[iCell].zz * (rgas/p0) * (cr[iCell].rtheta_p + cr[iCell].rtheta_base), rcv)
+    cr[iCell].exner_base = cmath.pow(cr[iCell].zz * (rgas/p0) * (cr[iCell].rtheta_base), rcv)
+    cr[iCell].pressure_p = cr[iCell].zz * rgas * (cr[iCell].exner * cr[iCell].rtheta_p + cr[iCell].rtheta_base 
+                                                  * (cr[iCell].exner - cr[iCell].exner_base))
+    cr[iCell].pressure_base = cr[iCell].zz * rgas * cr[iCell].exner_base * cr[iCell].rtheta_base
+
+    --cio.printf("zz at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].zz)
+    --cio.printf("exner at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].exner)
+    --cio.printf("rtheta_p at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].rtheta_p)
+    --cio.printf("rtheta_base at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].rtheta_base)
+    --cio.printf("exner_base at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].exner_base)
+    --cio.printf("Pressure_p at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].pressure_p)
   end
-
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].rtheta_base = cr[{iCell, k}].theta_base * cr[{iCell, k}].rho_base
-    end
-  end
-
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].rtheta_p = cr[{iCell, k}].theta_m * cr[{iCell, k}].rho_p + cr[{iCell, k}].rho_base * (cr[{iCell, k}].theta_m - cr[{iCell, k}].theta_base)
-    end
-  end
-
-
-
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].exner = cmath.pow(cr[{iCell, k}].zz * (rgas/p0) * (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base), rcv)
-      cr[{iCell, k}].exner_base = cmath.pow(cr[{iCell, k}].zz * (rgas/p0) * (cr[{iCell, k}].rtheta_base), rcv)
-    end
-  end
-
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz * rgas * (cr[{iCell, k}].exner * cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
-      cr[{iCell, k}].pressure_base = cr[{iCell, k}].zz * rgas * cr[{iCell, k}].exner_base * cr[{iCell, k}].rtheta_base
-      --cio.printf("zz at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].zz)
-      --cio.printf("exner at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].exner)
-      --cio.printf("rtheta_p at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].rtheta_p)
-      --cio.printf("rtheta_base at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].rtheta_base)
-      --cio.printf("exner_base at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].exner_base)
-      --cio.printf("Pressure_p at cell %d and %d is %f \n", iCell, k, cr[{iCell, k}].pressure_p)
-    end
-  end
-
 end
 
 --Not sure how to translate: scalars(index_qv,k,iCell)
@@ -728,11 +684,11 @@ writes (cr.pressure, cr.rho, cr.theta) do
   format.println("Calling atm_compute_output_diagnostics...")
 
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
-  for i in cell_range do
+  for iCell in cell_range do
     --Original contains scalars(index_qv,k,iCell). Currently translating as follows
-    --cr[i].theta = cr[i].theta_m / (1 + constants.rvord * cr[i].scalars[index_qv])
-    cr[i].rho = cr[i].rho_zz * cr[i].zz
-    cr[i].pressure = cr[i].pressure_base + cr[i].pressure_p
+    --cr[iCell].theta = cr[iCell].theta_m / (1 + constants.rvord * cr[iCell].scalars[index_qv])
+    cr[iCell].rho = cr[iCell].rho_zz * cr[iCell].zz
+    cr[iCell].pressure = cr[iCell].pressure_base + cr[iCell].pressure_p
   end
 
 end
@@ -746,22 +702,25 @@ writes (cr.rho_p_save, cr.rho_zz_2, cr.rho_zz_old_split, cr.rtheta_p_save, cr.rw
   var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
 
-  for i in edge_range do
-    er[i].ru_save = er[i].ru
-    er[i].u_2 = er[i].u
+  for iEdge in edge_range do
+    er[iEdge].ru_save = er[iEdge].ru
+    er[iEdge].u_2 = er[iEdge].u
   end
 
-  for i in cell_range do
-    cr[i].rw_save = cr[i].rw
-    cr[i].rtheta_p_save = cr[i].rtheta_p
-    cr[i].rho_p_save = cr[i].rho_p
+  for iCell in cell_range do
+    cr[iCell].rw_save = cr[iCell].rw
+    cr[iCell].rtheta_p_save = cr[iCell].rtheta_p
+    cr[iCell].rho_p_save = cr[iCell].rho_p
 
-    cr[i].w_2 = cr[i].w
-    cr[i].theta_m_2 = cr[i].theta_m
-    cr[i].rho_zz_2 = cr[i].rho_zz
-    cr[i].rho_zz_old_split = cr[i].rho_zz
+    cr[iCell].w_2 = cr[iCell].w
+    cr[iCell].theta_m_2 = cr[iCell].theta_m
+    cr[iCell].rho_zz_2 = cr[iCell].rho_zz
+    cr[iCell].rho_zz_old_split = cr[iCell].rho_zz
     --Not sure how to translate scalars
-    --scalars_2(:,:,cellStart:cellEnd) = scalars_1(:,:,cellStart:cellEnd)
+    --Original: scalars_2(:,:,cellStart:cellEnd) = scalars_1(:,:,cellStart:cellEnd)
+    --for i = ???, ??? do -- Scalar bounds
+      --cr[iCell].scalars_2[i] = cr[iCell].scalars[i]
+    --end
   end
 end
 
@@ -1852,44 +1811,44 @@ reads writes (cr.wwAvg, cr.wwAvg_split, er.ruAvg, er.ruAvg_split) do
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
 
   if (dynamics_substep < dynamics_split) then
-    for i in edge_range do
-      er[i].ru_save = er[i].ru
-      er[i].u = er[i].u_2
+    for iEdge in edge_range do
+      er[iEdge].ru_save = er[iEdge].ru
+      er[iEdge].u = er[iEdge].u_2
     end
-    for i in cell_range do
-      cr[i].rw_save = cr[i].rw
-      cr[i].rtheta_p_save = cr[i].rtheta_p
-      cr[i].rho_p_save = cr[i].rho_p
+    for iCell in cell_range do
+      cr[iCell].rw_save = cr[iCell].rw
+      cr[iCell].rtheta_p_save = cr[iCell].rtheta_p
+      cr[iCell].rho_p_save = cr[iCell].rho_p
 
-      cr[i].w = cr[i].w_2
-      cr[i].theta_m = cr[i].theta_m_2
-      cr[i].rho_zz = cr[i].rho_zz_2
+      cr[iCell].w = cr[iCell].w_2
+      cr[iCell].theta_m = cr[iCell].theta_m_2
+      cr[iCell].rho_zz = cr[iCell].rho_zz_2
     end
   end
 
   if (dynamics_substep == 1) then
-    for i in edge_range do
-      er[i].ruAvg_split = er[i].ruAvg
+    for iEdge in edge_range do
+      er[iEdge].ruAvg_split = er[iEdge].ruAvg
     end
-    for i in cell_range do
-      cr[i].wwAvg_split = cr[i].wwAvg
+    for iCell in cell_range do
+      cr[iCell].wwAvg_split = cr[iCell].wwAvg
     end
   else
-    for i in edge_range do
-      er[i].ruAvg_split = er[i].ruAvg + er[i].ruAvg_split
+    for iEdge in edge_range do
+      er[iEdge].ruAvg_split = er[iEdge].ruAvg + er[iEdge].ruAvg_split
     end
-    for i in cell_range do
-      cr[i].wwAvg_split = cr[i].wwAvg + cr[i].wwAvg_split
+    for iCell in cell_range do
+      cr[iCell].wwAvg_split = cr[iCell].wwAvg + cr[iCell].wwAvg_split
     end
   end
 
   if (dynamics_substep == dynamics_split) then
-    for i in edge_range do
-      er[i].ruAvg = er[i].ruAvg_split * inv_dynamics_split
+    for iEdge in edge_range do
+      er[iEdge].ruAvg = er[iEdge].ruAvg_split * inv_dynamics_split
     end
-    for i in cell_range do
-      cr[i].wwAvg = cr[i].wwAvg_split * inv_dynamics_split
-      cr[i].rho_zz = cr[i].rho_zz_old_split
+    for iCell in cell_range do
+      cr[iCell].wwAvg = cr[iCell].wwAvg_split * inv_dynamics_split
+      cr[iCell].rho_zz = cr[iCell].rho_zz_old_split
     end
   end
 end
