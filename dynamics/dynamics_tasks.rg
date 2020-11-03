@@ -31,12 +31,21 @@ local seconds_per_day = constants.seconds_per_day
 
 
 local cio = terralib.includec("stdio.h")
-local cmath = terralib.includec("math.h")
+
+acos = regentlib.acos(double)
+asin = regentlib.asin(double)
+cos = regentlib.cos(double)
+sin = regentlib.sin(double)
+
+copysign = regentlib.copysign(double)
+fabs = regentlib.fabs(double)
+pow = regentlib.pow(double)
+sqrt = regentlib.sqrt(double)
 
 __demand(__cuda)
 task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
-                           er : region(ispace(int2d), edge_fs),
-                           vr : region(ispace(int2d), vertex_fs))
+                       er : region(ispace(int2d), edge_fs),
+                       vr : region(ispace(int2d), vertex_fs))
 where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge, er.verticesOnEdge, er.zb, er.zb3, vr.cellsOnVertex, vr.edgesOnVertex), 
 writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell, vr.edgesOnVertexSign) do
   format.println("Calling atm_compute_signs...")
@@ -53,11 +62,9 @@ writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell, vr.edgesOnV
         else
           vr[iVtx].edgesOnVertexSign[i] = -1.0
         end
-
       else
         vr[iVtx].edgesOnVertexSign[i] = 0.0
       end
-
     end
   end
 
@@ -119,7 +126,7 @@ writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell, vr.edgesOnV
   end
 end
 
---__demand(__cuda)
+--_demand(__cuda)
 task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs))
 where reads (cr.cellsOnCell, cr.nEdgesOnCell, er.cellsOnEdge, er.dcEdge, er.deriv_two, er.dvEdge),
@@ -131,6 +138,7 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
 
   var cell_list : int[maxEdges]
 
+  --__demand(__openmp)
   for iEdge in edge_range do
     er[iEdge].nAdvCellsForEdge = 0
     var cell1 = er[iEdge].cellsOnEdge[0]
@@ -224,10 +232,10 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
       end
 
       for j = 0, n do
-        er[iEdge].adv_coefs[j] =  -1.0 * cmath.pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs[j] / 12 -- this should be a negative number
-        er[iEdge].adv_coefs_3rd[j] =  -1.0 * cmath.pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs_3rd[j] / 12
-        er[iEdge].adv_coefs[j]     = - cmath.pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs[j]     / 12.
-        er[iEdge].adv_coefs_3rd[j] = - cmath.pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs_3rd[j] / 12.
+        er[iEdge].adv_coefs[j] =  -1.0 * pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs[j] / 12 -- this should be a negative number
+        er[iEdge].adv_coefs_3rd[j] =  -1.0 * pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs_3rd[j] / 12
+        er[iEdge].adv_coefs[j]     = - pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs[j]     / 12.
+        er[iEdge].adv_coefs_3rd[j] = - pow(er[iEdge].dcEdge, 2) * er[iEdge].adv_coefs_3rd[j] / 12.
       end
 
       -- 2nd order centered contribution - place this in the main flux weights
@@ -260,7 +268,7 @@ end
 
 
 --config_zd: default 22000.0, config_xnutr: default 0.2. From config
---__demand(__cuda)
+__demand(__cuda)
 task atm_compute_damping_coefs(config_zd : double,
                                config_xnutr : double,
                                cr : region(ispace(int2d), cell_fs))
@@ -268,24 +276,22 @@ where reads (cr.meshDensity, cr.zgrid),
 reads writes (cr.dss) do
   format.println("Calling atm_compute_damping_coefs...")
 
-  var cell_range = rect1d { 0, nCells - 1 }
+  var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
 
   var m1 = -1.0
-  var pii = cmath.acos(m1) -- find equivelent transformation in Regent for acos()
-  --cio.printf("pii = %f\n", pii)
+  var pii = acos(m1) -- find equivelent transformation in Regent for acos()
 
   var dx_scale_power = 1.0
 
+  __demand(__openmp)
   for iCell in cell_range do
+    cr[iCell].dss = 0.0
+    var zt = cr[{iCell.x, nVertLevels}].zgrid
     for k = 0, nVertLevels do
-      cr[{iCell, k}].dss = 0.0
-    end
-    var zt = cr[{iCell, nVertLevels}].zgrid
-    for k = 0, nVertLevels do
-      var z = 0.5 * (cr[{iCell, k}].zgrid + cr[{iCell, k+1}].zgrid)
+      var z = 0.5 * (cr[iCell].zgrid + cr[iCell + {0, 1}].zgrid)
       if (z > config_zd) then
-        cr[{iCell, k}].dss = config_xnutr * cmath.pow(cmath.sin(0.5 * pii * (z-config_zd)/(zt-config_zd)), 2.0)
-        cr[{iCell, k}].dss /= cmath.pow(cr[{iCell, 0}].meshDensity, (0.25*dx_scale_power))
+        cr[iCell].dss = config_xnutr * pow(sin(0.5 * pii * (z-config_zd)/(zt-config_zd)), 2.0)
+        cr[iCell].dss /= pow(cr[{iCell.x, 0}].meshDensity, (0.25*dx_scale_power))
       end
     end
   end
@@ -313,7 +319,7 @@ where reads writes (cr.zb3_cell, er.adv_coefs_3rd) do
   end
 end
 
---__demand(__cuda)
+__demand(__cuda)
 task atm_compute_solve_diagnostics(cr : region(ispace(int2d), cell_fs),
                                    er : region(ispace(int2d), edge_fs),
                                    vr : region(ispace(int2d), vertex_fs),
@@ -335,7 +341,7 @@ format.println("Calling atm_compute_solve_diagnostics...")
 
     er[iEdge].h_edge = 0.5 * (cr[{cell1, iEdge.y}].h + cr[{cell2, iEdge.y}].h)
     var efac = er[{iEdge.x, 0}].dcEdge * er[{iEdge.x, 0}].dvEdge
-    er[iEdge].ke_edge = efac * cmath.pow(er[iEdge].u, 2)
+    er[iEdge].ke_edge = efac * pow(er[iEdge].u, 2)
   end
 
   -- Compute circulation and relative vorticity at each vertex
@@ -493,12 +499,18 @@ end
 --mpas used cellSolveStart, cellSolveEnd; we believe those deal with how mpas uses parallelization (a start and end for which cell pool is currently being worked on). We will just loop thru the entire cell region instead.
 --mpas renames some fields; we will just use the original name --- p : exner, t : theta_m, rb : rho_base, rtb : rtheta_base, pb : exner_base, rt : rtheta_p
 
+--__demand(__cuda)
 task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
                                 vert_r : region(ispace(int1d), vertical_fs),
                                 dts : double)
 where reads (cr.cqw, cr.exner, cr.exner_base, cr.qtot, cr.rho_base, cr.rtheta_base, cr.rtheta_p, cr.theta_m, cr.zz, vert_r.rdzu, vert_r.rdzw, vert_r.fzm, vert_r.fzp),
 reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr.gamma_tri, vert_r.cofrz) do
   format.println("Calling atm_compute_vert_imp_coefs...")
+
+  var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
+  var cell_range_1d = rect2d { int2d {0, 0}, int2d {nCells - 1, 0} }
+  var vert_level_range = rect1d { 0, nVertLevels - 1 }
+
   --  set coefficients
   var dtseps = .5 * dts * (1.0 + constants.config_epssm)
   var rgas = constants.rgas
@@ -511,51 +523,50 @@ reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr
 
 
   -- MGD bad to have all threads setting this variable?
-  for k = 0, nVertLevels do
-      vert_r[k].cofrz = dtseps * vert_r[k].rdzw
+  for k in vert_level_range do
+    vert_r[k].cofrz = dtseps * vert_r[k].rdzw
   end
 
-  for iCell = 0, nCells do --  we only need to do cells we are solving for, not halo cells
+  for iCell in cell_range_1d do
+    --cr[iCell].a_tri = 0.0 --a_tri(1,iCell) = 0.  -- note, this value is never used
+    --b_tri[0] = 1.0    -- note, this value is never used
+    --c_tri[0] = 0.0    -- note, this value is never used
+    cr[iCell].gamma_tri = 0.0
+    --cr[iCell].alpha_tri = 0.0  -- note, this value is never used
+  end
 
-    for k = 1, nVertLevels do
-      cr[{iCell, k}].cofwr = .5 * dtseps * constants.gravity * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz)
+  for iCell in cell_range do --  we only need to do cells we are solving for, not halo cells
+
+    if (iCell.y > 0) then
+      cr[iCell].cofwr = .5 * dtseps * constants.gravity * (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz)
     end
-    cr[{iCell, 0}].coftz = 0.0 --coftz(1,iCell) = 0.0
-    for k = 1, nVertLevels do
-      cr[{iCell, k}].cofwz = dtseps * c2 * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k-1}].zz) * vert_r[k].rdzu * cr[{iCell, k}].cqw * (vert_r[k].fzm * cr[{iCell, k}].exner + vert_r[k].fzp * cr[{iCell, k-1}].exner)
-      cr[{iCell, k}].coftz = dtseps * (vert_r[k].fzm * cr[{iCell, k}].theta_m + vert_r[k].fzp * cr[{iCell, k-1}].theta_m)
+    
+    cr[iCell].coftz = 0.0
+    if (iCell.y > 0) then
+      cr[iCell].cofwz = dtseps * c2 * (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz) * vert_r[iCell.y].rdzu * cr[iCell].cqw * (vert_r[iCell.y].fzm * cr[iCell].exner + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].exner)
+      cr[iCell].coftz = dtseps * (vert_r[iCell.y].fzm * cr[iCell].theta_m + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].theta_m)
     end
-    cr[{iCell, nVertLevels}].coftz = 0.0 -- coftz(nVertLevels+1,iCell)
-    for k = 0, nVertLevels do
+    
 
-      qtotal = cr[{iCell, k}].qtot
+    var qtotal = cr[iCell].qtot
 
-      cr[{iCell, k}].cofwt = .5 * dtseps * rcv * cr[{iCell, k}].zz * constants.gravity * cr[{iCell, k}].rho_base / ( 1.0 + qtotal) * cr[{iCell, k}].exner / ((cr[{iCell, k}].rtheta_base + cr[{iCell, k}].rtheta_p) * cr[{iCell, k}].exner_base)
-    end
+    cr[iCell].cofwt = .5 * dtseps * rcv * cr[iCell].zz * constants.gravity * cr[iCell].rho_base / ( 1.0 + qtotal) * cr[iCell].exner / ((cr[iCell].rtheta_base + cr[iCell].rtheta_p) * cr[iCell].exner_base)
 
-    cr[{iCell, 0}].a_tri = 0.0 --a_tri(1,iCell) = 0.  -- note, this value is never used
-    b_tri[0] = 1.0    -- note, this value is never used
-    c_tri[0] = 0.0    -- note, this value is never used
-    cr[{iCell, 0}].gamma_tri = 0.0
-    cr[{iCell, 0}].alpha_tri = 0.0  -- note, this value is never used
+    if (iCell.y > 0) then --k=2,nVertLevels
+      cr[iCell].a_tri = -1.0 * cr[iCell].cofwz * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz + cr[iCell].cofwr * vert_r[iCell.y - 1].cofrz - cr[iCell - {0, 1}].cofwt * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw
 
-    for k = 1, nVertLevels do --k=2,nVertLevels
-      cr[{iCell,k}].a_tri = -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k-1}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz + cr[{iCell, k}].cofwr * vert_r[k-1].cofrz - cr[{iCell, k-1}].cofwt * cr[{iCell, k-1}].coftz * vert_r[k-1].rdzw
+      b_tri[iCell.y] = 1.0 + cr[iCell].cofwz * (cr[iCell].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz +  cr[iCell].coftz * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz) - cr[iCell].coftz * (cr[iCell].cofwt * vert_r[iCell.y].rdzw - cr[iCell].cofwt * vert_r[iCell.y - 1].rdzw) + cr[iCell].cofwr * ((vert_r[iCell.y].cofrz- vert_r[iCell.y - 1].cofrz))
 
-      b_tri[k] = 1.0 + cr[{iCell, k}].cofwz * (cr[{iCell, k}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz +  cr[{iCell, k}].coftz * vert_r[k-1].rdzw * cr[{iCell, k-1}].zz) -  cr[{iCell, k}].coftz * (cr[{iCell, k}].cofwt * vert_r[k].rdzw - cr[{iCell, k-1}].cofwt * vert_r[k-1].rdzw) + cr[{iCell, k}].cofwr * ((vert_r[k].cofrz- vert_r[k-1].cofrz))
-
-      c_tri[k] =   -1.0 * cr[{iCell, k}].cofwz * cr[{iCell, k+1}].coftz * vert_r[k].rdzw * cr[{iCell, k}].zz - cr[{iCell, k}].cofwr * vert_r[k].cofrz+ cr[{iCell, k}].cofwt * cr[{iCell, k+1 }].coftz * vert_r[k].rdzw
-    end
-    --MGD VECTOR DEPENDENCE
-    for k = 1, nVertLevels do -- k=2, nVertLevels
-      cr[{iCell, k}].alpha_tri = 1.0/ (b_tri[k]-cr[{iCell, k}].a_tri * cr[{iCell, k-1}].gamma_tri)
-      cr[{iCell, k}].gamma_tri = c_tri[k] * cr[{iCell, k}].alpha_tri
+      c_tri[iCell.y] = -1.0 * cr[iCell].cofwz * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz - cr[iCell].cofwr * vert_r[iCell.y].cofrz + cr[iCell].cofwt * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw
+      --MGD VECTOR DEPENDENCE
+      cr[iCell].alpha_tri = 1.0 / (b_tri[iCell.y] - cr[iCell].a_tri * cr[iCell - {0, 1}].gamma_tri)
+      cr[iCell].gamma_tri = c_tri[iCell.y] * cr[iCell].alpha_tri
     end
 
   end -- loop over cells
 end
 
---__demand(__cuda)
+__demand(__cuda)
 task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs),
                               config_h_ScaleWithMesh : bool)
@@ -575,8 +586,8 @@ writes (cr.meshScalingRegionalCell, er.meshScalingDel2, er.meshScalingDel4, er.m
     for iEdge in edge_range do
       var cell1 = er[iEdge].cellsOnEdge[0]
       var cell2 = er[iEdge].cellsOnEdge[1]
-      er[iEdge].meshScalingDel2 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
-      er[iEdge].meshScalingDel4 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
+      er[iEdge].meshScalingDel2 = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+      er[iEdge].meshScalingDel4 = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
     end
   end
 
@@ -595,18 +606,18 @@ writes (cr.meshScalingRegionalCell, er.meshScalingDel2, er.meshScalingDel4, er.m
     for iEdge in edge_range do
       var cell1 = er[iEdge].cellsOnEdge[0]
       var cell2 = er[iEdge].cellsOnEdge[1]
-      er[iEdge].meshScalingRegionalEdge = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+      er[iEdge].meshScalingRegionalEdge = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
     end
 
     for iCell in cell_range do
-      cr[iCell].meshScalingRegionalCell = 1.0 / cmath.pow(cr[iCell].meshDensity, 0.25)
+      cr[iCell].meshScalingRegionalCell = 1.0 / pow(cr[iCell].meshDensity, 0.25)
     end
   end
 end
 
 --Not sure how to translate: scalars(index_qv,k,iCell)
---sign(1.0_RKIND,flux) translated as cmath.copysign(1.0, flux)
---__demand(__cuda)
+--sign(1.0_RKIND,flux) translated as copysign(1.0, flux)
+__demand(__cuda)
 task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs),
                                   er : region(ispace(int2d), edge_fs),
                                   vert_r : region(ispace(int1d), vertical_fs))
@@ -650,7 +661,7 @@ reads writes (cr.exner, cr.exner_base, cr.rho_p, cr.rho_zz, cr.rtheta_base, cr.r
       if (iCell.y > 0) then -- Original Fortran: do k = 2, nVertLevels
         var flux = vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].ru + vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].ru
         cr[iCell].rw -= cr[{iCell.x, 0}].edgesOnCellSign[i] 
-                        * (cr[iCell].zb_cell[i] + cmath.copysign(1.0, flux) * cr[iCell].zb3_cell[i]) * flux 
+                        * (cr[iCell].zb_cell[i] + copysign(1.0, flux) * cr[iCell].zb3_cell[i]) * flux 
                         * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz + vert_r[iCell.y].fzm * cr[iCell].zz)
       end
     end
@@ -661,18 +672,18 @@ reads writes (cr.exner, cr.exner_base, cr.rho_p, cr.rho_zz, cr.rtheta_base, cr.r
     cr[iCell].rtheta_base = cr[iCell].theta_base * cr[iCell].rho_base
     cr[iCell].rtheta_p = cr[iCell].theta_m * cr[iCell].rho_p + cr[iCell].rho_base 
                          * (cr[iCell].theta_m - cr[iCell].theta_base)
-    cr[iCell].exner = cmath.pow(cr[iCell].zz * (rgas/p0) * (cr[iCell].rtheta_p + cr[iCell].rtheta_base), rcv)
-    cr[iCell].exner_base = cmath.pow(cr[iCell].zz * (rgas/p0) * (cr[iCell].rtheta_base), rcv)
+    cr[iCell].exner = pow(cr[iCell].zz * (rgas/p0) * (cr[iCell].rtheta_p + cr[iCell].rtheta_base), rcv)
+    cr[iCell].exner_base = pow(cr[iCell].zz * (rgas/p0) * (cr[iCell].rtheta_base), rcv)
     cr[iCell].pressure_p = cr[iCell].zz * rgas * (cr[iCell].exner * cr[iCell].rtheta_p + cr[iCell].rtheta_base 
                                                   * (cr[iCell].exner - cr[iCell].exner_base))
     cr[iCell].pressure_base = cr[iCell].zz * rgas * cr[iCell].exner_base * cr[iCell].rtheta_base
 
-    --cio.printf("zz at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].zz)
-    --cio.printf("exner at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].exner)
-    --cio.printf("rtheta_p at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].rtheta_p)
-    --cio.printf("rtheta_base at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].rtheta_base)
-    --cio.printf("exner_base at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].exner_base)
-    --cio.printf("Pressure_p at cell %d and %d is %f \n", iCell.x, iCell.y, cr[iCell].pressure_p)
+    --format.println("zz at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].zz)
+    --format.println("exner at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].exner)
+    --format.println("rtheta_p at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].rtheta_p)
+    --format.println("rtheta_base at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].rtheta_base)
+    --format.println("exner_base at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].exner_base)
+    --format.println("Pressure_p at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].pressure_p)
   end
 end
 
@@ -732,7 +743,7 @@ end
 __demand(__inline)
 task flux3(q_im2 : double, q_im1 : double, q_i : double, q_ip1 : double, ua : double, coef3 : double) : double
   return flux4(q_im2, q_im1, q_i, q_ip1, ua) 
-         + coef3*cmath.fabs(ua)*((q_ip1-q_im2)-3.*(q_i-q_im1))/12.0
+         + coef3*fabs(ua)*((q_ip1-q_im2)-3.*(q_i-q_im1))/12.0
 end
 
 -- Comments for atm_compute_dyn_tend_work
@@ -748,7 +759,7 @@ end
 -- unconditionally.
 -- Some config values should be configurable, rather than constants. These are currently in constants.rg.
 -- I have also used previous conventions like removing "_RKIND", looping over all cells instead of 
--- cellSolveStart to cellStartEnd, using cmath.copysign and cmath.fabs for sign and abs, etc.
+-- cellSolveStart to cellStartEnd, using copysign and fabs for sign and abs, etc.
 
 task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
@@ -807,13 +818,13 @@ reads writes (cr.delsq_divergence, cr.delsq_theta, cr.delsq_w, cr.dpdz, cr.h_div
           -- followed by imposition of an upper bound on the eddy viscosity
 
           -- Original: kdiff(k,iCell) = min((c_s * config_len_disp)**2 * sqrt(d_diag(k)**2 + d_off_diag(k)**2),(0.01*config_len_disp**2) * invDt)
-          cr[{iCell, k}].kdiff = min(cmath.pow(c_s * constants.config_len_disp, 2.0) 
-                                     * cmath.sqrt(cmath.pow(d_diag[k], 2.0) + cmath.pow(d_off_diag[k], 2.0)),
-                                     (0.01 * cmath.pow(constants.config_len_disp, 2.0)) * invDt)
+          cr[{iCell, k}].kdiff = min(pow(c_s * constants.config_len_disp, 2.0) 
+                                     * sqrt(pow(d_diag[k], 2.0) + pow(d_off_diag[k], 2.0)),
+                                     (0.01 * pow(constants.config_len_disp, 2.0)) * invDt)
         end
       end
 
-      h_mom_eddy_visc4 = constants.config_visc4_2dsmag * cmath.pow(constants.config_len_disp, 3.0) --0.05 * 120000.0**3
+      h_mom_eddy_visc4 = constants.config_visc4_2dsmag * pow(constants.config_len_disp, 3.0) --0.05 * 120000.0**3
       h_theta_eddy_visc4 = h_mom_eddy_visc4
 
     elseif ([rawstring](config_horiz_mixing) == "2d_fixed") then
@@ -943,8 +954,8 @@ reads writes (cr.delsq_divergence, cr.delsq_theta, cr.delsq_w, cr.dpdz, cr.h_div
 
       -- #ifdef CURVATURE
       -- curvature terms for the sphere
-      er[{iEdge, k}].tend_u -= ( 2.0 * constants.omega * cmath.cos(er[{iEdge, 0}].angleEdge) 
-                               * cmath.cos(er[{iEdge, 0}].lat) * er[{iEdge, k}].rho_edge 
+      er[{iEdge, k}].tend_u -= ( 2.0 * constants.omega * cos(er[{iEdge, 0}].angleEdge) 
+                               * cos(er[{iEdge, 0}].lat) * er[{iEdge, k}].rho_edge 
                                * 0.25 * (cr[{cell1, k}].w + cr[{cell1, k + 1}].w 
                                + cr[{cell2, k}].w + cr[{cell2, k + 1}].w) )
                                - ( er[{iEdge, k}].u * 0.25 * (cr[{cell1, k}].w + cr[{cell1, k + 1}].w 
@@ -1072,8 +1083,8 @@ reads writes (cr.delsq_divergence, cr.delsq_theta, cr.delsq_w, cr.dpdz, cr.h_div
           var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
           for k = 0, nVertLevels do
-            u_mix[k] = er[{iEdge, k}].u - vert_r[k].u_init * cmath.cos(er[{iEdge, 0}].angleEdge)
-                       - vert_r[k].v_init * cmath.sin(er[{iEdge, 0}].angleEdge)
+            u_mix[k] = er[{iEdge, k}].u - vert_r[k].u_init * cos(er[{iEdge, 0}].angleEdge)
+                       - vert_r[k].v_init * sin(er[{iEdge, 0}].angleEdge)
           end
 
           for k = 1, nVertLevels - 1 do
@@ -1151,7 +1162,7 @@ reads writes (cr.delsq_divergence, cr.delsq_theta, cr.delsq_w, cr.dpdz, cr.h_div
       for j = 0, er[{iEdge, 0}].nAdvCellsForEdge do
         var iAdvCell = er[{iEdge, 0}].advCellsForEdge[j]
         for k = 1, nVertLevels do
-          var scalar_weight = er[{iEdge, 0}].adv_coefs[j] + cmath.copysign(1.0, ru_edge_w[k]) * er[{iEdge, 0}].adv_coefs_3rd[j]
+          var scalar_weight = er[{iEdge, 0}].adv_coefs[j] + copysign(1.0, ru_edge_w[k]) * er[{iEdge, 0}].adv_coefs_3rd[j]
           flux_arr[k] += scalar_weight * cr[{iAdvCell, k}].w
         end
       end
@@ -1167,11 +1178,11 @@ reads writes (cr.delsq_divergence, cr.delsq_theta, cr.delsq_w, cr.dpdz, cr.h_div
     for k = 1, nVertLevels do
       cr[{iCell, k}].tend_w += (cr[{iCell, k}].rho_zz * vert_r[k].fzm 
                                 + cr[{iCell, k-1}].rho_zz * vert_r[k].fzp)
-                               * ( cmath.pow(vert_r[k].fzm * cr[{iCell, k}].ur_cell 
+                               * ( pow(vert_r[k].fzm * cr[{iCell, k}].ur_cell 
                                              + vert_r[k].fzp * cr[{iCell, k-1}].ur_cell, 2.0)
-                                  + cmath.pow(vert_r[k].fzm * cr[{iCell, k}].vr_cell
+                                  + pow(vert_r[k].fzm * cr[{iCell, k}].vr_cell
                                              + vert_r[k].fzp * cr[{iCell, k-1}].vr_cell, 2.0) ) / r_earth
-                               + 2.0 * constants.omega * cmath.cos(cr[{iCell, 0}].lat)
+                               + 2.0 * constants.omega * cos(cr[{iCell, 0}].lat)
                                * (vert_r[k].fzm * cr[{iCell, k}].ur_cell 
                                   + vert_r[k].fzp * cr[{iCell, k-1}].ur_cell)
                                * (cr[{iCell, k}].rho_zz * vert_r[k].fzm 
@@ -1305,7 +1316,7 @@ reads writes (cr.delsq_divergence, cr.delsq_theta, cr.delsq_w, cr.dpdz, cr.h_div
       for j = 0, er[{iEdge, 0}].nAdvCellsForEdge do
         var iAdvCell = er[{iEdge, 0}].advCellsForEdge[j]
         for k = 0, nVertLevels do
-          var scalar_weight = er[{iEdge, 0}].adv_coefs[j] + cmath.copysign(1.0, er[{iEdge, k}].ru) 
+          var scalar_weight = er[{iEdge, 0}].adv_coefs[j] + copysign(1.0, er[{iEdge, k}].ru) 
                               * er[{iEdge, 0}].adv_coefs_3rd[j]
           flux_arr[k] += scalar_weight * cr[{iAdvCell, k}].theta_m
         end
@@ -1482,7 +1493,7 @@ where reads writes (cr, er, vr, vert_r) do
   atm_compute_dyn_tend_work(cr, er, vr, vert_r, rk_step, dt, config_horiz_mixing, config_mpas_cam_coef, config_mix_full, config_rayleigh_damp_u)
 end
 
---__demand(__cuda)
+__demand(__cuda)
 task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
                                          er : region(ispace(int2d), edge_fs),
                                          vert_r : region(ispace(int1d), vertical_fs))
@@ -1490,22 +1501,18 @@ where reads (cr.bdyMaskCell, cr.edgesOnCell, cr.edgesOnCell_sign, cr.nEdgesOnCel
 reads writes (cr.w_tend) do
   format.println("Calling atm_set_smlstep_pert_variables_work...")
 
-  var cell_range = rect1d { 0, nCells - 1 }
+  var cell_range = rect2d { int2d {0, 1}, int2d {nCells - 1, nVertLevels - 1} } --All vertical loops in the original code go from 2 to nVertLevels
 
   for iCell in cell_range do
-    if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
-      for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-        var iEdge = cr[{iCell, 0}].edgesOnCell[i]
-        for k = 1, nVertLevels do
-            var flux = cr[{iCell, 0}].edgesOnCell_sign[i] * (vert_r[k].fzm * er[{iEdge, k}].u_tend + vert_r[k].fzp * er[{iEdge, k - 1}].u_tend)
-            --sign function copied as cmath.copysign, _RKIND removed as done previously
-            cr[{iCell, k}].w_tend = cr[{iCell, k}].w_tend - (cr[{iCell, k}].zb_cell[i] + cmath.copysign(1.0, er[{iEdge, k}].u_tend) * cr[{iCell, k}].zb3_cell[i]) * flux
-        end
+    if (cr[{iCell.x, 0}].bdyMaskCell <= nRelaxZone) then
+      for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
+        var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
+        var flux = cr[{iCell.x, 0}].edgesOnCell_sign[i] * (vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].u_tend + vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].u_tend)
+        --sign function copied as copysign, _RKIND removed as done previously
+        cr[iCell].w_tend -= (cr[iCell].zb_cell[i] + copysign(1.0, er[{iEdge, iCell.y}].u_tend) * cr[{iCell, iCell.y}].zb3_cell[i]) * flux
       end
 
-      for k = 1, nVertLevels do
-        cr[{iCell, k}].w_tend = ( vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k - 1}].zz ) * cr[{iCell, k}].w_tend
-      end
+      cr[iCell].w_tend *= ( vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz )
     end
   end
 end
@@ -1734,7 +1741,7 @@ end
 -- In Fortran, mpas_reconstruct is an interface with 1d and 2d versions.
 -- The program decides which to call based on the types of the arguments passed in.
 -- In the dynamics loop, only the 2d version is called.
---__demand(__cuda)
+__demand(__cuda)
 task mpas_reconstruct_2d(cr : region(ispace(int2d), cell_fs),
                          er : region(ispace(int2d), edge_fs),
                          includeHalos : bool,
@@ -1750,48 +1757,41 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
   --if (includeHalos) then
   --  nCellsReconstruct = nCellsSolve
   --end
-  var cell_range_1d = rect1d { 0, nCellsReconstruct - 1}
-  var cell_range_2d = rect2d { int2d {0, 0}, int2d {nCellsReconstruct - 1, nVertLevels - 1} }
+  var cell_range = rect2d { int2d {0, 0}, int2d {nCellsReconstruct - 1, nVertLevels - 1} }
 
   -- initialize the reconstructed vectors
-  for iCell in cell_range_2d do
+  for iCell in cell_range do
     cr[iCell].uReconstructX = 0.0
     cr[iCell].uReconstructY = 0.0
     cr[iCell].uReconstructZ = 0.0
   end
   
-  for iCell in cell_range_1d do
+  for iCell in cell_range do
     -- a more efficient reconstruction where rbf_values*matrix_reconstruct
     -- has been precomputed in coeffs_reconstruct
-    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-      var iEdge = cr[{iCell, 0}].edgesOnCell[i]
-      for k = 0, nVertLevels do
-        cr[{iCell, k}].uReconstructX += cr[{iCell, 0}].coeffs_reconstruct[i][0] * er[{iEdge, k}].u
-        cr[{iCell, k}].uReconstructY += cr[{iCell, 0}].coeffs_reconstruct[i][1] * er[{iEdge, k}].u
-        cr[{iCell, k}].uReconstructZ += cr[{iCell, 0}].coeffs_reconstruct[i][2] * er[{iEdge, k}].u
-      end
+    for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
+      var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
+      cr[iCell].uReconstructX += cr[{iCell.x, 0}].coeffs_reconstruct[i][0] * er[{iEdge, iCell.y}].u
+      cr[iCell].uReconstructY += cr[{iCell.x, 0}].coeffs_reconstruct[i][1] * er[{iEdge, iCell.y}].u
+      cr[iCell].uReconstructZ += cr[{iCell.x, 0}].coeffs_reconstruct[i][2] * er[{iEdge, iCell.y}].u
     end
   end -- iCell
 
   if (on_a_sphere) then
     --__demand(__openmp)
-    for iCell in cell_range_1d do
-      var clat = cmath.cos(cr[{iCell, 0}].lat)
-      var slat = cmath.sin(cr[{iCell, 0}].lat)
-      var clon = cmath.cos(cr[{iCell, 0}].lon)
-      var slon = cmath.sin(cr[{iCell, 0}].lon)
-      for k = 0, nVertLevels do
-        cr[{iCell, k}].uReconstructZonal = -cr[{iCell, k}].uReconstructX * slon + 
-                                            cr[{iCell, k}].uReconstructY * clon
-        cr[{iCell, k}].uReconstructMeridional = -(cr[{iCell, k}].uReconstructX * clon
-                                                + cr[{iCell, k}].uReconstructY * slon) * slat
-                                                + cr[{iCell, k}].uReconstructZ * clat
-      end
+    for iCell in cell_range do
+      var clat = cos(cr[{iCell.x, 0}].lat)
+      var slat = sin(cr[{iCell.x, 0}].lat)
+      var clon = cos(cr[{iCell.x, 0}].lon)
+      var slon = sin(cr[{iCell.x, 0}].lon)
+      cr[iCell].uReconstructZonal = -cr[iCell].uReconstructX * slon + cr[iCell].uReconstructY * clon
+      cr[iCell].uReconstructMeridional = -(cr[iCell].uReconstructX * clon + cr[iCell].uReconstructY * slon) * slat
+                                         + cr[iCell].uReconstructZ * clat
     end
   else
-    for i in cell_range_2d do
-      cr[i].uReconstructZonal = cr[i].uReconstructX
-      cr[i].uReconstructMeridional = cr[i].uReconstructY
+    for iCell in cell_range do
+      cr[iCell].uReconstructZonal = cr[iCell].uReconstructX
+      cr[iCell].uReconstructMeridional = cr[iCell].uReconstructY
     end
   end
 end
