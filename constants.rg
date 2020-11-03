@@ -67,7 +67,13 @@ constants.config_print_detailed_minmax_vel = false
 constants.config_print_global_minmax_vel = false
 constants.config_print_global_minmax_sca = false
 
-
+-- Physics - Radiation
+constants.R_d = constants.rgas              -- gas constant for dry air [J kg-1 K-1]
+constants.R_v = 461.6                       -- gas constant for water vapor
+constants.ep_2 = terralib.constant(double, `(-constants.R_d / constants.R_v))
+constants.stbolt = 5.67051e-8
+constants.mwdry = 28.966                    -- molecular weight dry air ~ kg/kmole (shr_const_mwdair)
+constants.mwco2 = 44.                       -- molecular weight co2
 
 
 return constants
