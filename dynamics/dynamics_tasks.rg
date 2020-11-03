@@ -67,7 +67,6 @@ writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell, vr.edgesOnV
       end
     end
   end
-<<<<<<< HEAD
 
   for iCell in cell_range_1d do
     for i = 0, cr[iCell].nEdgesOnCell do
@@ -90,53 +89,17 @@ writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell, vr.edgesOnV
           --VERTICAL STRUCTURE ACCESSED--
           cr[iCell].zb_cell[i] = er[{cr[{iCell.x, 0}].edgesOnCell[i], iCell.y}].zb[0]
           cr[iCell].zb3_cell[i] = er[{cr[{iCell.x, 0}].edgesOnCell[i], iCell.y}].zb3[0]
-=======
-end
-
-task atm_compute_signs_pt2(cr : region(ispace(int2d), cell_fs),
-                           er : region(ispace(int2d), edge_fs),
-                           vr : region(ispace(int2d), vertex_fs))
-where reads (cr.edgesOnCell, cr.nEdgesOnCell, cr.verticesOnCell, er.cellsOnEdge, er.zb, er.zb3, vr.cellsOnVertex),
-writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell) do
-  format.println("Calling atm_compute_signs_pt2...")
-
-  --var cell_range = rect1d { 0, nCells - 1 }
-
-  --for iCell in cell_range do
-  for iCell = 0, nCells do
-    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-      if (cr[{iCell, 0}].edgesOnCell[i] <= nEdges) then
-        if (iCell == er[{cr[{iCell, 0}].edgesOnCell[i], 0}].cellsOnEdge[0]) then
-          cr[{iCell, 0}].edgesOnCellSign[i] = 1.0
-          --VERTICAL STRUCTURE ACCESSED--
-          for k = 0, nVertLevels + 1 do
-
-            cr[{iCell, k}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], k}].zb[0]
-            cr[{iCell, k}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], k}].zb3[0]
-
-            --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, k, i, cr[{iCell, k}].zb_cell[i])
-            --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, k, i, cr[{iCell, k}].zb3_cell[i])
->>>>>>> 14d05fb3bb98095325ba02cf34f6b20629bcbc40
 
           --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell.x, iCell.y, i, cr[iCell].zb_cell[i])
           --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell.x, iCell.y, i, cr[iCell].zb3_cell[i])
 
         else
           --VERTICAL--
-<<<<<<< HEAD
 
           cr[iCell].zb_cell[i] = er[{cr[{iCell.x, 0}].edgesOnCell[i], iCell.y}].zb[1]
           cr[iCell].zb3_cell[i] = er[{cr[{iCell.x, 0}].edgesOnCell[i], iCell.y}].zb3[1]
           --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell.x, iCell.y, i, cr[iCell].zb_cell[i])
           --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell.x, iCell.y, i, cr[iCell].zb3_cell[i])
-=======
-          for k = 0, nVertLevels + 1 do
-
-            cr[{iCell, k}].zb_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], k}].zb[1]
-            cr[{iCell, k}].zb3_cell[i] = er[{cr[{iCell, 0}].edgesOnCell[i], k}].zb3[1]
-            --cio.printf("zb at cell %d and level %d, index %d, is %f \n", iCell, k, i, cr[{iCell, k}].zb_cell[i])
-            --cio.printf("zb3 at cell %d and level %d, index %d, is %f \n", iCell, k, i, cr[{iCell, k}].zb3_cell[i])
->>>>>>> 14d05fb3bb98095325ba02cf34f6b20629bcbc40
 
         end
       end
@@ -144,16 +107,9 @@ writes (cr.edgesOnCellSign, cr.kiteForCell, cr.zb_cell, cr.zb3_cell) do
   end
 
 
-<<<<<<< HEAD
   for iCell in cell_range_1d do
     for i = 0, cr[iCell].nEdgesOnCell do
       var iVtx = cr[iCell].verticesOnCell[i]
-=======
-  --for iCell in cell_range do
-  for iCell = 0, nCells do
-    for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-      var iVtx = cr[{iCell, 0}].verticesOnCell[i]
->>>>>>> 14d05fb3bb98095325ba02cf34f6b20629bcbc40
       if (iVtx <= nVertices) then
         for j = 1, vertexDegree do
           if (iCell.x == vr[{iVtx, 0}].cellsOnVertex[j]) then
@@ -182,7 +138,6 @@ reads writes (er.adv_coefs, er.adv_coefs_3rd, er.nAdvCellsForEdge) do
 
   var cell_list : int[maxEdges]
 
-  --__demand(__openmp)
   for iEdge in edge_range do
     er[iEdge].nAdvCellsForEdge = 0
     var cell1 = er[iEdge].cellsOnEdge[0]
@@ -327,7 +282,6 @@ reads writes (cr.dss) do
 
   var dx_scale_power = 1.0
 
-  __demand(__openmp)
   for iCell in cell_range do
     cr[iCell].dss = 0.0
     var zt = cr[{iCell.x, nVertLevels}].zgrid
@@ -348,7 +302,6 @@ task atm_couple_coef_3rd_order(config_coef_3rd_order : double,
 where reads writes (cr.zb3_cell, er.adv_coefs_3rd) do
   format.println("Calling atm_couple_coef_3rd_order...")
 
-<<<<<<< HEAD
   var edge_range = rect1d { 0, nEdges - 1 }
   for iEdge in edge_range do
     for i = 0, FIFTEEN do
@@ -360,19 +313,6 @@ where reads writes (cr.zb3_cell, er.adv_coefs_3rd) do
   for iCell in cell_range do
     for j = 0, maxEdges do
       cr[{iCell, 0}].zb3_cell[j] *= config_coef_3rd_order
-=======
-  var edge_range = rect2d { int2d {0, 0}, int2d{nEdges - 1, 0} }
-  for iEdge in edge_range do
-    for i = 0, FIFTEEN do
-      er[iEdge].adv_coefs_3rd[i] = config_coef_3rd_order * er[iEdge].adv_coefs_3rd[i]
-    end
-  end
-
-  var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
-  for i in cell_range do
-    for j = 0, maxEdges do
-      cr[i].zb3_cell[j] = config_coef_3rd_order * cr[i].zb3_cell[j]
->>>>>>> 14d05fb3bb98095325ba02cf34f6b20629bcbc40
     end
   end
 end
@@ -392,7 +332,6 @@ format.println("Calling atm_compute_solve_diagnostics...")
   var vertex_range = rect2d { int2d {0, 0}, int2d {nVertices - 1, nVertLevels - 1} }
 
   -- Compute height on cell edges at velocity locations
-  --__demand(__openmp)
   for iEdge in edge_range do
     var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge.x, 0}].cellsOnEdge[1]
@@ -528,7 +467,6 @@ reads writes (cr.qtot) do
     end
   end
 
-  __demand(__openmp)
   for iCell in cell_range do
     if (iCell.y > 0) then -- Original from Fortran: do k = 2, nVertLevels
       var qtotal = 0.5 * (cr[iCell].qtot + cr[iCell - {0, 1}].qtot)
@@ -580,7 +518,6 @@ reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr
   var c_tri : double[nVertLevels]
 
 
-<<<<<<< HEAD
   -- MGD bad to have all threads setting this variable?
   for k in vert_level_range do
     vert_r[k].cofrz = dtseps * vert_r[k].rdzw
@@ -625,8 +562,6 @@ reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr
   end -- loop over cells
 end
 
-=======
->>>>>>> 14d05fb3bb98095325ba02cf34f6b20629bcbc40
 __demand(__cuda)
 task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs),
@@ -636,7 +571,6 @@ writes (cr.meshScalingRegionalCell, er.meshScalingDel2, er.meshScalingDel4, er.m
 
   format.println("Calling atm_compute_mesh_scaling...")
 
-<<<<<<< HEAD
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, 0} }
   -- Compute the scaling factors to be used in the del2 and del4 dissipation
   for iEdge in edge_range do
@@ -673,41 +607,6 @@ writes (cr.meshScalingRegionalCell, er.meshScalingDel2, er.meshScalingDel4, er.m
 
     for iCell in cell_range do
       cr[iCell].meshScalingRegionalCell = 1.0 / pow(cr[iCell].meshDensity, 0.25)
-=======
-  var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, 0} }
-  for i in edge_range do
-    er[i].meshScalingDel2 = 1.0
-    er[i].meshScalingDel4 = 1.0
-  end
-
-  if (config_h_ScaleWithMesh) then
-    for i in edge_range do
-      var cell1 = er[i].cellsOnEdge[0]
-      var cell2 = er[i].cellsOnEdge[1]
-      er[i].meshScalingDel2 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
-      er[i].meshScalingDel4 = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
-    end
-  end
-
-  var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, 0} }
-  for i in cell_range do
-    cr[i].meshScalingRegionalCell = 1.0
-  end
-
-  for i in edge_range do
-    er[i].meshScalingRegionalEdge = 1.0
-  end
-
-  if (config_h_ScaleWithMesh) then
-    for i in edge_range do
-      var cell1 = er[i].cellsOnEdge[0]
-      var cell2 = er[i].cellsOnEdge[1]
-      er[i].meshScalingRegionalEdge = 1.0 / cmath.pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
-    end
-
-    for i in cell_range do
-      cr[i].meshScalingRegionalCell = 1.0/ cmath.pow(cr[i].meshDensity, 0.25)
->>>>>>> 14d05fb3bb98095325ba02cf34f6b20629bcbc40
     end
   end
 end
@@ -1875,7 +1774,6 @@ reads writes (cr.uReconstructX, cr.uReconstructY, cr.uReconstructZ) do
   end -- iCell
 
   if (on_a_sphere) then
-    --__demand(__openmp)
     for iCell in cell_range do
       var clat = cos(cr[{iCell.x, 0}].lat)
       var slat = sin(cr[{iCell.x, 0}].lat)
