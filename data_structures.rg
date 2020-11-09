@@ -252,6 +252,13 @@ fspace cell_fs {
     t_init : double, --type="real" dimensions="nVertLevels nCells" units="K" description="theta reference profile"
     tend_rtheta_physics : double, --Note: not found in Registry.xml
 
+    -- The following are added to the region for parallelization purposes
+    ru_edge_w : double, --Note: not found in Registry.xml
+    flux_arr : double,
+    wdwz : double,
+
+    wdtz : double,
+
     --vars first seen in atm_rk_integration_setup--
     rtheta_p_save : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="predicted value rtheta_p, saved before acoustic steps"
     rho_p_save : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="predicted value rho_p, saved before acoustic steps" 
@@ -370,6 +377,10 @@ fspace edge_fs {
     delsq_u : double, --Note: not found in Registry.xml
     tend_ru_physics : double, --Note: not found in Registry.xml
     ru_save : double, --type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-2} s^{-1}" description="predicted value of horizontal momentum, saved before acoustic steps"
+    -- The following are added to the region for parallelization purposes
+    wduz : double, --Note: not found in Registry.xml
+    q : double, --Note: not found in Registry.xml
+    u_mix : double, --Note: not found in Registry.xml
 
     -- vars first seen in atm_rk_integration_setup --
     u_2 : double, --Note: not found in Registry.xml. Predicted value of u, saved before acoustic steps
