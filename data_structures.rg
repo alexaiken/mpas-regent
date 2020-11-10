@@ -183,6 +183,8 @@ fspace cell_fs {
     cofwt : double, -- type="real" dimensions="nVertLevels nCells Time" units="m s^{-1} K^{-1}" description="coefficient for implicit contribution of density to the vertical velocity update"
 
     a_tri : double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="implicit tridiagonal solve coefficients"
+    b_tri : double, --Note: not found in Registry.xml
+    c_tri : double, --Note: not found in Registry.xml
     alpha_tri : double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="implicit tridiagonal solve coefficients"
     gamma_tri : double,  --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="implicit tridiagonal solve coefficients"
 

@@ -42,7 +42,7 @@ fabs = regentlib.fabs(double)
 pow = regentlib.pow(double)
 sqrt = regentlib.sqrt(double)
 
-__demand(__cuda)
+--__demand(__cuda)
 task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
                        er : region(ispace(int2d), edge_fs),
                        vr : region(ispace(int2d), vertex_fs))
@@ -493,12 +493,12 @@ end
 --mpas used cellSolveStart, cellSolveEnd; we believe those deal with how mpas uses parallelization (a start and end for which cell pool is currently being worked on). We will just loop thru the entire cell region instead.
 --mpas renames some fields; we will just use the original name --- p : exner, t : theta_m, rb : rho_base, rtb : rtheta_base, pb : exner_base, rt : rtheta_p
 
---__demand(__cuda)
+__demand(__cuda)
 task atm_compute_vert_imp_coefs(cr : region(ispace(int2d), cell_fs),
                                 vert_r : region(ispace(int1d), vertical_fs),
                                 dts : double)
 where reads (cr.cqw, cr.exner, cr.exner_base, cr.qtot, cr.rho_base, cr.rtheta_base, cr.rtheta_p, cr.theta_m, cr.zz, vert_r.rdzu, vert_r.rdzw, vert_r.fzm, vert_r.fzp),
-reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr.gamma_tri, vert_r.cofrz) do
+reads writes (cr.a_tri, cr.alpha_tri, cr.b_tri, cr.c_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr.gamma_tri, vert_r.cofrz) do
   format.println("Calling atm_compute_vert_imp_coefs...")
 
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
@@ -512,9 +512,6 @@ reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr
   var c2 = constants.cp * rcv
 
   var qtotal : double
-  var b_tri : double[nVertLevels]
-  var c_tri : double[nVertLevels]
-
 
   -- MGD bad to have all threads setting this variable?
   for k in vert_level_range do
@@ -523,14 +520,14 @@ reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr
 
   for iCell in cell_range_1d do
     --cr[iCell].a_tri = 0.0 --a_tri(1,iCell) = 0.  -- note, this value is never used
-    --b_tri[0] = 1.0    -- note, this value is never used
-    --c_tri[0] = 0.0    -- note, this value is never used
+    --cr[{iCell.x, 0}].b_tri = 1.0    -- note, this value is never used
+    --cr[{iCell.x, 0}].c_tri = 0.0    -- note, this value is never used
     cr[iCell].gamma_tri = 0.0
     --cr[iCell].alpha_tri = 0.0  -- note, this value is never used
   end
 
+  -- NB: The following loops must be kept separate, otherwise the parallelism will fail.
   for iCell in cell_range do --  we only need to do cells we are solving for, not halo cells
-
     if (iCell.y > 0) then
       cr[iCell].cofwr = .5 * dtseps * constants.gravity * (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz)
     end
@@ -540,23 +537,37 @@ reads writes (cr.a_tri, cr.alpha_tri, cr.coftz, cr.cofwr, cr.cofwt, cr.cofwz, cr
       cr[iCell].cofwz = dtseps * c2 * (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz) * vert_r[iCell.y].rdzu * cr[iCell].cqw * (vert_r[iCell.y].fzm * cr[iCell].exner + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].exner)
       cr[iCell].coftz = dtseps * (vert_r[iCell.y].fzm * cr[iCell].theta_m + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].theta_m)
     end
-    
 
     var qtotal = cr[iCell].qtot
 
     cr[iCell].cofwt = .5 * dtseps * rcv * cr[iCell].zz * constants.gravity * cr[iCell].rho_base / ( 1.0 + qtotal) * cr[iCell].exner / ((cr[iCell].rtheta_base + cr[iCell].rtheta_p) * cr[iCell].exner_base)
+  end
 
+  for iCell in cell_range do
     if (iCell.y > 0) then --k=2,nVertLevels
-      cr[iCell].a_tri = -1.0 * cr[iCell].cofwz * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz + cr[iCell].cofwr * vert_r[iCell.y - 1].cofrz - cr[iCell - {0, 1}].cofwt * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw
+      cr[iCell].a_tri = -1.0 * cr[iCell].cofwz * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz 
+                        + cr[iCell].cofwr * vert_r[iCell.y - 1].cofrz - cr[iCell - {0, 1}].cofwt * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw
 
-      b_tri[iCell.y] = 1.0 + cr[iCell].cofwz * (cr[iCell].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz +  cr[iCell].coftz * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz) - cr[iCell].coftz * (cr[iCell].cofwt * vert_r[iCell.y].rdzw - cr[iCell].cofwt * vert_r[iCell.y - 1].rdzw) + cr[iCell].cofwr * ((vert_r[iCell.y].cofrz- vert_r[iCell.y - 1].cofrz))
+      cr[iCell].b_tri = 1.0 + cr[iCell].cofwz * (cr[iCell].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz + cr[iCell].coftz 
+                       * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz) - cr[iCell].coftz * (cr[iCell].cofwt * vert_r[iCell.y].rdzw 
+                       - cr[iCell].cofwt * vert_r[iCell.y - 1].rdzw) + cr[iCell].cofwr * ((vert_r[iCell.y].cofrz - vert_r[iCell.y - 1].cofrz))
 
-      c_tri[iCell.y] = -1.0 * cr[iCell].cofwz * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz - cr[iCell].cofwr * vert_r[iCell.y].cofrz + cr[iCell].cofwt * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw
-      --MGD VECTOR DEPENDENCE
-      cr[iCell].alpha_tri = 1.0 / (b_tri[iCell.y] - cr[iCell].a_tri * cr[iCell - {0, 1}].gamma_tri)
-      cr[iCell].gamma_tri = c_tri[iCell.y] * cr[iCell].alpha_tri
+      cr[iCell].c_tri = -1.0 * cr[iCell].cofwz * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz 
+                       - cr[iCell].cofwr * vert_r[iCell.y].cofrz + cr[iCell].cofwt * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw
     end
+  end
 
+  for iCell in cell_range do
+    if (iCell.y > 0) then --k=2,nVertLevels
+      --MGD VECTOR DEPENDENCE
+      cr[iCell].alpha_tri = 1.0 / (cr[iCell].b_tri - cr[iCell].a_tri * cr[iCell - {0, 1}].gamma_tri)
+    end
+  end
+
+  for iCell in cell_range do
+    if (iCell.y > 0) then --k=2,nVertLevels
+      cr[iCell].gamma_tri = cr[iCell].c_tri * cr[iCell].alpha_tri
+    end
   end -- loop over cells
 end
 
@@ -741,10 +752,10 @@ task flux3(q_im2 : double, q_im1 : double, q_i : double, q_ip1 : double, ua : do
 end
 
 __demand(__inline)
-task rayleigh_damp_coef(k : double) : double
+task rayleigh_damp_coef(vertLevel : double) : double
   var rayleigh_coef_inverse = 1.0 / ( [double](constants.config_number_rayleigh_damp_u_levels)
                                       * (constants.config_rayleigh_damp_u_timescale_days * seconds_per_day) )
-  return [double](k - (nVertLevels - constants.config_number_rayleigh_damp_u_levels)) * rayleigh_coef_inverse
+  return [double](vertLevel - (nVertLevels - constants.config_number_rayleigh_damp_u_levels)) * rayleigh_coef_inverse
 end
 
 -- Comments for atm_compute_dyn_tend_work
@@ -1259,7 +1270,6 @@ reads writes (cr.delsq_divergence, cr.delsq_theta, cr.delsq_w, cr.dpdz, cr.flux_
 
 
 -------- BEGIN THETA SECTION --------
-
   -- horizontal advection for theta
   for iCell in cell_range do
     cr[iCell].tend_theta = 0.0
