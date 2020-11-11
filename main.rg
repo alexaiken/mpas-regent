@@ -39,7 +39,7 @@ task main()
   atm_core_init(cell_region, edge_region, vertex_region, vertical_region)
 
   for i = 0, constants.NUM_TIMESTEPS do
-    atm_timestep(cell_region, edge_region, vertex_region, vertical_region, i)
+    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, i)
   end
 
   atm_compute_output_diagnostics(cell_region)

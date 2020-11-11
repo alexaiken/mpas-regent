@@ -1,6 +1,7 @@
 import "regent"
 require "data_structures"
 require "atmphys_init"
+require "atmphys_driver"
 
 local constants = require("constants")
 local format = require("std/format")
@@ -35,4 +36,19 @@ where reads writes (cr, er, vr, vert_r) do
   --config_zd: default 22000.0, config_xnutr: default 0.2. From config
   atm_compute_damping_coefs(22000, 0.2, cr)
 
+end
+
+task atm_do_timestep(cr : region(ispace(int2d), cell_fs),
+                     er : region(ispace(int2d), edge_fs),
+                     vr : region(ispace(int2d), vertex_fs),
+                     vert_r : region(ispace(int1d), vertical_fs),
+                     dt : double)
+where reads writes (cr, er, vr, vert_r) 
+do
+  --if(moist_physics) then
+  physics_timetracker()
+  physics_driver()
+  --end
+
+  atm_timestep(cr, er, vr, vert_r, dt)
 end
