@@ -13,9 +13,7 @@ task atm_core_init(cr : region(ispace(int2d), cell_fs),
 where reads writes (cr, er, vr, vert_r) do
   format.println("Calling atm_core_init...")
 
-  atm_compute_signs_pt1(cr, er, vr)
-
-  atm_compute_signs_pt2(cr, er, vr)
+  atm_compute_signs(cr, er, vr)
 
   atm_adv_coef_compression(cr, er)
 
