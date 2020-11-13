@@ -468,7 +468,7 @@ where reads writes (cr, er, vr, vert_r) do
 
     -- SKIPPING  if (config_scalar_advection .and. (.not. config_split_dynamics_transport) ) @ line 993
 
-    atm_compute_solve_diagnostics(cr, er, vr, false)
+    atm_compute_solve_diagnostics(cr, er, vr, false, rk_step)
 
     -- SKIPPING  if (config_scalar_advection .and. (.not. config_split_dynamics_transport) ) @ line 1246
 
