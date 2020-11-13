@@ -6,6 +6,7 @@ require "mesh_loading"
 require "init_atm_cases"
 require "dynamics_tasks"
 require "rk_timestep"
+require "atm_core"
 local constants = require("constants")
 
 terralib.linklibrary("/share/software/user/open/netcdf/4.4.1.1/lib/libnetcdf.so")
@@ -38,7 +39,7 @@ task main()
   atm_core_init(cell_region, edge_region, vertex_region, vertical_region)
 
   for i = 0, constants.NUM_TIMESTEPS do
-    atm_timestep(cell_region, edge_region, vertex_region, vertical_region, i)
+    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, i)
   end
 
   atm_compute_output_diagnostics(cell_region)

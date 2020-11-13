@@ -67,7 +67,19 @@ constants.config_print_detailed_minmax_vel = false
 constants.config_print_global_minmax_vel = false
 constants.config_print_global_minmax_sca = false
 
+-- Physics - Radiation
+constants.R_d = constants.rgas              -- gas constant for dry air [J kg-1 K-1]
+constants.R_v = 461.6                       -- gas constant for water vapor
+constants.ep_2 = terralib.constant(double, `(-constants.R_d / constants.R_v))
+constants.stbolt = 5.67051e-8
+constants.mwdry = 28.966                    -- molecular weight dry air ~ kg/kmole (shr_const_mwdair)
+constants.mwco2 = 44.                       -- molecular weight co2
+constants.tmelt = 273.16                    -- freezing T of fresh water ~ K 
 
+-- Physics - Radiation (parameters)
+constants.min_tp_h2o = 160.0        -- min T_p for pre-calculated abs/emis
+constants.max_tp_h2o = 349.999999   -- max T_p for pre-calculated abs/emis
+constants.ntemp = 192               -- Number of temperatures in H2O sat. table for Tp
 
 
 return constants
