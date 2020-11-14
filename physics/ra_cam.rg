@@ -10,7 +10,17 @@ task param_cldoptics_calc()
 end
 
 task radctl()
-  oznint()
+
+  -- passing temp variables for now
+  var julian : double = 1.0
+  var levsiz : int = 1
+  var num_months : int = 1
+  var pcols : int = 1
+  var ozncyc : bool = true
+  var ozmixmj = region(ispace(int3d, {pcols, levsiz, num_months}), doublefield)
+  var ozmix = region(ispace(int2d, {pcols, levsiz}), doublefield)
+  oznint(julian, ozmixmj, ozmix, levsiz, num_months, pcols, ozncyc)
+
   radozn()
   radinp()
   aqsat()
