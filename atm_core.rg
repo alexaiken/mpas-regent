@@ -1,7 +1,7 @@
 import "regent"
 require "data_structures"
-require "atmphys_init"
-require "atmphys_driver"
+require "physics/atmphys_init"
+require "physics/atmphys_driver"
 
 local constants = require("constants")
 local format = require("std/format")
@@ -23,7 +23,7 @@ where reads writes (cr, er, vr, vert_r) do
 
   atm_init_coupled_diagnostics(cr, er, vert_r)
 
-  atm_compute_solve_diagnostics(cr, er, vr, false) --last param is hollingsworth
+  atm_compute_solve_diagnostics(cr, er, vr, false, -1) --last param is hollingsworth
 
   mpas_reconstruct_2d(cr, er, false, true) --bools are includeHalos and on_a_sphere
 

@@ -1,7 +1,7 @@
 import "regent"
 require "data_structures"
-require "ra_cam_cld_support"
-require "ra_cam_radctl_support"
+require "physics/ra_cam_cld_support"
+require "physics/ra_cam_radctl_support"
 
 task param_cldoptics_calc()
   cldefr()

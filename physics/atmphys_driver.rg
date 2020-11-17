@@ -1,7 +1,7 @@
 import "regent"
 require "data_structures"
-require "atmphys_driver_cloudiness"
-require "atmphys_driver_radiation_swlw"
+require "physics/atmphys_driver_cloudiness"
+require "physics/atmphys_driver_radiation_swlw"
 
 task physics_timetracker()
 end

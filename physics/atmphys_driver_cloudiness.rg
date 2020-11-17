@@ -1,6 +1,6 @@
 import "regent"
 require "data_structures"
-require "thompson_cldfra3"
+require "physics/thompson_cldfra3"
 
 task allocate_cloudiness()
 end

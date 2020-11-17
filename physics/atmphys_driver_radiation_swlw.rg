@@ -1,6 +1,6 @@
 import "regent"
 require "data_structures"
-require "ra_cam"
+require "physics/ra_cam"
 
 task radconst()
 end

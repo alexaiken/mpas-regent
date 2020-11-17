@@ -1,6 +1,6 @@
 import "regent"
 require "data_structures"
-require "atmphys_camrad_init"
+require "physics/atmphys_camrad_init"
 
 -- Counterpart of mpas_atmphys_init.F:physics_init(...)
 -- Currently only implementing radiation
