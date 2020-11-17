@@ -70,8 +70,8 @@ task getfactors(cycflag : bool,
 end
 
 task oznint(julian : double,
-            ozmixmj : region(ispace(int3d), doublefield),
-            ozmix : region(ispace(int2d), doublefield),
+            ozmixmj : region(ispace(int3d), double),
+            ozmix : region(ispace(int2d), double),
             levsiz : int,
             num_months : int,
             pcols : int,
@@ -125,7 +125,7 @@ do
   -- Time interpolation
   for k = 0, levsiz do 
     for i = 0, pcols do
-      ozmix[{i, k}].x = ozmixmj[{i, k, nm}].x * fact1 + ozmixmj[{i, k, np}].x * fact2
+      ozmix[{i, k}] = ozmixmj[{i, k, nm}] * fact1 + ozmixmj[{i, k, np}] * fact2
     end
   end
 
@@ -137,11 +137,11 @@ end
 task radozn(ncol : int,     -- number of atmospheric columns
             pcols : int,
             pver : int,
-            pmid : region(ispace(int2d), doublefield),    -- level pressures (mks)
-            pin : region(ispace(int1d), doublefield),     -- ozone data level pressures (mks)
+            pmid : region(ispace(int2d), double),    -- level pressures (mks)
+            pin : region(ispace(int1d), double),     -- ozone data level pressures (mks)
             levsiz : int,                                 -- number of ozone layers
-            ozmix : region(ispace(int2d), doublefield),   -- ozone mixing ratio
-            o3vmr : region(ispace(int2d), doublefield))   -- OUTPUT, ozone volume mixing ratio
+            ozmix : region(ispace(int2d), double),   -- ozone mixing ratio
+            o3vmr : region(ispace(int2d), double))   -- OUTPUT, ozone volume mixing ratio
 where
   reads (pmid, pin, ozmix),
   writes (o3vmr)
@@ -149,9 +149,9 @@ do
   --
   -- Initialize index array
   --
-  var kupper = region(ispace(int1d, pcols), intfield)     -- Level indices for interpolation
+  var kupper = region(ispace(int1d, pcols), int)     -- Level indices for interpolation
   for i=0, ncol do
-    kupper[i].x = 1
+    kupper[i] = 1
   end
 
   for k=0, pver do
@@ -161,7 +161,7 @@ do
     --
     var kkstart : int = levsiz
     for i=0, ncol do
-      kkstart = min(kkstart, kupper[i].x)
+      kkstart = min(kkstart, kupper[i])
     end
 
     --
@@ -171,8 +171,8 @@ do
     var iter_done : bool = false
     for kk=kkstart, levsiz - 1 do
       for i=0, ncol do
-        if ((pin[kk].x < pmid[{i, k}].x) and (pmid[{i, k}].x < pin[kk + 1].x)) then
-          kupper[i].x = kk
+        if ((pin[kk] < pmid[{i, k}]) and (pmid[{i, k}] < pin[kk + 1])) then
+          kupper[i] = kk
           kount = kount + 1
         end
       end
@@ -184,9 +184,9 @@ do
       if (kount == ncol) then
         iter_done = true
         for i=0, ncol do
-          var dpu : double = pmid[{i, k}].x - pin[kupper[i].x].x
-          var dpl : double = pin[kupper[i].x + 1].x - pmid[{i, k}].x
-          o3vmr[{i, k}].x = (ozmix[{i, kupper[i].x}].x * dpl + ozmix[{i, kupper[i].x + 1}].x * dpu) / (dpl + dpu)
+          var dpu : double = pmid[{i, k}] - pin[kupper[i]]
+          var dpl : double = pin[kupper[i] + 1] - pmid[{i, k}]
+          o3vmr[{i, k}] = (ozmix[{i, kupper[i]}] * dpl + ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
         end
         break
       end
@@ -199,14 +199,14 @@ do
       -- of the longitude points.
       --
       for i=0, ncol do
-        if (pmid[{i, k}].x < pin[0].x) then
-          o3vmr[{i, k}].x = ozmix[{i, 0}].x * pmid[{i, k}].x / pin[0].x
-        elseif (pmid[{i, k}].x > pin[levsiz].x) then
-          o3vmr[{i, k}].x = ozmix[{i, levsiz}].x
+        if (pmid[{i, k}] < pin[0]) then
+          o3vmr[{i, k}] = ozmix[{i, 0}] * pmid[{i, k}] / pin[0]
+        elseif (pmid[{i, k}] > pin[levsiz]) then
+          o3vmr[{i, k}] = ozmix[{i, levsiz}]
         else
-          var dpu : double = pmid[{i, k}].x - pin[kupper[i].x].x
-          var dpl : double = pin[kupper[i].x + 1].x - pmid[{i, k}].x
-          o3vmr[{i, k}].x = (ozmix[{i, kupper[i].x}].x * dpl + ozmix[{i, kupper[i].x + 1}].x * dpu) / (dpl + dpu)
+          var dpu : double = pmid[{i, k}] - pin[kupper[i]]
+          var dpl : double = pin[kupper[i] + 1] - pmid[{i, k}]
+          o3vmr[{i, k}] = (ozmix[{i, kupper[i]}] * dpl + ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
         end
       end
     end
