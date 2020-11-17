@@ -13,6 +13,10 @@ fspace doublefield {
   x         : double;
 }
 
+fspace intfield {
+  x         : int;
+}
+
 -- check sanity of time interpolation factors to within 32-bit roundoff
 task validfactors(fact1 : double,
                   fact2 : double)
@@ -65,7 +69,6 @@ task getfactors(cycflag : bool,
   return fact1
 end
 
--- Sets ozmix
 task oznint(julian : double,
             ozmixmj : region(ispace(int3d), doublefield),
             ozmix : region(ispace(int2d), doublefield),
@@ -128,7 +131,87 @@ do
 
 end
 
-task radozn()
+-- Purpose: Interpolate ozone from current time-interpolated values to model levels
+--
+-- Method: Use pressure values to determine interpolation levels
+task radozn(ncol : int,     -- number of atmospheric columns
+            pcols : int,
+            pver : int,
+            pmid : region(ispace(int2d), doublefield),    -- level pressures (mks)
+            pin : region(ispace(int1d), doublefield),     -- ozone data level pressures (mks)
+            levsiz : int,                                 -- number of ozone layers
+            ozmix : region(ispace(int2d), doublefield),   -- ozone mixing ratio
+            o3vmr : region(ispace(int2d), doublefield))   -- OUTPUT, ozone volume mixing ratio
+where
+  reads (pmid, pin, ozmix),
+  writes (o3vmr)
+do
+  --
+  -- Initialize index array
+  --
+  var kupper = region(ispace(int1d, pcols), intfield)     -- Level indices for interpolation
+  for i=0, ncol do
+    kupper[i].x = 1
+  end
+
+  for k=0, pver do
+    --
+    -- Top level we need to start looking is the top level for the previous k
+    -- for all longitude points
+    --
+    var kkstart : int = levsiz
+    for i=0, ncol do
+      kkstart = min(kkstart, kupper[i].x)
+    end
+
+    --
+    -- Store level indices for interpolation
+    --
+    var kount : int = 0
+    var iter_done : bool = false
+    for kk=kkstart, levsiz - 1 do
+      for i=0, ncol do
+        if ((pin[kk].x < pmid[{i, k}].x) and (pmid[{i, k}].x < pin[kk + 1].x)) then
+          kupper[i].x = kk
+          kount = kount + 1
+        end
+      end
+
+      --
+      -- If all indices for this level have been found, do the interpolation and
+      -- go to the next level
+      --
+      if (kount == ncol) then
+        iter_done = true
+        for i=0, ncol do
+          var dpu : double = pmid[{i, k}].x - pin[kupper[i].x].x
+          var dpl : double = pin[kupper[i].x + 1].x - pmid[{i, k}].x
+          o3vmr[{i, k}].x = (ozmix[{i, kupper[i].x}].x * dpl + ozmix[{i, kupper[i].x + 1}].x * dpu) / (dpl + dpu)
+        end
+        break
+      end
+    end
+
+    if not iter_done then
+      --
+      -- If we've fallen through the kk=1,levsiz-1 loop, we cannot interpolate and
+      -- must extrapolate from the bottom or top ozone data level for at least some
+      -- of the longitude points.
+      --
+      for i=0, ncol do
+        if (pmid[{i, k}].x < pin[0].x) then
+          o3vmr[{i, k}].x = ozmix[{i, 0}].x * pmid[{i, k}].x / pin[0].x
+        elseif (pmid[{i, k}].x > pin[levsiz].x) then
+          o3vmr[{i, k}].x = ozmix[{i, levsiz}].x
+        else
+          var dpu : double = pmid[{i, k}].x - pin[kupper[i].x].x
+          var dpl : double = pin[kupper[i].x + 1].x - pmid[{i, k}].x
+          o3vmr[{i, k}].x = (ozmix[{i, kupper[i].x}].x * dpl + ozmix[{i, kupper[i].x + 1}].x * dpu) / (dpl + dpu)
+        end
+      end
+    end
+
+  end
 end
 
 task radinp()
