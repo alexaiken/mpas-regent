@@ -280,6 +280,10 @@ fspace cell_fs {
     uReconstructZonal : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Zonal component of reconstructed horizontal velocity at cell centers"
     uReconstructMeridional : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Meridional component of reconstructed horizontal velocity at cell centers"
 
+    ---------------------------------------------
+    -----------begin physics fields--------------
+    ---------------------------------------------
+
     -- Physics - Radiation
     --vars first seen in radiation_lw_from_MPAS
     sfc_emiss : double, --type="real" dimensions="nCells Time" units="unitless" description="surface emissivity"
@@ -319,6 +323,10 @@ fspace cell_fs {
     p2d : double,
     pres_hyd_p : double,
     o3vmr : double,
+
+    gsw : double, --type="real" dimensions="nCells Time" units="W m^{-2}" description="net surface shortwave radiation flux"
+    swcf : double, --type="real" dimensions="nCells Time" units="W m^{-2}" description="top-of-atmosphere cloud shortwave radiative forcing"
+    coszr : double, --type="real" dimensions="nCells Time" units="unitless" description="cosine of zenith solar angle"
 
     -- Temporary versions to be used in radiation. Currently included to match original style of radiation code. TODO: Are these necessary?
     sfc_emiss_p : double,
@@ -368,6 +376,9 @@ fspace cell_fs {
     absnxt_p : double[constants.cam_abs_dim1],
     abstot_p : double[constants.cam_abs_dim2],
     emstot_p : double,
+
+    -----------end physics fields----------------
+    ---------------------------------------------
 }
 
 

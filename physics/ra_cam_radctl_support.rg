@@ -9,14 +9,6 @@ floor = regentlib.floor(double)
 fmod = regentlib.fmod(double, double)
 
 
-fspace doublefield {
-  x         : double;
-}
-
-fspace intfield {
-  x         : int;
-}
-
 -- check sanity of time interpolation factors to within 32-bit roundoff
 task validfactors(fact1 : double,
                   fact2 : double)
