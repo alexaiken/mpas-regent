@@ -145,13 +145,98 @@ do
   radaeini(estblh2o, pstdx, constants.mwdry, constants.mwco2)
 end
 
--- initialization of saturation vapor pressures:
-task esinti(cr : region(ispace(int2d), cell_fs),
-            er : region(ispace(int2d), edge_fs))
-where reads (cr),
-      writes (cr)
+-- Purpose:
+-- Builds saturation vapor pressure table for later lookup procedure.
+--
+-- Method:
+-- Uses Goff & Gratch (1946) relationships to generate the table
+-- according to a set of free parameters defined below.  Auxiliary
+-- routines are also included for making rapid estimates (well with 1%)
+-- of both es and d(es)/dt for the particular table configuration.
+--
+-- Author: J. Hack
+task gestbl(estbl : region(ispace(int1d), doublefield))
+where reads writes (estbl)
 do
-  -- TODO
+  -- Initialize variables
+  var itype : double = 0
+  var pcf : double[5]                   -- polynomial coeffs -> es transition water to ice
+
+  -- Set es table parameters
+  var tmin : double = 173.16            -- Minimum temperature (K) in table
+  var tmax : double = 375.16            -- Maximum temperature (K) in table
+  var ttrice : double = 20.00           -- Trans. range from es over h2o to es over ice
+  var icephs : bool = true              -- Ice phase (true or false)
+
+  -- Set physical constants required for es calculation
+  var epsqs : double = constants.ep_2
+  var hlatv : double = 2.501e6          -- latent heat of evaporation ~ J/kg
+  var hlatf : double = 3.336e5          -- latent heat of fusion ~ J/kg
+  var rgasv : double = constants.R_v
+  var cp : double = constants.cp
+  var tmelt : double = 273.16           -- freezing T of fresh water ~ K
+
+  var lentbl = [int](tmax - tmin + 2.000001)
+  if (lentbl > constants.plenest) then
+    -- write(6,9000) tmax, tmin, plenest
+    -- call endrun ('GESTBL')    -- Abnormal termination
+  end
+
+-- Begin building es table.
+-- Check whether ice phase requested.
+-- If so, set appropriate transition range for temperature
+  if (icephs) then
+    if (ttrice ~= 0.0) then
+      itype = -ttrice
+    else
+      itype = 1
+    end
+  else
+    itype = 0
+  end
+--
+  var t = tmin - 1.0
+  for n = 0, lentbl do
+    t += 1.0
+    gffgch(t, estbl, n, itype)
+  end
+--
+  for n = lentbl, constants.plenest do
+    estbl[n].x = -99999.0
+  end
+
+-- Table complete -- Set coefficients for polynomial approximation of
+-- difference between saturation vapor press over water and saturation
+-- pressure over ice for -ttrice < t < 0 (degrees C). NOTE: polynomial
+-- is valid in the range -40 < t < 0 (degrees C).
+
+--                  --- Degree 5 approximation ---
+  pcf[0] =  5.04469588506e-01
+  pcf[1] = -5.47288442819e+00
+  pcf[2] = -3.67471858735e-01
+  pcf[3] = -8.95963532403e-03
+  pcf[4] = -7.78053686625e-05
+
+  --#if !defined(mpas)
+    --if (masterproc) then
+      --write(6,*)' *** SATURATION VAPOR PRESSURE TABLE COMPLETED ***'
+    --end
+  --#endif
+
+  --return
+
+--9000 format('GESTBL: FATAL ERROR *********************************',/, &
+--            ' TMAX AND TMIN REQUIRE A LARGER DIMENSION ON THE LENGTH', &
+--            ' OF THE SATURATION VAPOR PRESSURE TABLE ESTBL(PLENEST)',/, &
+--            ' TMAX, TMIN, AND PLENEST => ', 2f7.2, i3)
+end
+
+-- initialization of saturation vapor pressures:
+task esinti(estbl : region(ispace(int1d), doublefield))
+where reads writes (estbl)
+do
+  -- Call gestbl to build saturation vapor pressure table.
+  gestbl(estbl)
 end
 
 -- initialization of ozone mixing ratios:
@@ -163,13 +248,16 @@ do
   -- TODO
 end
 
+task aer_optics_initialize()
+end
+
 -- initialization of aerosol concentrations:
 task aerosol_init(cr : region(ispace(int2d), cell_fs),
                   er : region(ispace(int2d), edge_fs))
 where reads (cr),
       writes (cr)
 do
-  -- TODO
+  aer_optics_initialize()
 end
 
 -- Counterpart of mpas_atmphys_camrad_init.F:camradinit(...)
@@ -212,9 +300,13 @@ do
 
   var estblh2o = region(ispace(int1d, constants.ntemp), doublefield)      -- table of H2O saturation vapor pressures
   radini(estblh2o, constants.gravity, constants.cp, constants.ep_2, constants.stbolt, pstd*10.0)
-  
+
+  -- Table of saturation vapor pressure values es from tmin degrees
+  -- to tmax+1 degrees k in one degree increments.  ttrice defines the
+  -- transition region where es is a combination of ice & water values
+  var estbl = region(ispace(int1d, constants.plenest), doublefield)       -- table values of saturation vapor pressure
+  esinti(estbl)
   -- TODO correct arguments
-  esinti(cr, er)
   oznini(cr, er)
   aerosol_init(cr, er)
 end

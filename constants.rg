@@ -78,9 +78,10 @@ constants.tmelt = 273.16                                        -- freezing T of
 constants.daysperyear = 365
 
 -- Physics - Radiation (parameters)
-constants.min_tp_h2o = terralib.constant(double, 160.0)         -- min T_p for pre-calculated abs/emis
-constants.max_tp_h2o = 349.999999                               -- max T_p for pre-calculated abs/emis
-constants.ntemp = 192                                           -- Number of temperatures in H2O sat. table for Tp
+constants.min_tp_h2o = terralib.constant(double, 160.0)        -- min T_p for pre-calculated abs/emis
+constants.max_tp_h2o = 349.999999   -- max T_p for pre-calculated abs/emis
+constants.ntemp = 192               -- Number of temperatures in H2O sat. table for Tp
+constants.plenest = 250             -- length of saturation vapor pressure table
 
 
 return constants
