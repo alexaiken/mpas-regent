@@ -16,17 +16,21 @@ task main()
   ----- DEFINE INDEX SPACES AND REGIONS -----
   -------------------------------------------
 
-  -- Define index spaces for cell IDs, vertex IDs and edge IDs
+  -- Define index spaces
   var cell_id_space = ispace(int2d, {constants.nCells, constants.nVertLevels + 1})
   var edge_id_space = ispace(int2d, {constants.nEdges, constants.nVertLevels + 1})
   var vertex_id_space = ispace(int2d, {constants.nVertices, constants.nVertLevels + 1})
   var vertical_id_space = ispace(int1d, constants.nVertLevels + 1)
+  var ozn_id_space = ispace(int2d, {constants.nCells, constants.nOznLevels + 1})
+  var aerosol_id_space = ispace(int2d, {constants.nCells, constants.nAerLevels + 1})
 
   -- Define regions
   var cell_region = region(cell_id_space, cell_fs)
   var edge_region = region(edge_id_space, edge_fs)
   var vertex_region = region(vertex_id_space, vertex_fs)
   var vertical_region = region(vertical_id_space, vertical_fs)
+  var ozn_region = region(ozn_id_space, ozn_fs)
+  var aerosol_region = region(aerosol_id_space, aerosol_fs)
 
 
   load_mesh(cell_region, edge_region, vertex_region, constants.FILE_NAME, constants.GRAPH_FILE_NAME)

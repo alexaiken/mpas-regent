@@ -76,11 +76,22 @@ constants.mwdry = 28.966                                        -- molecular wei
 constants.mwco2 = terralib.constant(double, 44.0)               -- molecular weight co2
 constants.tmelt = 273.16                                        -- freezing T of fresh water ~ K
 constants.daysperyear = 365
+constants.solcon_0 = terralib.constant(double, 1370.0)          -- solar constant [W/m2]
+constants.nMonths = 12
+constants.cam_abs_dim1 = 1 -- TODO: What is this???
+constants.cam_abs_dim2 = constants.nVertLevels + 1
+
+--TODO: Radiation-related constants that we need to find, so these are placeholders for now
+constants.nOznLevels = 1
+constants.nAerLevels = 1
+constants.nAerosols = 12
 
 -- Physics - Radiation (parameters)
-constants.min_tp_h2o = terralib.constant(double, 160.0)         -- min T_p for pre-calculated abs/emis
-constants.max_tp_h2o = 349.999999                               -- max T_p for pre-calculated abs/emis
-constants.ntemp = 192                                           -- Number of temperatures in H2O sat. table for Tp
+constants.min_tp_h2o = terralib.constant(double, 160.0)        -- min T_p for pre-calculated abs/emis
+constants.max_tp_h2o = 349.999999   -- max T_p for pre-calculated abs/emis
+constants.ntemp = 192               -- Number of temperatures in H2O sat. table for Tp
+constants.plenest = 250             -- length of saturation vapor pressure table
 
+constants.config_dt = terralib.constant(double, 720.0)          -- Model time step, seconds
 
 return constants

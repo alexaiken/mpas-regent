@@ -279,6 +279,95 @@ fspace cell_fs {
     coeffs_reconstruct : double[constants.maxEdges][3], --type="real" dimensions="R3 maxEdges nCells" units="unitless" description="Coefficients to reconstruct velocity vectors at cell centers"
     uReconstructZonal : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Zonal component of reconstructed horizontal velocity at cell centers"
     uReconstructMeridional : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Meridional component of reconstructed horizontal velocity at cell centers"
+
+    -- Physics - Radiation
+    --vars first seen in radiation_lw_from_MPAS
+    sfc_emiss : double, --type="real" dimensions="nCells Time" units="unitless" description="surface emissivity"
+    skintemp : double, --type="real" dimensions="nCells Time" units="K" description="ground or water surface temperature"
+    snow : double, --type="real" dimensions="nCells Time" units="kg m^{-2}" description="snow water equivalent"
+    xice : double, --type="real" dimensions="nCells Time" units="unitless" description="fractional area coverage of sea-ice"
+    xland : double, --type="real" dimensions="nCells Time" units="unitless" description="land-ocean mask (1=land including sea-ice ; 2=ocean)"
+    cldfrac : double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="horizontal cloud fraction"
+    re_cloud : double, -- ?
+    re_ice : double, -- ?
+    re_snow : double, -- ?
+    sfc_albedo : double, --type="real" dimensions="nCells Time" units="unitless" description="surface albedo"
+    m_ps : double, --type="real" dimensions="nCells Time" units="Pa" description="Surface pressure from match on MPAS grid"
+    f_ice : double, --Note: not found in Registry.xml
+    f_rain : double, --Note: not found in Registry.xml
+
+    -- vars first seen in radiation_lw_to_MPAS
+    -- The following fields are all of dimensions="nCells Time" units="W m^{-2}"
+    glw : double, --all-sky downward surface longwave radiation
+    lwcf : double, --top-of-atmosphere cloud longwave radiative forcing
+    lwdnb : double, --all-sky downward surface longwave radiation flux
+    lwdnbc : double, --clear-sky downward surface longwave radiation flux
+    lwdnt : double, --all-sky downward top-of-the-atmosphere longwave radiation flux
+    lwdntc : double, --clear-sky downward top-of-the-atmosphere longwave radiation flux
+    lwupb : double, --all-sky upward surface longwave radiation flux
+    lwupbc : double, --clear-sky upward surface longwave radiation flux
+    lwupt : double, --all-sky upward top-of-the-atmosphere longwave radiation flux
+    lwuptc : double, --clear-sky upward top-of-the-atmosphere longwave radiation flux
+    olrtoa : double, --all-sky top-of-atmosphere outgoing longwave radiation flux
+
+    rthratenlw : double, --type="real" dimensions="nVertLevels nCells Time" units="K s^{-1}" description="tendency of potential temperature due to short wave radiation"
+    rre_cloud : double, --type="real" dimensions="nVertLevels nCells Time" units="microns" description="effective radius of cloud water droplets calculated in RRTMG radiation"
+    rre_ice : double, --type="real" dimensions="nVertLevels nCells Time" units="microns" description="effective radius of cloud ice crystals calculated in RRTMG radiation"
+    rre_snow : double, --type="real" dimensions="nVertLevels nCells Time" units="microns" description="effective radius of snow crystals calculated in RRTMG radiation"
+
+    o32d : double,
+    p2d : double,
+    pres_hyd_p : double,
+    o3vmr : double,
+
+    -- Temporary versions to be used in radiation. Currently included to match original style of radiation code. TODO: Are these necessary?
+    sfc_emiss_p : double,
+    tsk_p : double, --skintemp
+    snow_p : double,
+    xice_p : double,
+    xland_p : double,
+    cldfrac_p : double,
+    recloud_p : double,
+    reice_p : double,
+    resnow_p : double,
+    rrecloud_p : double,
+    rreice_p : double,
+    rresnow_p : double,
+    sfc_albedo_p : double,
+    m_psp_p : double,
+    m_psn_p : double,
+    glw_p : double,
+    lwcf_p : double,
+    lwdnb_p : double,
+    lwdnbc_p : double,
+    lwdnt_p : double,
+    lwdntc_p : double,
+    lwupb_p : double,
+    lwupbc_p : double,
+    lwupt_p : double,
+    lwuptc_p : double,
+    olrtoa_p : double,
+    rthratenlw_p : double,
+    xlat_p : double,
+    xlon_p : double,
+    coszr_p : double,
+    gsw_p : double,
+    swcf_p : double,
+    swdnb_p : double,
+    swdnbc_p : double,
+    swdnt_p : double,
+    swdntc_p : double,
+    swupb_p : double,
+    swupbc_p : double,
+    swupt_p : double,
+    swuptc_p : double,
+    rthratensw_p : double,
+    cemiss_p : double,
+    taucldc_p : double,
+    taucldi_p : double,
+    absnxt_p : double[constants.cam_abs_dim1],
+    abstot_p : double[constants.cam_abs_dim2],
+    emstot_p : double,
 }
 
 
@@ -405,4 +494,25 @@ fspace vertical_fs {
   -- vars first seen in atm_compute_dyn_tend_work --
   u_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="u reference profile"
   v_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="v reference profile"
+}
+
+fspace ozn_fs {
+  o3clim : double, --type="real" dimensions="nOznLevels nCells Time" units="mol mol^{-1}" description="climatological ozone on prescribed pressure levels at current time"
+  pin : double, --type="real"  dimensions="nOznLevels" units="Pa" description="fixed pressure levels at which climatological ozone is defined"
+  ozmixm : double[constants.nMonths], --type="real" dimensions="nMonths nOznLevels nCells" units="mol mol^{-1}" description="monthly-mean climatological ozone defined at fixed pressure levels"
+
+  --Temporary versions to be used in radiation code
+  o3clim_p : double,
+  pin_p : double,
+  ozmixm_p : double[constants.nMonths],
+}
+
+fspace aerosol_fs {
+  aerosols : double[constants.nAerosols], --type="real" dimensions="nAerLevels nCells Time"
+  m_hybi : double, --type="real" dimensions="nAerLevels nCells" units="unitless" description="Matched hybi (needs to be re-checked)"
+
+  --Temporary versions to be used in radiation code
+  aerosolcp_p : double[constants.nAerosols],
+  aerosolcn_p : double[constants.nAerosols],
+  m_hybi_p : double,
 }
