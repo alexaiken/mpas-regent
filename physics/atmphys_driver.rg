@@ -26,7 +26,7 @@ task physics_driver()
   driver_cloudiness()
 
   allocate_radiation_sw()
-  driver_radiation_sw()
+  --driver_radiation_sw()
 
   allocate_radiation_lw()
   driver_radiation_lw()

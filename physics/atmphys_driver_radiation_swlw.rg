@@ -4,12 +4,62 @@ require "physics/ra_cam"
 
 local constants = require("constants")
 
-local levsiz = constants.noznLevels
+local nCellsSolve = constants.nCells --simplification
+local nAerLevels = constants.nAerLevels
+local nAerosols = constants.nAerosols
+local nOznLevels = constants.nOznLevels
+local levsiz = constants.nOznLevels
+local nVertLevels = constants.nVertLevels
 
--- Math library imports
-min = regentlib.fmin(double, double)
+local jts = 0
+local jte = 0
 
-task radconst()
+--Math function imports
+--TODO: These cause an error "macros must be called from inside terra code".
+--min = regentlib.fmin(double, double)
+--sin = regentlib.sin(double)
+--asin = regentlib.asin(double)
+--cos = regentlib.cos(double)
+--acos = regentlib.acos(double)
+
+task radconst(julian : double,
+              degrad : double,
+              dpd : double)
+  var obecl : double
+  var sinob : double
+  var sxlong : double
+  var arg : double
+  var decdeg : double
+  var djul : double
+  var rjul : double
+  var eccfac : double
+  var declin : double
+  var solcon : double
+
+  -- obecl : obliquity = 23.5 degree.
+      
+  obecl = 23.5 * degrad
+  --sinob = sin(obecl)
+      
+  -- calculate longitude of the sun from vernal equinox:
+
+  if (julian > 80.0) then
+    sxlong = dpd * (julian - 80.0)
+  else
+    sxlong = dpd * (julian + 285.0)
+  end
+  sxlong *= degrad
+  --arg = sinob * sin(sxlong)
+  --declin = asin(arg)
+  --decdeg = declin / degrad
+
+  -- solar constant eccentricity factor (paltridge and platt 1976)
+
+  --djul = julian * 360.0 / 365.0
+  --rjul = djul * degrad
+  --eccfac = 1.000110 + 0.034221 * cos(rjul) + 0.001280 * sin(rjul) + 0.000719 * 
+  --      cos(2 * rjul) + 0.000077 * sin(2 * rjul)
+  --solcon = constants.solcon_0 * eccfac
 end
 
 ----------------
@@ -30,7 +80,7 @@ end
 
 task driver_radiation_sw()
   radiation_sw_from_MPAS()
-  radconst()
+  radconst(0, 0, 0)
   camrad()
   radiation_sw_to_MPAS()
 end
@@ -46,154 +96,70 @@ task deallocate_radiation_lw()
 end
 
 task vinterp_ozn()
--- reads: pin_in, ozmix_in
--- writes: o3vmr_out
--- reads writes: o3vmr, ozmix, pin, pmid
-  -- Initialize variables
-  var kkstart : int -- level index
-  var kount : int -- counter
-  var dpu : double -- upper level pressure difference
-  var dpl : double -- lower level pressure difference
-  var kupper : int[pcols] -- level indices for interpolation
-
-  -- ldf begin:
-  for k = 0, levsiz do
-    pin[k] = pin_in[k]
-  end
-  for i = 0, pcols do
-    for k = 0, levsiz do
-      ozmix[{i, k}] = ozmix_in[{i, k}]
-    end
-  end
-  for i = 0, pcols do
-    for k = 0, pver do
-      var kk = pver - k + 1
-      pmid[{i, kk}] = pmid_in[{i, k}]
-    end
-  end
-  -- ldf end.
-
-  -- Initialize index array
-  for i = 0, ncol do
-    kupper[i] = 1 -- TODO: 0 or 1?
-  end
-
-  for k = 0, pver do
-    -- Top level we need to start looking is the top level for the previous k
-    -- for all longitude points
-    kkstart = levsiz
-    for i = 0, ncol do
-      kkstart = fmin(kkstart, kupper[i])
-    end
-    kount = 0
-
-    -- Store level indices for interpolation
-    for kk = kkstart, levsiz - 1 do -- Original: kkstart to levsiz - 1
-      for i = 0, ncol do
-        if (pin[kk] < pmid[{i, k}] and pmid[{i, k}] <= pin[kk + 1]) then
-          kupper[i] = kk
-          kount += 1
-        end
-      end
-
-      -- If all indices for this level have been found, do the interpolation and
-      -- go to the next level
-      if (kount == ncol) then
-        for i = 0, ncol do
-          dpu = pmid[{i, k}] - pin[kupper[i]]
-          dpl = pin[kupper[i] + 1] - pmid[{i, k}]
-          o3vmr[{i, k}] = (ozmix[{i, kupper[i]}] * dpl +
-                            ozmix[{i, kupper[i]+1}] * dpu) / (dpl + dpu)
-        end
-        --goto 35
-      end
-    end
-
-    -- If we've fallen through the kk=1,levsiz-1 loop, we cannot interpolate and
-    -- must extrapolate from the bottom or top ozone data level for at least some
-    -- of the longitude points.
-    for i = 0, ncol do
-      if (pmid[{i, k}] < pin[0]) then -- Originally: .lt. pin(1)
-        o3vmr[{i, k}] = ozmix[{i,0}] * pmid[{i, k}] / pin[0]
-      else if (pmid[{i, k}] > pin[levsiz]) then
-        o3vmr[{i,k}] = ozmix[{i, levsiz}]
-      else
-        dpu = pmid[{i, k}] - pin[kupper[i]]
-        dpl = pin[kupper[i]+1] - pmid[{i, k}]
-        o3vmr[{i, k}] = (ozmix[{i, kupper[i]}] * dpl +
-                          ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
-      end
-    end
-
-    if (kount > ncol) then
-      -- call endrun ('VINTERP_OZN: Bad ozone data: non-monotonicity suspected')
-    end
---35    continue
-  end
-
-  --ldf begin:
-  for i = 0, pcols do
-    for k = 0, pver do
-      var kk = pver - k + 1
-      o3vmr_out[{i, kk}] = o3vmr[{i, k}]
-    end
-  end
-  --ldf end.
 end
 
-task radiation_lw_from_MPAS(cr : region (ispace(int2d), cell_fs),
+task radiation_lw_from_MPAS(cr : region(ispace(int2d), cell_fs),
+                            ozn_r : region(ispace(int2d), ozn_fs),
+                            aer_r : region(ispace(int2d), aerosol_fs),
                             radt_lw_scheme : regentlib.string,
                             microp_scheme : regentlib.string,
                             config_microp_re : bool,
                             config_o3climatology : bool,
-                            xtime_s : double)
-where reads (cr.cldfrac, cr.lat, cr.lon, cr.m_ps, cr.re_cloud, cr.re_ice, cr.re_snow, cr.sfc_emiss, cr.skintemp, cr.snow, cr.xice, cr.xland)
+                            xtime_s : double,
+                            degrad : double)
+where reads (cr.cldfrac, cr.lat, cr.lon, cr.m_ps, cr.pres_hyd_p, cr.re_cloud, cr.re_ice, cr.re_snow, cr.sfc_albedo, cr.sfc_emiss, cr.skintemp, cr.snow, cr.xice, cr.xland,
+aer_r.aerosols, aer_r.m_hybi,
+ozn_r.o3clim, ozn_r.ozmixm, ozn_r.pin),
+writes (cr.absnxt_p, cr.abstot_p, cr.cemiss_p, cr.cldfrac_p, cr.coszr_p, cr.emstot_p, cr.f_ice, cr.f_rain, cr.glw_p, cr.gsw_p, cr.lwcf_p, cr.lwdnb_p, cr.lwdnbc_p, cr.lwdnt_p, cr.lwdntc_p, cr.lwupb_p, cr.lwupbc_p, cr.lwupt_p, cr.lwuptc_p, cr.m_psn_p, cr.m_psp_p, cr.o3vmr, cr.olrtoa_p, cr.p2d, cr.recloud_p, cr.reice_p, cr.resnow_p, cr.rrecloud_p, cr.rreice_p, cr.rresnow_p, cr.rthratenlw_p, cr.rthratensw_p, cr.sfc_albedo_p, cr.sfc_emiss_p, cr.snow_p, cr.swcf_p, cr.swdnb_p, cr.swdnbc_p, cr.swdnt_p, cr.swdntc_p, cr.swupb_p, cr.swupbc_p, cr.swupt_p, cr.swuptc_p, cr.taucldc_p, cr.taucldi_p, cr.tsk_p, cr.xice_p, cr.xland_p, cr.xlat_p, cr.xlon_p,
+aer_r.aerosolcn_p, aer_r.aerosolcp_p, aer_r.m_hybi_p,
+ozn_r.o3clim_p, ozn_r.ozmixm_p, ozn_r.pin_p),
+reads writes (cr.o32d)
 do
   for j = jts, jte do
-    for i = its, ite do
-      sfc_emiss_p[{i, j}] = cr[{i, 0}].sfc_emiss
-      tsk_p[{i, j}]       = cr[{i, 0}].skintemp
-      snow_p[{i, j}]      = cr[{i, 0}].snow
-      xice_p[{i, j}]      = cr[{i, 0}].xice
-      xland_p[{i, j}]     = cr[{i, 0}].xland
+    for i = 0, nCellsSolve do
+      cr[{i, 0}].sfc_emiss_p = cr[{i, 0}].sfc_emiss
+      cr[{i, 0}].tsk_p       = cr[{i, 0}].skintemp
+      cr[{i, 0}].snow_p      = cr[{i, 0}].snow
+      cr[{i, 0}].xice_p      = cr[{i, 0}].xice
+      cr[{i, 0}].xland_p     = cr[{i, 0}].xland
     end
   end
   for j = jts, jte do
-    for k = kts, kte do
-      for i = its, ite do
-        cldfrac_p[{i,k,j}] = cr[{i, k}].cldfrac
+    for k = 0, nVertLevels do
+      for i = 0, nCellsSolve do
+        cr[{i, k}].cldfrac_p = cr[{i, k}].cldfrac
       end
     end
   end
 
   -- initialization:
   for j = jts, jte do
-    for k = kts, kte do
-      for i = its, ite do
-        f_ice[{i,k,j}]  = 0.0
-        f_rain[{i,k,j}] = 0.0
+    for k = 0, nVertLevels do
+      for i = 0, nCellsSolve do
+        cr[{i, k}].f_ice  = 0.0
+        cr[{i, k}].f_rain = 0.0
       end
     end
   end
 
   for j = jts, jte do
-    for i = its, ite do
-      glw_p[{i, j}]      = 0.0
-      lwcf_p[{i, j}]     = 0.0
-      lwdnb_p[{i, j}]    = 0.0
-      lwdnbc_p[{i, j}]   = 0.0
-      lwdnt_p[{i, j}]    = 0.0
-      lwdntc_p[{i, j}]   = 0.0
-      lwupb_p[{i, j}]    = 0.0
-      lwupbc_p[{i, j}]   = 0.0
-      lwupt_p[{i, j}]    = 0.0
-      lwuptc_p[{i, j}]   = 0.0
-      olrtoa_p[{i, j}]   = 0.0
+    for i = 0, nCellsSolve do
+      cr[{i, 0}].glw_p      = 0.0
+      cr[{i, 0}].lwcf_p     = 0.0
+      cr[{i, 0}].lwdnb_p    = 0.0
+      cr[{i, 0}].lwdnbc_p   = 0.0
+      cr[{i, 0}].lwdnt_p    = 0.0
+      cr[{i, 0}].lwdntc_p   = 0.0
+      cr[{i, 0}].lwupb_p    = 0.0
+      cr[{i, 0}].lwupbc_p   = 0.0
+      cr[{i, 0}].lwupt_p    = 0.0
+      cr[{i, 0}].lwuptc_p   = 0.0
+      cr[{i, 0}].olrtoa_p   = 0.0
     end
   
-    for k = kts, kte do
-      for i = its, ite do
-        rthratenlw_p[{i,k,j}] = 0.0
+    for k = 0, nVertLevels do
+      for i = 0, nCellsSolve do
+        cr[{i, k}].rthratenlw_p = 0.0
       end
     end
   end
@@ -203,118 +169,118 @@ do
       if (config_microp_re) then
 
         for j = jts, jte do
-          for k = kts, kte do
-            for i = its, ite do
-              recloud_p[{i, k, j}] = cr[{i, k}].re_cloud
-              reice_p[{i, k, j}]   = cr[{i, k}].re_ice
-              resnow_p[{i, k, j}]  = cr[{i, k}].re_snow
+          for k = 0, nVertLevels do
+            for i = 0, nCellsSolve do
+              cr[{i, k}].recloud_p = cr[{i, k}].re_cloud
+              cr[{i, k}].reice_p   = cr[{i, k}].re_ice
+              cr[{i, k}].resnow_p  = cr[{i, k}].re_snow
             end
           end
         end
       else
         for j = jts, jte do
-          for k = kts, kte do
-            for i = its, ite do
-              recloud_p[{i, k, j}] = 0.0
-              reice_p[{i, k, j}]   = 0.0
-              resnow_p[{i, k, j}]  = 0.0
+          for k = 0, nVertLevels do
+            for i = 0, nCellsSolve do
+              cr[{i, k}].recloud_p = 0.0
+              cr[{i, k}].reice_p   = 0.0
+              cr[{i, k}].resnow_p  = 0.0
             end
           end
         end
       end
       for j = jts, jte do
-        for k = kts, kte do
-          for i = its, ite do
-            rrecloud_p[{i, k, j}] = 0.0
-            rreice_p[{i, k, j}]   = 0.0
-            rresnow_p[{i, k, j}]  = 0.0
+        for k = 0, nVertLevels do
+          for i = 0, nCellsSolve do
+            cr[{i, k}].rrecloud_p = 0.0
+            cr[{i, k}].rreice_p   = 0.0
+            cr[{i, k}].rresnow_p  = 0.0
           end
         end
       end
     end
 
     for j = jts, jte do
-      for k = kts, kte + 2 do
-        for i = its, ite do
-          lwdnflx_p[{i, k, j}]  = 0.0
-          lwdnflxc_p[{i, k, j}] = 0.0
-          lwupflx_p[{i, k, j}]  = 0.0
-          lwupflxc_p[{i, k, j}] = 0.0
+      for k = 0, nVertLevels + 2 do
+        for i = 0, nCellsSolve do
+          --lwdnflx_p[{i, k, j}]  = 0.0
+          --lwdnflxc_p[{i, k, j}] = 0.0
+          --lwupflx_p[{i, k, j}]  = 0.0
+          --lwupflxc_p[{i, k, j}] = 0.0
         end
       end
     end
 
     if (config_o3climatology) then
       -- ozone mixing ratio:
-      for k = 0, num_oznLevels do
-        pin_p[k] = pin[k]
+      for k = 0, nOznLevels do
+        ozn_r[{0, k}].pin_p = ozn_r[{0, k}].pin
       end
       for j = jts, jte do
-        for k = 0, num_oznLevels do
-          for i = its, ite do
-            o3clim_p[{i, k, j}] = cr[{i, 0}].o3clim[k]
+        for k = 0, nOznLevels do
+          for i = 0, nCellsSolve do
+            ozn_r[{i, k}].o3clim_p = ozn_r[{i, k}].o3clim
           end
         end
       end
 
-      var nlevs = kte - kts + 1
-      var ncols = ite - its + 1
+      var nlevs = nVertLevels + 1
+      var ncols = nCellsSolve + 1
       --if(.not.allocated(p2d) ) allocate(p2d(its:ite,kts:kte) )
       --if(.not.allocated(o32d)) allocate(o32d(its:ite,kts:kte))
       for j = jts, jte do
-        for i = its, ite do
-          for k = kts, kte do
-            o32d[{i, k}] = 0.0
-            p2d[{i, k}]  = pres_hyd_p[{i, k, j}] / 100.0
+        for i = 0, nCellsSolve do
+          for k = 0, nVertLevels do
+            cr[{i, k}].o32d = 0.0
+            cr[{i, k}].p2d  = cr[{i, k}].pres_hyd_p / 100.0
           end
         end
-        vinterp_ozn(1, ncols, ncols, nlevs, p2d, pin_p, num_oznlevels, o3clim_p[{1, 1, j}], o32d)
-        for i = its, ite do
-          for k = kts, kte do
-            o3vmr[{k,i}] = o32d[{i,k}]
+        --vinterp_ozn(cr, ozn_r, 1, ncols, ncols, nlevs)
+        for i = 0, nCellsSolve do
+          for k = 0, nVertLevels do
+            cr[{i, k}].o3vmr = cr[{i, k}].o32d
           end
         end
       end
       --if(allocated(p2d))  deallocate(p2d)
       --if(allocated(o32d)) deallocate(o32d)
     else
-      for k = 0, num_oznLevels do
-        pin_p[k] = 0.0
+      for k = 0, nOznLevels do
+        ozn_r[{0, k}].pin_p = 0.0
       end
       for j = jts, jte do
-        for k = 0, num_oznLevels do
-          for i = its, ite do
-            o3clim_p[{i,k,j}] = 0.0
+        for k = 0, nOznLevels do
+          for i = 0, nCellsSolve do
+            ozn_r[{i, k}].o3clim_p = 0.0
           end
         end
       end
     end
-
-  else if ([rawstring](radt_lw_scheme) == "cam_lw") then
+  end
+  if ([rawstring](radt_lw_scheme) == "cam_lw") then
     for j = jts, jte do
-      for i = its, ite do
-        xlat_p[{i,j}] = cr[{i, 0}].lat / degrad
-        xlon_p[{i,j}] = cr[{i, 0}].lon / degrad
-        sfc_albedo_p[{i, j}] = cr[{i, 0}].sfc_albedo
+      for i = 0, nCellsSolve do
+        cr[{i, 0}].xlat_p = cr[{i, 0}].lat / degrad
+        cr[{i, 0}].xlon_p = cr[{i, 0}].lon / degrad
+        cr[{i, 0}].sfc_albedo_p = cr[{i, 0}].sfc_albedo
 
-        coszr_p[{i, j}]      = 0.0
-        gsw_p[{i, j}]        = 0.0
-        swcf_p[{i, j}]       = 0.0
-        swdnb_p[{i, j}]      = 0.0
-        swdnbc_p[{i, j}]     = 0.0
-        swdnt_p[{i, j}]      = 0.0
-        swdntc_p[{i, j}]     = 0.0
-        swupb_p[{i, j}]      = 0.0
-        swupbc_p[{i, j}]     = 0.0
-        swupt_p[{i, j}]      = 0.0
-        swuptc_p[{i, j}]     = 0.0
+        cr[{i, 0}].coszr_p      = 0.0
+        cr[{i, 0}].gsw_p        = 0.0
+        cr[{i, 0}].swcf_p       = 0.0
+        cr[{i, 0}].swdnb_p      = 0.0
+        cr[{i, 0}].swdnbc_p     = 0.0
+        cr[{i, 0}].swdnt_p      = 0.0
+        cr[{i, 0}].swdntc_p     = 0.0
+        cr[{i, 0}].swupb_p      = 0.0
+        cr[{i, 0}].swupbc_p     = 0.0
+        cr[{i, 0}].swupt_p      = 0.0
+        cr[{i, 0}].swuptc_p     = 0.0
       end
-      for k = kts, kte do
-        for i = its, ite do
-          rthratensw_p[{i, k, j}] = 0.0
-          cemiss_p[{i, k, j}]     = 0.0
-          taucldc_p[{i, k, j}]    = 0.0
-          taucldi_p[{i, k, j}]    = 0.0
+      for k = 0, nVertLevels do
+        for i = 0, nCellsSolve do
+          cr[{i, k}].rthratensw_p = 0.0
+          cr[{i, k}].cemiss_p     = 0.0
+          cr[{i, k}].taucldc_p    = 0.0
+          cr[{i, k}].taucldi_p    = 0.0
         end
       end
     end
@@ -325,57 +291,57 @@ do
     -- these three arrays will be filled with the restart values.
     if (xtime_s < 1.0e-12) then
       for j = jts, jte do
-        for n = 0, cam_abs_dim1 do -- Originally from 1 to cam_abs_dim1
-          for k = kts, kte do
-            for i = its, ite do
-              absnxt_p[{i,k,n,j}] = 0.0
+        for n = 0, constants.cam_abs_dim1 do -- Originally from 1 to cam_abs_dim1
+          for k = 0, nVertLevels do
+            for i = 0, nCellsSolve do
+              cr[{i, k}].absnxt_p[n] = 0.0
             end
           end
         end
-        for n = 0, cam_abs_dim2 do -- Originally from 1 to cam_abs_dim2
-          for k = kts, kte + 1 do
-            for i = its, ite do
-              abstot_p[{i,k,n,j}] = 0.0
+        for n = 0, constants.cam_abs_dim2 do -- Originally from 1 to cam_abs_dim2
+          for k = 0, nVertLevels + 1 do
+            for i = 0, nCellsSolve do
+              cr[{i, k}].abstot_p[n] = 0.0
             end
           end
         end
-        for k = kts, kte + 1 do
-          for i = its, ite do
-            emstot_p[{i, k, j}] = 0.0
+        for k = 0, nVertLevels + 1 do
+          for i = 0, nCellsSolve do
+            cr[{i, k}].emstot_p = 0.0
           end
         end
       end
     end
 
     -- ozone mixing ratio:
-    for k = 0, num_oznlevels do
-      pin_p[k] = pin[k]
+    for k = 0, nOznLevels do
+      ozn_r[{0, k}].pin_p = ozn_r[{0, k}].pin
     end
-    for n = 0, num_months do
+    for n = 0, constants.nMonths do
       for j = jts, jte do
-        for k = 0, num_oznlevels do
-          for i = its, ite do
-            ozmixm_p(i,k,j,n) = ozmixm(n,k,i)
+        for k = 0, nOznLevels do
+          for i = 0, nCellsSolve do
+            ozn_r[{i, k}].ozmixm_p[n] = ozn_r[{i, k}].ozmixm[n]
           end
         end
       end
     end
     --aerosol mixing ratio:
-    for k = 0, num_aerlevels do
-      m_hybi_p[k] = cr[{0, k}].m_hybi
+    for k = 0, nAerLevels do
+      aer_r[{0, k}].m_hybi_p = aer_r[{0, k}].m_hybi
     end
-    for i = its, ite do
+    for i = 0, nCellsSolve do
       for j = jts, jte do
-        m_psp_p[{i, j}] = cr[{i, 0}].m_ps
-        m_psn_p[{i, j}] = cr[{i, 0}].m_ps
+        cr[{i, 0}].m_psp_p = cr[{i, 0}].m_ps
+        cr[{i, 0}].m_psn_p = cr[{i, 0}].m_ps
       end
     end
-    for n = 0, num_aerosols do
+    for n = 0, nAerosols do
       for j = jts, jte do
-        for k = 0, num_aerlevels do
-          for i = its, ite do
-            aerosolcp_p[{i,k,j,n}] = cr[{i, k}].aerosols[n]
-            aerosolcn_p[{i,k,j,n}] = cr[{i, k}].aerosols[n]
+        for k = 0, nAerLevels do
+          for i = 0, nCellsSolve do
+            aer_r[{i, k}].aerosolcp_p[n] = aer_r[{i, k}].aerosols[n]
+            aer_r[{i, k}].aerosolcn_p[n] = aer_r[{i, k}].aerosols[n]
           end
         end
       end
@@ -386,9 +352,29 @@ end
 task radiation_lw_to_MPAS()
 end
 
-task driver_radiation_lw()
-  radiation_lw_from_MPAS()
-  radconst()
-  camrad()
-  radiation_lw_to_MPAS()
+task driver_radiation_lw(cr : region(ispace(int2d), cell_fs),
+                         radt_lw_scheme : regentlib.string,
+                         config_o3climatology : bool,
+                         microp_scheme : regentlib.string,
+                         config_microp_re : bool)
+where reads writes (cr)
+do
+  var radt : double
+  --radiation_lw_from_MPAS()
+
+  -- I don't think we are actually doing rrtmg?
+  --if ([rawstring](radt_lw_scheme) == "rrtmg_lw") then
+  --  var o3input : int = 0
+  --  if (config_o3climatology) then
+  --    o3input = 2
+  --  end
+  --  rrtmg_lwrad() -- o3input will be an argument
+  --else if
+  if ([rawstring](radt_lw_scheme) == "cam_lw") then
+    radconst(0, 0, 0) --TODO: Placeholder arguments! I don't know where actual arguments are from
+    radt = constants.config_dt / 60.0
+    camrad()
+  end
+
+  --radiation_lw_to_MPAS(cr, radt_lw_scheme, microp_scheme, config_microp_re)
 end
