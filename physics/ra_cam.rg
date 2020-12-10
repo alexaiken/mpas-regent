@@ -5,16 +5,6 @@ require "physics/ra_cam_radctl_support"
 
 local constants = require("constants")
 
-fspace ozone_mix_fs {
-  ozmixmj : double,     -- monthly ozone mixing ratio
-  ozmix : double,                             -- ozone mixing ratio (time interpolated)
-}
-
-fspace aerosol_fs {
-  aerosoljp : double, -- monthly aerosol concentrations
-  aerosoljn : double, -- monthly aerosol concentrations
-}
-
 task param_cldoptics_calc()
   cldefr()
   cldems()
@@ -120,22 +110,6 @@ task camrad(cr : region(ispace(int2d), cell_fs))
   var hrang : double
   var xxlat : double
   var oldxt24 : double
-
-  var n_cldadv : int
-  var paerlev : int
-  var levsiz : int
-  var naer_c : int
-
-  var nCells : int = cr.bounds.lo.x
-
-  var q = region(ispace(int3d, {nCells, constants.nVertLevels, n_cldadv}), double)
-  var ozone_mix_locals = region(ispace(int2d, {nCells, levsiz}), ozone_mix_fs)
-  var pin = region(ispace(int1d, levsiz), double)
-  var aerosol_locals = region(ispace(int3d, {nCells, paerlev, naer_c}), aerosol_fs)
-  var m_hybi = region(ispace(int1d, paerlev), double)
-  var abstot = region(ispace(int3d, {nCells, constants.nVertLevels+1, constants.nVertLevels+1}), double)   -- Total absorptivity
-  var absnxt = region(ispace(int3d, {nCells, constants.nVertLevels, 4}), double)             -- Total nearest layer absorptivity
-  var emstot = region(ispace(int2d, {nCells, constants.nVertLevels+1}), double)              -- Total emissivity
 
   -- END LOCALS --
   ----------------

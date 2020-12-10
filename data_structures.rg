@@ -298,8 +298,6 @@ fspace cell_fs {
     re_snow : double, -- ?
     sfc_albedo : double, --type="real" dimensions="nCells Time" units="unitless" description="surface albedo"
     m_ps : double, --type="real" dimensions="nCells Time" units="Pa" description="Surface pressure from match on MPAS grid"
-    f_ice : double, --Note: not found in Registry.xml
-    f_rain : double, --Note: not found in Registry.xml
 
     -- vars first seen in radiation_lw_to_MPAS
     -- The following fields are all of dimensions="nCells Time" units="W m^{-2}"
@@ -322,7 +320,6 @@ fspace cell_fs {
 
     o32d : double,
     p2d : double,
-    pres_hyd_p : double,
     o3vmr : double,
 
     gsw : double, --type="real" dimensions="nCells Time" units="W m^{-2}" description="net surface shortwave radiation flux"

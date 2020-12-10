@@ -26,10 +26,10 @@ task physics_driver(cr : region(ispace(int2d), cell_fs))
   driver_cloudiness()
 
   allocate_radiation_sw()
-  driver_radiation_sw(cr)
+  --driver_radiation_sw(cr)
 
   allocate_radiation_lw()
-  driver_radiation_lw(cr)
+  --driver_radiation_lw(cr)
 
   update_radiation_diagnostics()
 
