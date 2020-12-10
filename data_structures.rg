@@ -280,7 +280,12 @@ fspace cell_fs {
     uReconstructZonal : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Zonal component of reconstructed horizontal velocity at cell centers"
     uReconstructMeridional : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Meridional component of reconstructed horizontal velocity at cell centers"
 
+    ---------------------------------------------
+    -----------begin physics fields--------------
+    ---------------------------------------------
+
     -- Physics - Radiation
+
     --vars first seen in radiation_lw_from_MPAS
     sfc_emiss : double, --type="real" dimensions="nCells Time" units="unitless" description="surface emissivity"
     skintemp : double, --type="real" dimensions="nCells Time" units="K" description="ground or water surface temperature"
@@ -293,8 +298,6 @@ fspace cell_fs {
     re_snow : double, -- ?
     sfc_albedo : double, --type="real" dimensions="nCells Time" units="unitless" description="surface albedo"
     m_ps : double, --type="real" dimensions="nCells Time" units="Pa" description="Surface pressure from match on MPAS grid"
-    f_ice : double, --Note: not found in Registry.xml
-    f_rain : double, --Note: not found in Registry.xml
 
     -- vars first seen in radiation_lw_to_MPAS
     -- The following fields are all of dimensions="nCells Time" units="W m^{-2}"
@@ -317,57 +320,191 @@ fspace cell_fs {
 
     o32d : double,
     p2d : double,
-    pres_hyd_p : double,
     o3vmr : double,
 
+    gsw : double, --type="real" dimensions="nCells Time" units="W m^{-2}" description="net surface shortwave radiation flux"
+    swcf : double, --type="real" dimensions="nCells Time" units="W m^{-2}" description="top-of-atmosphere cloud shortwave radiative forcing"
+    coszr : double, --type="real" dimensions="nCells Time" units="unitless" description="cosine of zenith solar angle"
+
     -- Temporary versions to be used in radiation. Currently included to match original style of radiation code. TODO: Are these necessary?
-    sfc_emiss_p : double,
-    tsk_p : double, --skintemp
-    snow_p : double,
-    xice_p : double,
-    xland_p : double,
     cldfrac_p : double,
-    recloud_p : double,
-    reice_p : double,
-    resnow_p : double,
-    rrecloud_p : double,
-    rreice_p : double,
-    rresnow_p : double,
-    sfc_albedo_p : double,
-    m_psp_p : double,
-    m_psn_p : double,
-    glw_p : double,
-    lwcf_p : double,
-    lwdnb_p : double,
-    lwdnbc_p : double,
-    lwdnt_p : double,
-    lwdntc_p : double,
-    lwupb_p : double,
-    lwupbc_p : double,
-    lwupt_p : double,
-    lwuptc_p : double,
-    olrtoa_p : double,
-    rthratenlw_p : double,
-    xlat_p : double,
-    xlon_p : double,
-    coszr_p : double,
-    gsw_p : double,
-    swcf_p : double,
-    swdnb_p : double,
-    swdnbc_p : double,
-    swdnt_p : double,
-    swdntc_p : double,
-    swupb_p : double,
-    swupbc_p : double,
-    swupt_p : double,
-    swuptc_p : double,
-    rthratensw_p : double,
-    cemiss_p : double,
-    taucldc_p : double,
-    taucldi_p : double,
     absnxt_p : double[constants.cam_abs_dim1],
     abstot_p : double[constants.cam_abs_dim2],
-    emstot_p : double,
+
+    ------ From mpas_atmphys_interface.F, allocate_forall_physics() ------
+
+    psfc_p : double,        --allocate(psfc_p(ims:ime,jms:jme))
+    ptop_p : double,        --allocate(ptop_p(ims:ime,jms:jme))
+    
+    u_p : double,         --allocate(u_p(ims:ime,kms:kme,jms:jme))
+    v_p : double,         --allocate(v_p(ims:ime,kms:kme,jms:jme))
+    fzm_p : double,       --allocate(fzm_p(ims:ime,kms:kme,jms:jme))
+    fzp_p : double,       --allocate(fzp_p(ims:ime,kms:kme,jms:jme))
+    zz_p : double,        --allocate(zz_p(ims:ime,kms:kme,jms:jme))
+    pres_p : double,      --allocate(pres_p(ims:ime,kms:kme,jms:jme))
+    pi_p : double,        --allocate(pi_p(ims:ime,kms:kme,jms:jme))
+    z_p : double,         --allocate(z_p(ims:ime,kms:kme,jms:jme))
+    zmid_p : double,      --allocate(zmid_p(ims:ime,kms:kme,jms:jme))
+    dz_p : double,        --allocate(dz_p(ims:ime,kms:kme,jms:jme))
+    t_p : double,         --allocate(t_p(ims:ime,kms:kme,jms:jme))
+    th_p : double,        --allocate(th_p(ims:ime,kms:kme,jms:jme))
+    al_p : double,        --allocate(al_p(ims:ime,kms:kme,jms:jme))
+    rh_p : double,        --allocate(rh_p(ims:ime,kms:kme,jms:jme))
+    znu_p : double,       --allocate(znu_p(ims:ime,kms:kme,jms:jme))
+
+    w_p : double,         --allocate(w_p(ims:ime,kms:kme,jms:jme))
+    pres2_p : double,     --allocate(pres2_p(ims:ime,kms:kme,jms:jme))
+    t2_p : double,        --allocate(t2_p(ims:ime,kms:kme,jms:jme))
+
+    qv_p : double,        --allocate(qv_p(ims:ime,kms:kme,jms:jme))
+    qc_p : double,        --allocate(qc_p(ims:ime,kms:kme,jms:jme))
+    qr_p : double,        --allocate(qr_p(ims:ime,kms:kme,jms:jme))
+    qi_p : double,        --allocate(qi_p(ims:ime,kms:kme,jms:jme))
+    qs_p : double,        --allocate(qs_p(ims:ime,kms:kme,jms:jme))
+    qg_p : double,        --allocate(qg_p(ims:ime,kms:kme,jms:jme))
+
+    ni_p : double,        --allocate(ni_p(ims:ime,kms:kme,jms:jme))
+
+    -- arrays used for calculating the hydrostatic pressure and exner function
+    psfc_hyd_p : double,    --allocate(psfc_hyd_p(ims:ime,jms:jme))
+    psfc_hydd_p : double,   --allocate(psfc_hydd_p(ims:ime,jms:jme))
+    pres_hyd_p : double,    --allocate(pres_hyd_p(ims:ime,kms:kme,jms:jme))
+    pres_hydd_p : double,   --allocate(pres_hydd_p(ims:ime,kms:kme,jms:jme))
+    pres2_hyd_p : double,   --allocate(pres2_hyd_p(ims:ime,kms:kme,jms:jme))
+    pres2_hydd_p : double,  --allocate(pres2_hydd_p(ims:ime,kms:kme,jms:jme))
+    znu_hyd_p : double,     --allocate(znu_hyd_p(ims:ime,kms:kme,jms:jme))
+
+    ------ From mpas_atmphys_driver_radiation_lw.F, allocate_radiation_lw() ------
+
+    f_ice : double,             --allocate(f_ice(ims:ime,kms:kme,jms:jme))
+    f_rain : double,            --allocate(f_rain(ims:ime,kms:kme,jms:jme))
+
+    sfc_emiss_p : double,   --allocate(sfc_emiss_p(ims:ime,jms:jme))
+    snow_p : double,        --allocate(snow_p(ims:ime,jms:jme))
+    tsk_p : double,         --allocate(tsk_p(ims:ime,jms:jme))
+    xice_p : double,        --allocate(xice_p(ims:ime,jms:jme))
+    xland_p : double,       --allocate(xland_p(ims:ime,jms:jme))
+
+    glw_p : double,         --allocate(glw_p(ims:ime,jms:jme))
+    lwcf_p : double,        --allocate(lwcf_p(ims:ime,jms:jme))
+    lwdnb_p : double,       --allocate(lwdnb_p(ims:ime,jms:jme))
+    lwdnbc_p : double,      --allocate(lwdnbc_p(ims:ime,jms:jme))
+    lwdnt_p : double,       --allocate(lwdnt_p(ims:ime,jms:jme))
+    lwdntc_p : double,      --allocate(lwdntc_p(ims:ime,jms:jme))
+    lwupb_p : double,       --allocate(lwupb_p(ims:ime,jms:jme))
+    lwupbc_p : double,      --allocate(lwupbc_p(ims:ime,jms:jme))
+    lwupt_p : double,       --allocate(lwupt_p(ims:ime,jms:jme))
+    lwuptc_p : double,      --allocate(lwuptc_p(ims:ime,jms:jme))
+    olrtoa_p : double,      --allocate(olrtoa_p(ims:ime,jms:jme))
+
+    rthratenlw_p : double,      --allocate(rthratenlw_p(ims:ime,kms:kme,jms:jme))
+
+    -- case("rrtmg_lw")
+    recloud_p : double,         --allocate(recloud_p(ims:ime,kms:kme,jms:jme))
+    reice_p : double,           --allocate(reice_p(ims:ime,kms:kme,jms:jme))
+    resnow_p : double,          --allocate(resnow_p(ims:ime,kms:kme,jms:jme))
+    rrecloud_p : double,        --allocate(rrecloud_p(ims:ime,kms:kme,jms:jme))
+    rreice_p : double,          --allocate(rreice_p(ims:ime,kms:kme,jms:jme))
+    rresnow_p : double,         --allocate(rresnow_p(ims:ime,kms:kme,jms:jme))
+
+    -- case("cam_lw")
+    xlat_p : double,        --allocate(xlat_p(ims:ime,jms:jme))
+    xlon_p : double,        --allocate(xlon_p(ims:ime,jms:jme))
+    gsw_p : double,         --allocate(gsw_p(ims:ime,jms:jme))
+    swcf_p : double,        --allocate(swcf_p(ims:ime,jms:jme))
+    swdnb_p : double,       --allocate(swdnb_p(ims:ime,jms:jme))
+    swdnbc_p : double,      --allocate(swdnbc_p(ims:ime,jms:jme))
+    swdnt_p : double,       --allocate(swdnt_p(ims:ime,jms:jme))
+    swdntc_p : double,      --allocate(swdntc_p(ims:ime,jms:jme))
+    swupb_p : double,       --allocate(swupb_p(ims:ime,jms:jme))
+    swupbc_p : double,      --allocate(swupbc_p(ims:ime,jms:jme))
+    swupt_p : double,       --allocate(swupt_p(ims:ime,jms:jme))
+    swuptc_p : double,      --allocate(swuptc_p(ims:ime,jms:jme))
+    coszr_p : double,       --allocate(coszr_p(ims:ime,jms:jme))
+    sfc_albedo_p : double,  --allocate(sfc_albedo_p(ims:ime,jms:jme))
+    rthratensw_p : double,      --allocate(rthratensw_p(ims:ime,kms:kme,jms:jme))
+    --
+    cemiss_p : double,          --allocate(cemiss_p(ims:ime,kms:kme,jms:jme))
+    taucldc_p : double,         --allocate(taucldc_p(ims:ime,kms:kme,jms:jme))
+    taucldi_p : double,         --allocate(taucldi_p(ims:ime,kms:kme,jms:jme))
+    --
+    m_psn_p : double,       --allocate(m_psn_p(ims:ime,jms:jme))
+    m_psp_p : double,       --allocate(m_psp_p(ims:ime,jms:jme))
+
+    -- !allocate these arrays on the first time step, only:
+    emstot_p : double,          --allocate(emstot_p(ims:ime,kms:kme,jms:jme))
+
+    ------ camrad() 1d locals ------
+
+    coszrs : double,
+    landfrac : double,
+    landm : double,
+    snowh : double,
+    icefrac : double,
+    lwups : double,
+    asdir : double,
+    asdif : double,
+    aldir : double,
+    aldif : double,
+    ps : double,
+    nmxrgn : int,       -- Number of maximally overlapped regions
+
+    fsns : double,      -- Surface absorbed solar flux
+    fsnt : double,      -- Net column abs solar flux at model top
+    flns : double,      -- Srf longwave cooling (up-down) flux
+    flnt : double,      -- Net outgoing lw flux at model top
+
+    swcftoa : double,   -- Top of the atmosphere solar cloud forcing
+    lwcftoa : double,   -- Top of the atmosphere longwave cloud forcing
+
+    sols : double,      -- Downward solar rad onto surface (sw direct)
+    soll : double,      -- Downward solar rad onto surface (lw direct)
+    solsd : double,     -- Downward solar rad onto surface (sw diffuse)
+    solld : double,     -- Downward solar rad onto surface (lw diffuse)
+    fsds : double,      -- Flux Shortwave Downwelling Surface
+    flwds : double,     -- Surface down longwave flux
+    m_psjp : double,    -- MATCH surface pressure
+    m_psjn : double,
+    clat : double,      -- latitude in radians for columns
+
+    ------ camrad() 2d locals ------
+
+    cld : double, 
+    pmid : double, 
+    lnpmid : double, 
+    pdel : double, 
+    zm : double, 
+    t : double,
+    cicewp : double,    -- in-cloud cloud ice water path
+    cliqwp : double,    -- in-cloud cloud liquid water path
+    emis : double,      -- cloud emissivity
+    rel : double,       -- effective drop radius (microns)
+    rei : double,       -- ice effective drop size (microns)
+
+    qrs : double,       -- Solar heating rate
+    qrl : double,       -- Longwave cooling rate
+
+    -- extended (1 to kte-kts + 2) --
+    pint : double, 
+    lnpint : double,
+    pmxrgn : double,    -- Maximum values of pressure for each
+    
+    -- Added outputs of total and clearsky fluxes etc
+    fsup : double,      -- Upward total sky solar
+    fsupc : double,     -- Upward clear sky solar
+    fsdn : double,      -- Downward total sky solar
+    fsdnc : double,     -- Downward clear sky solar
+    flup : double,      -- Upward total sky longwave
+    flupc : double,     -- Upward clear sky longwave
+    fldn : double,      -- Downward total sky longwave  
+    fldnc : double,     -- Downward clear sky longwave
+
+    -- left shifted (0 to kte-kts+1) --
+    tauxcl : double,    -- cloud water optical depth
+    tauxci : double,    -- cloud ice optical depth
+
+    -----------end physics fields----------------
+    ---------------------------------------------
 }
 
 

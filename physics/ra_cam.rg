@@ -3,6 +3,8 @@ require "data_structures"
 require "physics/ra_cam_cld_support"
 require "physics/ra_cam_radctl_support"
 
+local constants = require("constants")
+
 task param_cldoptics_calc()
   cldefr()
   cldems()
@@ -65,7 +67,53 @@ task radctl()
   trcmix()
 end
 
-task camrad()
+task camrad(cr : region(ispace(int2d), cell_fs))
+
+  ------------------
+  -- START LOCALS --
+
+  var lchnk : int
+  var ncol : int
+  var pcols : int
+  var pver : int
+  var pverp : int
+  var pverr : int
+  var pverrp : int
+
+  var pcnst : int
+  var pnats : int
+  var ppcnst : int
+  var i : int
+  var j : int
+  var k : int
+  var ii : int
+  var kk : int
+  var kk1 : int
+  var m : int
+  var n : int
+
+  var begchunk : int
+  var endchunk : int
+
+  var nyrm : int
+  var nyrp : int
+
+  var doymodel : double
+  var doydatam : double
+  var doydatap : double
+  var deltat : double
+  var fact1 : double
+  var fact2 : double
+
+  var xt24 : double
+  var tloctm : double
+  var hrang : double
+  var xxlat : double
+  var oldxt24 : double
+
+  -- END LOCALS --
+  ----------------
+
   param_cldoptics_calc()
   radctl()
 end
