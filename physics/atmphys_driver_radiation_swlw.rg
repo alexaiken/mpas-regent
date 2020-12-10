@@ -78,10 +78,10 @@ end
 task radiation_sw_to_MPAS()
 end
 
-task driver_radiation_sw()
+task driver_radiation_sw(cr : region(ispace(int2d), cell_fs))
   radiation_sw_from_MPAS()
   radconst(0, 0, 0)
-  camrad()
+  camrad(cr)
   radiation_sw_to_MPAS()
 end
 
@@ -373,7 +373,7 @@ do
   if ([rawstring](radt_lw_scheme) == "cam_lw") then
     radconst(0, 0, 0) --TODO: Placeholder arguments! I don't know where actual arguments are from
     radt = constants.config_dt / 60.0
-    camrad()
+    camrad(cr)
   end
 
   --radiation_lw_to_MPAS(cr, radt_lw_scheme, microp_scheme, config_microp_re)

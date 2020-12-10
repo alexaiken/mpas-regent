@@ -149,7 +149,9 @@ task radctl()
   trcmix()
 end
 
-task camrad(rthratenlw,
+task camrad(cr : region(ispace(int2d), cell_fs),
+
+            rthratenlw,
             rthatensw,
             dolw,
             dosw,
@@ -243,8 +245,8 @@ task camrad(rthratenlw,
             jme, 
             kms,
             kme,
-            its,
-            ite,
+            -- its, -- its = 1
+            -- ite, -- ite = nCellsSolve
             jts,
             jte,
             kts,
@@ -292,17 +294,19 @@ task camrad(rthratenlw,
   xxlat : double
   oldxt24 : double
 
-  q = region(ispace(int3d, {ite-its, kte-kts, n_cldadv}), double)
-  ozone_mix_locals = region(ispace(int2d, {ite-its, levsiz}), ozone_mix_fs)
+  nCells = cr.bounds[0]
+
+  q = region(ispace(int3d, {nCells, kte-kts, n_cldadv}), double)
+  ozone_mix_locals = region(ispace(int2d, {nCells, levsiz}), ozone_mix_fs)
   pin = region(ispace(int1d, levsiz), double)
-  aerosol_locals = region(ispace(int3d, {ite-its, paerlev, naer_c}), aerosol_fs)
+  aerosol_locals = region(ispace(int3d, {nCells, paerlev, naer_c}), aerosol_fs)
   m_hybi = region(ispace(int1d, paerlev), double)
-  abstot = region(ispace(int3d, {its:its, kts:kte+1, kts:kte+1}), double)   -- Total absorptivity
-  absnxt = region(ispace(int3d, {its:ite, kts:kte, 4}), double)             -- Total nearest layer absorptivity
-  emstot = region(ispace(int2d, {its:ite, kts:kte+1}), double)              -- Total emissivity
-  camrad_1d_locals = region(ispace(int1d, ite-its), camrad_1d_fs)
-  camrad_2d_locals = region(ispace(int2d, {ite-its, kte-kts}), camrad_2d_fs)
-  camrad_2dextended_locals = region(ispace(int2d, {ite-its, kte-kts+1}), camrad_2d_extended_fs)
+  abstot = region(ispace(int3d, {nCells, kts:kte+1, kts:kte+1}), double)   -- Total absorptivity
+  absnxt = region(ispace(int3d, {nCells, kts:kte, 4}), double)             -- Total nearest layer absorptivity
+  emstot = region(ispace(int2d, {nCells, kts:kte+1}), double)              -- Total emissivity
+  camrad_1d_locals = region(ispace(int1d, nCells), camrad_1d_fs)
+  camrad_2d_locals = region(ispace(int2d, {nCells, kte-kts}), camrad_2d_fs)
+  camrad_2dextended_locals = region(ispace(int2d, {nCells, kte-kts+1}), camrad_2d_extended_fs)
 
   -- END LOCALS --
   ----------------

@@ -18,7 +18,7 @@ end
 task update_radiation_diagnostics()
 end
 
-task physics_driver()
+task physics_driver(cr : region(ispace(int2d), cell_fs))
   allocate_forall_physics()
   MPAS_to_physics()
 
@@ -26,10 +26,10 @@ task physics_driver()
   driver_cloudiness()
 
   allocate_radiation_sw()
-  --driver_radiation_sw()
+  driver_radiation_sw(cr)
 
   allocate_radiation_lw()
-  --driver_radiation_lw()
+  driver_radiation_lw(cr)
 
   update_radiation_diagnostics()
 

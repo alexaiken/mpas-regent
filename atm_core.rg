@@ -47,7 +47,7 @@ where reads writes (cr, er, vr, vert_r)
 do
   --if(moist_physics) then
   physics_timetracker()
-  physics_driver()
+  physics_driver(cr)
   --end
 
   atm_timestep(cr, er, vr, vert_r, dt)
