@@ -352,7 +352,6 @@ fspace cell_fs {
     t_p : double,         --allocate(t_p(ims:ime,kms:kme,jms:jme))
     th_p : double,        --allocate(th_p(ims:ime,kms:kme,jms:jme))
     al_p : double,        --allocate(al_p(ims:ime,kms:kme,jms:jme))
-    rho_p : double,       --allocate(rho_p(ims:ime,kms:kme,jms:jme))
     rh_p : double,        --allocate(rh_p(ims:ime,kms:kme,jms:jme))
     znu_p : double,       --allocate(znu_p(ims:ime,kms:kme,jms:jme))
 
@@ -437,6 +436,75 @@ fspace cell_fs {
 
     -- !allocate these arrays on the first time step, only:
     emstot_p : double,          --allocate(emstot_p(ims:ime,kms:kme,jms:jme))
+
+    ------ camrad() 1d locals ------
+
+    coszrs : double,
+    landfrac : double,
+    landm : double,
+    snowh : double,
+    icefrac : double,
+    lwups : double,
+    asdir : double,
+    asdif : double,
+    aldir : double,
+    aldif : double,
+    ps : double,
+    nmxrgn : int,       -- Number of maximally overlapped regions
+
+    fsns : double,      -- Surface absorbed solar flux
+    fsnt : double,      -- Net column abs solar flux at model top
+    flns : double,      -- Srf longwave cooling (up-down) flux
+    flnt : double,      -- Net outgoing lw flux at model top
+
+    swcftoa : double,   -- Top of the atmosphere solar cloud forcing
+    lwcftoa : double,   -- Top of the atmosphere longwave cloud forcing
+
+    sols : double,      -- Downward solar rad onto surface (sw direct)
+    soll : double,      -- Downward solar rad onto surface (lw direct)
+    solsd : double,     -- Downward solar rad onto surface (sw diffuse)
+    solld : double,     -- Downward solar rad onto surface (lw diffuse)
+    fsds : double,      -- Flux Shortwave Downwelling Surface
+    flwds : double,     -- Surface down longwave flux
+    m_psjp : double,    -- MATCH surface pressure
+    m_psjn : double,
+    clat : double,      -- latitude in radians for columns
+
+    ------ camrad() 2d locals ------
+
+    cld : double, 
+    pmid : double, 
+    lnpmid : double, 
+    pdel : double, 
+    zm : double, 
+    t : double,
+    cicewp : double,    -- in-cloud cloud ice water path
+    cliqwp : double,    -- in-cloud cloud liquid water path
+    emis : double,      -- cloud emissivity
+    rel : double,       -- effective drop radius (microns)
+    rei : double,       -- ice effective drop size (microns)
+
+    qrs : double,       -- Solar heating rate
+    qrl : double,       -- Longwave cooling rate
+
+    -- extended (1 to kte-kts + 2) --
+    pint : double, 
+    lnpint : double,
+    pmxrgn : double,    -- Maximum values of pressure for each
+    
+    -- Added outputs of total and clearsky fluxes etc
+    fsup : double,      -- Upward total sky solar
+    fsupc : double,     -- Upward clear sky solar
+    fsdn : double,      -- Downward total sky solar
+    fsdnc : double,     -- Downward clear sky solar
+    flup : double,      -- Upward total sky longwave
+    flupc : double,     -- Upward clear sky longwave
+    fldn : double,      -- Downward total sky longwave  
+    fldnc : double,     -- Downward clear sky longwave
+
+    -- left shifted (0 to kte-kts+1) --
+    tauxcl : double,    -- cloud water optical depth
+    tauxci : double,    -- cloud ice optical depth
 
     -----------end physics fields----------------
     ---------------------------------------------

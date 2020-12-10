@@ -3,82 +3,10 @@ require "data_structures"
 require "physics/ra_cam_cld_support"
 require "physics/ra_cam_radctl_support"
 
-fspace camrad_1d_fs {
-  coszrs : double,
-  landfrac : double,
-  landm : double,
-  snowh : double,
-  icefrac : double,
-  lwups : double,
-  asdir : double,
-  asdif : double,
-  aldir : double,
-  aldif : double,
-  ps : double,
-  nmxrgn : int,       -- Number of maximally overlapped regions
-
-  fsns : double,      -- Surface absorbed solar flux
-  fsnt : double,      -- Net column abs solar flux at model top
-  flns : double,      -- Srf longwave cooling (up-down) flux
-  flnt : double,      -- Net outgoing lw flux at model top
-
-  swcftoa : double,   -- Top of the atmosphere solar cloud forcing
-  lwcftoa : double,   -- Top of the atmosphere longwave cloud forcing
-  olrtoa : double,    -- Top of the atmosphere outgoing longwave
-
-  sols : double,      -- Downward solar rad onto surface (sw direct)
-  soll : double,      -- Downward solar rad onto surface (lw direct)
-  solsd : double,     -- Downward solar rad onto surface (sw diffuse)
-  solld : double,     -- Downward solar rad onto surface (lw diffuse)
-  fsds : double,      -- Flux Shortwave Downwelling Surface
-  flwds : double,     -- Surface down longwave flux
-  m_psjp : double,    -- MATCH surface pressure
-  m_psjn : double,
-  clat : double,      -- latitude in radians for columns
-}
-
-fspace camrad_2d_fs {
-  cld : double, 
-  pmid : double, 
-  lnpmid : double, 
-  pdel : double, 
-  zm : double, 
-  t : double,
-  cicewp : double,    -- in-cloud cloud ice water path
-  cliqwp : double,    -- in-cloud cloud liquid water path
-  emis : double,      -- cloud emissivity
-  rel : double,       -- effective drop radius (microns)
-  rei : double,       -- ice effective drop size (microns)
-
-  qrs : double,       -- Solar heating rate
-  qrl : double,       -- Longwave cooling rate
-}
-
-fspace camrad_2d_extended_fs {
-  ---------------------------------
-  -- extended (1 to kte-kts + 2) --
-  pint : double, 
-  lnpint : double,
-  pmxrgn : double,    -- Maximum values of pressure for each
-  
-  -- Added outputs of total and clearsky fluxes etc
-  fsup : double,      -- Upward total sky solar
-  fsupc : double,     -- Upward clear sky solar
-  fsdn : double,      -- Downward total sky solar
-  fsdnc : double,     -- Downward clear sky solar
-  flup : double,      -- Upward total sky longwave
-  flupc : double,     -- Upward clear sky longwave
-  fldn : double,      -- Downward total sky longwave  
-  fldnc : double,     -- Downward clear sky longwave
-
-  -----------------------------------
-  -- left shifted (0 to kte-kts+1) --
-  tauxcl : double,    -- cloud water optical depth
-  tauxci : double,    -- cloud ice optical depth
-}
+local constants = require("constants")
 
 fspace ozone_mix_fs {
-  ozmixmj : double[constants.num_months],     -- monthly ozone mixing ratio
+  ozmixmj : double,     -- monthly ozone mixing ratio
   ozmix : double,                             -- ozone mixing ratio (time interpolated)
 }
 
@@ -149,164 +77,65 @@ task radctl()
   trcmix()
 end
 
-task camrad(cr : region(ispace(int2d), cell_fs),
-
-            rthratenlw,
-            rthatensw,
-            dolw,
-            dosw,
-            swupt,
-            swuptc,
-            swdnt,
-            swdntc,
-            lwupt,
-            lwuptc,
-            lwdnt,
-            lwdntc,
-            swupb,
-            swupbc,
-            swdnb,
-            swdnbc,
-            lwupb,
-            lwupbc,
-            lwdnb,
-            lwdnbc,
-            olr,
-            cemiss,
-            taucldc,
-            taucldi,
-            xlat,
-            xlong,
-            albedo,
-            t_phy,
-            tsk,
-            emiss,
-            qv3d,
-            qc3d,
-            qr3d,
-            qi3d,
-            qs3d,
-            qg3d,
-            f_qv,
-            f_qc,
-            f_qr,
-            f_qi,
-            f_qs,
-            f_qg,
-            f_ice_phy,
-            f_rain_phy,
-            p_phy,
-            p8w,
-            z,
-            pi_phy,
-            rho_phy,
-            dz8w,
-            cldfra,
-            xland,
-            xice,
-            snow,
-            ozmixm,
-            pin0,
-            levsiz,
-            num_months,
-            m_psp,
-            m_psn,
-            aerosolcp,
-            aerosolcn,
-            m_hybi0,
-            cam_abs_dim1,
-            cam_abs_dim2,
-            paerlev,
-            naer_c,
-            gmt,
-            julday,
-            julian,
-            yr,
-            dt,
-            xtime,
-            declin,
-            solcon,
-            radt,
-            degrad,
-            n_cldadv,
-            abstot_3d,
-            absnxt_3d,
-            emstot_3d,
-            doabsems,
-            ids,
-            ide, 
-            jds,
-            jde, 
-            kds,
-            kde,
-            ims,
-            ime, 
-            jms,
-            jme, 
-            kms,
-            kme,
-            -- its, -- its = 1
-            -- ite, -- ite = nCellsSolve
-            jts,
-            jte,
-            kts,
-            kte)
+task camrad(cr : region(ispace(int2d), cell_fs))
 
   ------------------
   -- START LOCALS --
 
-  lchnk : int
-  ncol : int
-  pcols : int
-  pver : int
-  pverp : int
-  pverr : int
-  pverrp : int
+  var lchnk : int
+  var ncol : int
+  var pcols : int
+  var pver : int
+  var pverp : int
+  var pverr : int
+  var pverrp : int
 
-  pcnst : int
-  pnats : int
-  ppcnst : int
-  i : int
-  j : int
-  k : int
-  ii : int
-  kk : int
-  kk1 : int
-  m : int
-  n : int
+  var pcnst : int
+  var pnats : int
+  var ppcnst : int
+  var i : int
+  var j : int
+  var k : int
+  var ii : int
+  var kk : int
+  var kk1 : int
+  var m : int
+  var n : int
 
-  begchunk : int
-  endchunk : int
+  var begchunk : int
+  var endchunk : int
 
-  nyrm : int
-  nyrp : int
+  var nyrm : int
+  var nyrp : int
 
-  doymodel : double
-  doydatam : double
-  doydatap : double
-  deltat : double
-  fact1 : double
-  fact2 : double
+  var doymodel : double
+  var doydatam : double
+  var doydatap : double
+  var deltat : double
+  var fact1 : double
+  var fact2 : double
 
-  xt24 : double
-  tloctm : double
-  hrang : double
-  xxlat : double
-  oldxt24 : double
+  var xt24 : double
+  var tloctm : double
+  var hrang : double
+  var xxlat : double
+  var oldxt24 : double
 
-  nCells = cr.bounds[0]
+  var n_cldadv : int
+  var paerlev : int
+  var levsiz : int
+  var naer_c : int
 
-  q = region(ispace(int3d, {nCells, kte-kts, n_cldadv}), double)
-  ozone_mix_locals = region(ispace(int2d, {nCells, levsiz}), ozone_mix_fs)
-  pin = region(ispace(int1d, levsiz), double)
-  aerosol_locals = region(ispace(int3d, {nCells, paerlev, naer_c}), aerosol_fs)
-  m_hybi = region(ispace(int1d, paerlev), double)
-  abstot = region(ispace(int3d, {nCells, kts:kte+1, kts:kte+1}), double)   -- Total absorptivity
-  absnxt = region(ispace(int3d, {nCells, kts:kte, 4}), double)             -- Total nearest layer absorptivity
-  emstot = region(ispace(int2d, {nCells, kts:kte+1}), double)              -- Total emissivity
-  camrad_1d_locals = region(ispace(int1d, nCells), camrad_1d_fs)
-  camrad_2d_locals = region(ispace(int2d, {nCells, kte-kts}), camrad_2d_fs)
-  camrad_2dextended_locals = region(ispace(int2d, {nCells, kte-kts+1}), camrad_2d_extended_fs)
+  var nCells : int = cr.bounds.lo.x
+
+  var q = region(ispace(int3d, {nCells, constants.nVertLevels, n_cldadv}), double)
+  var ozone_mix_locals = region(ispace(int2d, {nCells, levsiz}), ozone_mix_fs)
+  var pin = region(ispace(int1d, levsiz), double)
+  var aerosol_locals = region(ispace(int3d, {nCells, paerlev, naer_c}), aerosol_fs)
+  var m_hybi = region(ispace(int1d, paerlev), double)
+  var abstot = region(ispace(int3d, {nCells, constants.nVertLevels+1, constants.nVertLevels+1}), double)   -- Total absorptivity
+  var absnxt = region(ispace(int3d, {nCells, constants.nVertLevels, 4}), double)             -- Total nearest layer absorptivity
+  var emstot = region(ispace(int2d, {nCells, constants.nVertLevels+1}), double)              -- Total emissivity
 
   -- END LOCALS --
   ----------------
