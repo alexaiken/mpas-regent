@@ -79,6 +79,8 @@ constants.tmelt = 273.16                                        -- freezing T of
 constants.daysperyear = 365
 constants.solcon_0 = terralib.constant(double, 1370.0)          -- solar constant [W/m2]
 constants.nMonths = 12
+constants.degrad = terralib.constant(double, `(3.1415926 / 180.0)) --conversion from degree to radiant
+constants.dpd = terralib.constant(double, `(360.0 / 365.0))
 constants.cam_abs_dim1 = 4
 constants.cam_abs_dim2 = constants.nVertLevels + 1
 
