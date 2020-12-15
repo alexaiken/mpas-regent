@@ -16,15 +16,12 @@ local jte = 0
 
 --Math function imports
 --TODO: These cause an error "macros must be called from inside terra code".
---min = regentlib.fmin(double, double)
---sin = regentlib.sin(double)
---asin = regentlib.asin(double)
---cos = regentlib.cos(double)
---acos = regentlib.acos(double)
+local sin = regentlib.sin(double)
+local asin = regentlib.asin(double)
+local cos = regentlib.cos(double)
+local acos = regentlib.acos(double)
 
-task radconst(julian : double,
-              degrad : double,
-              dpd : double)
+task radconst(julian : double)
   var obecl : double
   var sinob : double
   var sxlong : double
@@ -38,28 +35,28 @@ task radconst(julian : double,
 
   -- obecl : obliquity = 23.5 degree.
       
-  obecl = 23.5 * degrad
-  --sinob = sin(obecl)
+  obecl = 23.5 * constants.degrad
+  sinob = sin(obecl)
       
   -- calculate longitude of the sun from vernal equinox:
 
   if (julian > 80.0) then
-    sxlong = dpd * (julian - 80.0)
+    sxlong = constants.dpd * (julian - 80.0)
   else
-    sxlong = dpd * (julian + 285.0)
+    sxlong = constants.dpd * (julian + 285.0)
   end
-  sxlong *= degrad
-  --arg = sinob * sin(sxlong)
-  --declin = asin(arg)
-  --decdeg = declin / degrad
+  sxlong *= constants.degrad
+  arg = sinob * sin(sxlong)
+  declin = asin(arg)
+  decdeg = declin / constants.degrad
 
   -- solar constant eccentricity factor (paltridge and platt 1976)
 
-  --djul = julian * 360.0 / 365.0
-  --rjul = djul * degrad
-  --eccfac = 1.000110 + 0.034221 * cos(rjul) + 0.001280 * sin(rjul) + 0.000719 * 
-  --      cos(2 * rjul) + 0.000077 * sin(2 * rjul)
-  --solcon = constants.solcon_0 * eccfac
+  djul = julian * 360.0 / 365.0
+  rjul = djul * constants.degrad
+  eccfac = 1.000110 + 0.034221 * cos(rjul) + 0.001280 * sin(rjul) + 0.000719 * 
+           cos(2 * rjul) + 0.000077 * sin(2 * rjul)
+  solcon = constants.solcon_0 * eccfac
 end
 
 ----------------
@@ -78,9 +75,9 @@ end
 task radiation_sw_to_MPAS()
 end
 
-task driver_radiation_sw()
+task driver_radiation_sw(cr : region(ispace(int2d), cell_fs))
   radiation_sw_from_MPAS()
-  radconst(0, 0, 0)
+  radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
   camrad()
   radiation_sw_to_MPAS()
 end
@@ -267,8 +264,8 @@ do
   if ([rawstring](radt_lw_scheme) == "cam_lw") then
     for j = jts, jte do
       for i = 0, nCellsSolve do
-        cr[{i, 0}].xlat_p = cr[{i, 0}].lat / degrad
-        cr[{i, 0}].xlon_p = cr[{i, 0}].lon / degrad
+        cr[{i, 0}].xlat_p = cr[{i, 0}].lat / constants.degrad
+        cr[{i, 0}].xlon_p = cr[{i, 0}].lon / constants.degrad
         cr[{i, 0}].sfc_albedo_p = cr[{i, 0}].sfc_albedo
 
         cr[{i, 0}].coszr_p      = 0.0
@@ -357,7 +354,63 @@ do
   end
 end
 
-task radiation_lw_to_MPAS()
+task radiation_lw_to_MPAS(cr : region (ispace(int2d), cell_fs),
+                          radt_lw_scheme : regentlib.string,
+                          microp_scheme : regentlib.string,
+                          config_microp_re : bool)
+where 
+  reads (cr.glw_p, cr.lwcf_p, cr.lwdnb_p, cr.lwdnbc_p, cr.lwdnt_p, cr.lwdntc_p, cr.lwupb_p, cr.lwupbc_p, cr.lwupt_p, 
+         cr.lwuptc_p, cr.olrtoa_p, cr.rthratenlw_p, cr.rrecloud_p, cr.rreice_p, cr.rresnow_p),
+  writes (cr.glw, cr.lwcf, cr.lwdnb, cr.lwdnbc, cr.lwdnt, cr.lwdntc, cr.lwupb, cr.lwupbc, cr.lwupt, cr.lwuptc, cr.
+          olrtoa, cr.rthratenlw, cr.rre_cloud, cr.rre_ice, cr.rre_snow)
+do
+  for j = jts, jte do
+    for i = 0, nCellsSolve do
+      cr[{i, 0}].glw    = cr[{i, 0}].glw_p
+      cr[{i, 0}].lwcf   = cr[{i, 0}].lwcf_p
+      cr[{i, 0}].lwdnb  = cr[{i, 0}].lwdnb_p
+      cr[{i, 0}].lwdnbc = cr[{i, 0}].lwdnbc_p
+      cr[{i, 0}].lwdnt  = cr[{i, 0}].lwdnt_p
+      cr[{i, 0}].lwdntc = cr[{i, 0}].lwdntc_p
+      cr[{i, 0}].lwupb  = cr[{i, 0}].lwupb_p
+      cr[{i, 0}].lwupbc = cr[{i, 0}].lwupbc_p
+      cr[{i, 0}].lwupt  = cr[{i, 0}].lwupt_p
+      cr[{i, 0}].lwuptc = cr[{i, 0}].lwuptc_p
+      cr[{i, 0}].olrtoa = cr[{i, 0}].olrtoa_p
+    end
+
+    for k = 0, nVertLevels do
+      for i = 0, nCellsSolve do
+        cr[{i, k}].rthratenlw = cr[{i, k}].rthratenlw_p
+      end
+    end
+  end
+
+  if ([rawstring](radt_lw_scheme) == "radt_lw_scheme") then
+    if ([rawstring](microp_scheme) == "mp_thompson" or [rawstring](microp_scheme) == "mp_wsm6") then
+      if (config_microp_re) then
+        for j = jts, jte do
+          for k = 0, nVertLevels do
+            for i = 0, nCellsSolve do
+              cr[{i, k}].rre_cloud = cr[{i, k}].rrecloud_p
+              cr[{i, k}].rre_ice   = cr[{i, k}].rreice_p
+              cr[{i, k}].rre_snow  = cr[{i, k}].rresnow_p
+            end
+          end
+        end
+      else
+        for j = jts, jte do
+          for k = 0, nVertLevels do
+            for i = 0, nCellsSolve do
+              cr[{i, k}].rre_cloud = 0.0
+              cr[{i, k}].rre_ice   = 0.0
+              cr[{i, k}].rre_snow  = 0.0
+            end
+          end
+        end
+      end
+    end
+  end
 end
 
 task driver_radiation_lw(cr : region(ispace(int2d), cell_fs),
@@ -381,7 +434,7 @@ do
   --  rrtmg_lwrad() -- o3input will be an argument
   --else if
   if ([rawstring](radt_lw_scheme) == "cam_lw") then
-    radconst(0, 0, 0) --TODO: Placeholder arguments! I don't know where actual arguments are from
+    radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
     radt = constants.config_dt / 60.0
     camrad()
   end
