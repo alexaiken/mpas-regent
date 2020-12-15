@@ -41,6 +41,7 @@ task gffgch(t : double,
 where
   reads writes (estblh2o)
 do
+
   -- Local variables --
   var eswtr : double    -- Saturation vapor pressure over water
   var tr : double       -- Transition range for es over water to es over ice
@@ -114,6 +115,7 @@ task radaeini(estblh2o : region(ispace(int1d), doublefield), -- table of H2O sat
 where
   reads writes (estblh2o)
 do
+
   -- Reads in CAM_ABS_DATA.DBL file? 
 
   -- Set up table of H2O saturation vapor pressures for use in calculation effective path RH.  
@@ -142,6 +144,7 @@ task radini(estblh2o : region(ispace(int1d), doublefield), -- table of H2O satur
 where
   reads writes (estblh2o)
 do
+
   radaeini(estblh2o, pstdx, constants.mwdry, constants.mwco2)
 end
 
@@ -156,8 +159,10 @@ end
 --
 -- Author: J. Hack
 task gestbl(estbl : region(ispace(int1d), doublefield))
-where reads writes (estbl)
+where
+  reads writes (estbl)
 do
+
   -- Initialize variables
   var itype : double = 0
   var pcf : double[5]                   -- polynomial coeffs -> es transition water to ice
@@ -233,8 +238,10 @@ end
 
 -- initialization of saturation vapor pressures:
 task esinti(estbl : region(ispace(int1d), doublefield))
-where reads writes (estbl)
+where
+  reads writes (estbl)
 do
+
   -- Call gestbl to build saturation vapor pressure table.
   gestbl(estbl)
 end
@@ -242,8 +249,8 @@ end
 -- initialization of ozone mixing ratios:
 task oznini(cr : region(ispace(int2d), cell_fs),
             er : region(ispace(int2d), edge_fs))
-where reads (cr),
-      writes (cr)
+where
+  reads writes (cr)
 do
   -- TODO
 end
@@ -254,9 +261,10 @@ end
 -- initialization of aerosol concentrations:
 task aerosol_init(cr : region(ispace(int2d), cell_fs),
                   er : region(ispace(int2d), edge_fs))
-where reads (cr),
-      writes (cr)
+where
+  reads writes (cr)
 do
+
   aer_optics_initialize()
 end
 
@@ -293,9 +301,10 @@ end
 -- 
 task camradinit(cr : region(ispace(int2d), cell_fs),
                 er : region(ispace(int2d), edge_fs))
-where reads (cr),
-      writes (cr)
+where
+  reads writes (cr)
 do
+
   var pstd : double = 101325.0
 
   var estblh2o = region(ispace(int1d, constants.ntemp), doublefield)      -- table of H2O saturation vapor pressures

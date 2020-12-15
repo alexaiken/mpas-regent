@@ -11,7 +11,10 @@ task atm_core_init(cr : region(ispace(int2d), cell_fs),
                    er : region(ispace(int2d), edge_fs),
                    vr : region(ispace(int2d), vertex_fs),
                    vert_r : region(ispace(int1d), vertical_fs))
-where reads writes (cr, er, vr, vert_r) do
+where
+  reads writes (cr, er, vr, vert_r)
+do
+
   format.println("Calling atm_core_init...")
 
   atm_compute_signs(cr, er, vr)
@@ -43,8 +46,10 @@ task atm_do_timestep(cr : region(ispace(int2d), cell_fs),
                      vr : region(ispace(int2d), vertex_fs),
                      vert_r : region(ispace(int1d), vertical_fs),
                      dt : double)
-where reads writes (cr, er, vr, vert_r) 
+where
+  reads writes (cr, er, vr, vert_r) 
 do
+
   --if(moist_physics) then
   physics_timetracker()
   physics_driver()

@@ -24,7 +24,9 @@ end
 --FILE_NAME, GRAPH_FILE_NAME
 --return: cell_region, edge_region, vertex_region
 task load_mesh(cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs), file_name : regentlib.string, graph_file_name : regentlib.string)
-where reads writes(cell_region, edge_region, vertex_region) do
+where
+    reads writes (cell_region, edge_region, vertex_region)
+do
 
     -------------------------------------------
     ----- READ VARIABLES FROM NETCDF FILE -----
@@ -379,7 +381,9 @@ end
 --input: cell_region, edge_region, vertex_region,
 --return: cell_partition_initial, partition_s_1, partition_halo_1, partition_halo_2
 task partition_regions(num_partitions : int, cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
-where reads writes(cell_region, edge_region, vertex_region) do
+where
+    reads writes (cell_region, edge_region, vertex_region)
+do
 
 
 
@@ -691,7 +695,9 @@ end
 
 --input: cell_region, edge_region, vertex_region
 task write_output(cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
-where reads writes(cell_region, edge_region, vertex_region) do
+where
+    reads writes (cell_region, edge_region, vertex_region)
+do
 
 
     ----------------------------------------------------
@@ -1009,7 +1015,9 @@ end
 
 --input: cell_region, edge_region, vertex_region
 task write_output_plotting(cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
-where reads writes(cell_region, edge_region, vertex_region) do
+where
+    reads writes (cell_region, edge_region, vertex_region)
+do
 
 
     ----------------------------------------------------

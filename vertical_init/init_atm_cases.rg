@@ -24,9 +24,20 @@ task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
                       er : region(ispace(int2d), edge_fs),
                       vr : region(ispace(int2d), vertex_fs),
                       vertr : region(ispace(int1d), vertical_fs))
-where reads (cr.lat, er.cellsOnEdge, er.edgesOnEdge_ECP, er.lat, er.lon, er.nEdgesOnEdge, er.verticesOnEdge, er.weightsOnEdge, vr.lat, vr.lon),
-writes (cr.qsat, cr.relhum, cr.rho, cr.rtheta_base, cr.rtheta_p, cr.surface_pressure, cr.theta, cr.w, er.fEdge, er.zxu, vr.fVertex, vertr.rdzu, vertr.rdzw),
-reads writes (cr.areaCell, cr.dss, cr.exner, cr.hx, cr.pressure_base, cr.pressure_p, cr.qv, cr.rho_base, cr.rho_p, cr.rho_zz, cr.rw, cr.surface_pressure, cr.theta_base, cr.theta_m, cr.x, cr.y, cr.z, cr.zgrid, cr.zz, er.dvEdge, er.dcEdge, er.ru, er.u, er.v, er.x, er.y, er.z, er.zb, er.zb3, vr.areaTriangle, vr.kiteAreasOnVertex, vr.x, vr.y, vr.z, vertr.dzu, vertr.fzm, vertr.fzp) do
+where
+  reads (cr.lat,
+         er.{cellsOnEdge, edgesOnEdge_ECP, lat, lon, nEdgesOnEdge, verticesOnEdge, weightsOnEdge}, 
+         vr.{lat, lon}),
+  writes (cr.{qsat, relhum, rho, rtheta_base, rtheta_p, surface_pressure, theta, w},
+          er.{fEdge, zxu},
+          vr.fVertex,
+          vertr.{rdzu, rdzw}),
+  reads writes (cr.{areaCell, dss, exner, hx, pressure_base, pressure_p, qv, rho_base, rho_p, rho_zz, 
+                    rw, surface_pressure, theta_base, theta_m, x, y, z, zgrid, zz},
+                er.{dvEdge, dcEdge, ru, u, v, x, y, z, zb, zb3},
+                vr.{areaTriangle, kiteAreasOnVertex, x, y, z},
+                vertr.{dzu, fzm, fzp})
+do
 
 -- local vars/constants defined at beginning of subroutine
   var cp = constants.cp

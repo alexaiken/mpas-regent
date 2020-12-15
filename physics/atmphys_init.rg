@@ -8,8 +8,9 @@ require "physics/atmphys_camrad_init"
 -- TODO correct arguments
 task physics_init(cr : region(ispace(int2d), cell_fs),
                   er : region(ispace(int2d), edge_fs))
-where reads (cr),
-      writes (cr)
+where
+  reads (cr),
+  writes (cr)
 do
 
   -- SKIPPING LOTS OF mpas_atmphys_init.F:physics_init(...)
