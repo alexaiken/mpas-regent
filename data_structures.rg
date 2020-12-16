@@ -470,7 +470,7 @@ fspace cell_fs {
     ------ camrad() 2d locals ------
 
     cld : double, 
-    pmid : double, 
+    pmid : double,      -- level pressures (mks)
     lnpmid : double, 
     pdel : double, 
     zm : double, 
@@ -654,54 +654,9 @@ fspace aerosol_fs {
   m_hybi_p : double,
 }
 
-fspace radctl_args_fs {
-  lchnk : int,          -- chunk identifier
-  j : int,              -- chunk identifier
-  ncol : int,           -- number of atmospheric columns
-  levsiz : int,         -- number of ozone data levels
-  num_months : int,     -- 12 months
-  paerlev : int,        -- aerosol vertical level and # species
-  naer_c : int,         -- aerosol vertical level and # species
-  pcols : int,
-  pver : int,
-  pverp : int,
-  pverr : int,
-  pverrp : int,
-  ppcnst : int,
-  pcnst : int,
-  dolw : bool,
-  dosw : bool,
-  doabsems : bool,
+fspace radctl_1d_fs {
+  -- Arrays of size (pcols) --
 
-  nspint : int,         -- Num of spctrl intervals across solar spectrum
-  naer_groups : int,    -- Num of aerosol groups for optical diagnostics
-
-  solcon : double,      -- solar constant with eccentricity factor
-  xtime : double,
-  gmt : double,
-  julday : double,
-  julian : double,
-  dt : double,
-}
-
-fspace radctl_locals_fs {
-  -- Single attributes --
-
-  i : int,
-  k : int,
-
-  in2o : int,
-  ich4 : int,
-  if11 : int,
-  if12 : int,
-
-  eccf : double,          -- Earth/sun distance factor
-
-}
-
-fspace radctl_1dlocals_fs {
-
-  -- Arrays of size 'pcols' --
   solin : double,         -- Solar incident flux
   fsntoa : double,        -- Net solar flux at TOA
   fsntoac : double,       -- Clear sky net solar flux at TOA
@@ -718,4 +673,27 @@ fspace radctl_1dlocals_fs {
   lwupcgs : double,       -- Upward longwave flux in cgs units
 
   frc_day : double,       -- = 1 for daylight, =0 for night colums
+}
+
+fspace radctl_2d_pver_fs {
+  -- Arrays of size (pcols, pver) --
+  ftem : double,          -- temporary array for outfld
+  
+  n2o : double,      -- nitrous oxide mass mixing ratio
+  ch4 : double,      -- methane mass mixing ratio
+  cfc11 : double,    -- cfc11 mass mixing ratio
+  cfc12 : double,    -- cfc12 mass mixing ratio
+}
+
+fspace radctl_2d_pverr_fs {
+  -- Arrays of size (pcols, pverr) --
+
+  pbr : double,     -- Model mid-level pressures (dynes/cm2)
+
+  o3vmr : double,   -- Ozone volume mixing ratio
+  o3mmr : double,   -- Ozone mass mixing ratio
+  rh : double,      -- level relative humidity (fraction)
+
+  esat : double,    -- saturation vapor pressure
+  qsat : double,    -- saturation specific humidity
 }

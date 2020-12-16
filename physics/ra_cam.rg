@@ -11,69 +11,41 @@ task param_cldoptics_calc()
   cldovrlap()
 end
 
-task radctl(radctl_args : radctl_args_fs,
-            pin : region(ispace(int1d, levsiz), double))
+task radctl(cr : region(ispace(int2d), cell_fs),
+            ncol : int,
+            pcols : int,
+            pver : int, pverp : int, pverr : int, pverrp : int,
+            julian : double,
+            ozmixmj : region(ispace(int3d), double),
+            ozmix : region(ispace(int2d), double),
+            levsiz : double,
+            pin : region(ispace(int1d), double),
+            ozncyc : bool)
+where reads (ozmixmj, cr.pmid, pin, ozmix),
+      writes (ozmix)
+do
 
   -----------------------------Local variables-----------------------------
 
-  var i : int,
-  k : int,
+  var i : int
+  var k : int
 
-  in2o : int,
-  ich4 : int,
-  if11 : int,
-  if12 : int,
+  var in2o : int
+  var ich4 : int
+  var if11 : int
+  var if12 : int
 
-  eccf : double,          -- Earth/sun distance factor
+  var eccf : double          -- Earth/sun distance factor
 
+  var radctl_1d_r = region(ispace(int1d, pcols), radctl_1d_fs)
+  var radctl_2d_pver_r = region(ispace(int2d, {pcols, pver}), radctl_2d_pver_fs)
+  var radctl_2d_pverr_r = region(ispace(int2d, {pcols, pverr}), radctl_2d_pverr_fs)
 
+  -----------------------------
 
+  oznint(julian, ozmixmj, ozmix, levsiz, pcols, ozncyc)
 
-
-  -- passing temp variables for now
-  var ozmixmj = region(ispace(int3d, {pcols, levsiz, num_months}), double)
-  for i=0, pcols do
-    for j=0, levsiz do
-      for k=0, num_months do
-        ozmixmj[{i, j, k}] = .5
-      end
-    end
-  end
-  var ozmix = region(ispace(int2d, {pcols, levsiz}), double) -- ozone mixing ratio
-  for i=0, pcols do
-    for j=0, levsiz do
-      ozmix[{i, j}] = .5
-    end
-  end
-  oznint(radctl_args.julian, 
-         ozmixmj, 
-         ozmix, 
-         radctl_args.levsiz, 
-         radctl_args.num_months, 
-         radctl_args.pcols, 
-         radctl_args.ozncyc)
-
-  -- passing temp variables for now
-  var pmid = region(ispace(int2d, {pcols, pver}), double)    -- level pressures (mks)
-  for i=0, pcols do
-    for j=0, levsiz do
-      pmid[{i, j}] = .5
-    end
-  end
-  var o3vmr = region(ispace(int2d, {pcols, pver}), double)
-  for i=0, pcols do
-    for j=0, levsiz do
-      o3vmr[{i, j}] = .5
-    end
-  end
-  radozn(radctl_args.ncol, 
-         radctl_args.pcols, 
-         radctl_args.pver, 
-         pmid, 
-         pin, 
-         radctl_args.levsiz, 
-         ozmix, 
-         o3vmr)
+  radozn(cr, radctl_2d_pverr_r, ncol, pcols, pver, pin, levsiz, ozmix)
 
   radinp()
   aqsat()
@@ -86,10 +58,13 @@ task radctl(radctl_args : radctl_args_fs,
   trcmix()
 end
 
-task camrad(cr : region(ispace(int2d), cell_fs))
-
-  ------------------
-  -- START LOCALS --
+task camrad(cr : region(ispace(int2d), cell_fs),
+            levsiz : int,
+            julian : double,
+            ozncyc : bool)
+where reads (cr.pmid)
+do
+  -----------------------------Local variables-----------------------------
 
   var lchnk : int
   var ncol : int
@@ -130,11 +105,15 @@ task camrad(cr : region(ispace(int2d), cell_fs))
   var xxlat : double
   var oldxt24 : double
 
-  -- END LOCALS --
-  ----------------
+  var ozmixmj = region(ispace(int3d, {constants.nCells, levsiz, constants.nMonths}), double)
+  var ozmix = region(ispace(int2d, {constants.nCells, levsiz}), double)
+  var pin = region(ispace(int1d, levsiz), double)
+
+  -----------------------------
 
   param_cldoptics_calc()
 
-  var radctl_args = radctl_args_fs {}
-  radctl(radctl_args)
+  radctl(cr, ncol, pcols, pver, pverp, pverr, pverrp, julian,
+         ozmixmj, ozmix, levsiz, pin, ozncyc)
+
 end
