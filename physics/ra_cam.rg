@@ -11,14 +11,26 @@ task param_cldoptics_calc()
   cldovrlap()
 end
 
-task radctl()
+task radctl(radctl_args : radctl_args_fs,
+            pin : region(ispace(int1d, levsiz), double))
+
+  -----------------------------Local variables-----------------------------
+
+  var i : int,
+  k : int,
+
+  in2o : int,
+  ich4 : int,
+  if11 : int,
+  if12 : int,
+
+  eccf : double,          -- Earth/sun distance factor
+
+
+
+
 
   -- passing temp variables for now
-  var julian : double = 1.0
-  var levsiz : int = 1
-  var num_months : int = 1
-  var pcols : int = 1
-  var ozncyc : bool = true
   var ozmixmj = region(ispace(int3d, {pcols, levsiz, num_months}), double)
   for i=0, pcols do
     for j=0, levsiz do
@@ -33,20 +45,20 @@ task radctl()
       ozmix[{i, j}] = .5
     end
   end
-  oznint(julian, ozmixmj, ozmix, levsiz, num_months, pcols, ozncyc)
+  oznint(radctl_args.julian, 
+         ozmixmj, 
+         ozmix, 
+         radctl_args.levsiz, 
+         radctl_args.num_months, 
+         radctl_args.pcols, 
+         radctl_args.ozncyc)
 
   -- passing temp variables for now
-  var ncol : int = 1     -- number of atmospheric columns
-  var pver : int = 1
   var pmid = region(ispace(int2d, {pcols, pver}), double)    -- level pressures (mks)
   for i=0, pcols do
     for j=0, levsiz do
       pmid[{i, j}] = .5
     end
-  end
-  var pin = region(ispace(int1d, levsiz), double)            -- ozone data level pressures (mks)
-  for i=0, pcols do
-    pin[i] = .5
   end
   var o3vmr = region(ispace(int2d, {pcols, pver}), double)
   for i=0, pcols do
@@ -54,7 +66,14 @@ task radctl()
       o3vmr[{i, j}] = .5
     end
   end
-  radozn(ncol, pcols, pver, pmid, pin, levsiz, ozmix, o3vmr)
+  radozn(radctl_args.ncol, 
+         radctl_args.pcols, 
+         radctl_args.pver, 
+         pmid, 
+         pin, 
+         radctl_args.levsiz, 
+         ozmix, 
+         o3vmr)
 
   radinp()
   aqsat()
@@ -115,5 +134,7 @@ task camrad(cr : region(ispace(int2d), cell_fs))
   ----------------
 
   param_cldoptics_calc()
-  radctl()
+
+  var radctl_args = radctl_args_fs {}
+  radctl(radctl_args)
 end

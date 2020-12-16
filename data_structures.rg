@@ -653,3 +653,69 @@ fspace aerosol_fs {
   aerosolcn_p : double[constants.nAerosols],
   m_hybi_p : double,
 }
+
+fspace radctl_args_fs {
+  lchnk : int,          -- chunk identifier
+  j : int,              -- chunk identifier
+  ncol : int,           -- number of atmospheric columns
+  levsiz : int,         -- number of ozone data levels
+  num_months : int,     -- 12 months
+  paerlev : int,        -- aerosol vertical level and # species
+  naer_c : int,         -- aerosol vertical level and # species
+  pcols : int,
+  pver : int,
+  pverp : int,
+  pverr : int,
+  pverrp : int,
+  ppcnst : int,
+  pcnst : int,
+  dolw : bool,
+  dosw : bool,
+  doabsems : bool,
+
+  nspint : int,         -- Num of spctrl intervals across solar spectrum
+  naer_groups : int,    -- Num of aerosol groups for optical diagnostics
+
+  solcon : double,      -- solar constant with eccentricity factor
+  xtime : double,
+  gmt : double,
+  julday : double,
+  julian : double,
+  dt : double,
+}
+
+fspace radctl_locals_fs {
+  -- Single attributes --
+
+  i : int,
+  k : int,
+
+  in2o : int,
+  ich4 : int,
+  if11 : int,
+  if12 : int,
+
+  eccf : double,          -- Earth/sun distance factor
+
+}
+
+fspace radctl_1dlocals_fs {
+
+  -- Arrays of size 'pcols' --
+  solin : double,         -- Solar incident flux
+  fsntoa : double,        -- Net solar flux at TOA
+  fsntoac : double,       -- Clear sky net solar flux at TOA
+  fsnirt : double,        -- Near-IR flux absorbed at toa
+  fsnrtc : double,        -- Clear sky near-IR flux absorbed at toa
+  fsnirtsq : double,      -- Near-IR flux absorbed at toa >= 0.7 microns
+  fsntc : double,         -- Clear sky total column abs solar flux
+  fsnsc : double,         -- Clear sky surface abs solar flux
+  fsdsc : double,         -- Clear sky surface downwelling solar flux
+  flutc : double,         -- Upward Clear Sky flux at top of model
+  flntc : double,         -- Clear sky lw flux at model top
+  flnsc : double,         -- Clear sky lw flux at srf (up-down)
+
+  lwupcgs : double,       -- Upward longwave flux in cgs units
+
+  frc_day : double,       -- = 1 for daylight, =0 for night colums
+}
