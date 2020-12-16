@@ -470,7 +470,7 @@ fspace cell_fs {
     ------ camrad() 2d locals ------
 
     cld : double, 
-    pmid : double, 
+    pmid : double,      -- level pressures (mks)
     lnpmid : double, 
     pdel : double, 
     zm : double, 
@@ -652,4 +652,48 @@ fspace aerosol_fs {
   aerosolcp_p : double[constants.nAerosols],
   aerosolcn_p : double[constants.nAerosols],
   m_hybi_p : double,
+}
+
+fspace radctl_1d_fs {
+  -- Arrays of size (pcols) --
+
+  solin : double,         -- Solar incident flux
+  fsntoa : double,        -- Net solar flux at TOA
+  fsntoac : double,       -- Clear sky net solar flux at TOA
+  fsnirt : double,        -- Near-IR flux absorbed at toa
+  fsnrtc : double,        -- Clear sky near-IR flux absorbed at toa
+  fsnirtsq : double,      -- Near-IR flux absorbed at toa >= 0.7 microns
+  fsntc : double,         -- Clear sky total column abs solar flux
+  fsnsc : double,         -- Clear sky surface abs solar flux
+  fsdsc : double,         -- Clear sky surface downwelling solar flux
+  flutc : double,         -- Upward Clear Sky flux at top of model
+  flntc : double,         -- Clear sky lw flux at model top
+  flnsc : double,         -- Clear sky lw flux at srf (up-down)
+
+  lwupcgs : double,       -- Upward longwave flux in cgs units
+
+  frc_day : double,       -- = 1 for daylight, =0 for night colums
+}
+
+fspace radctl_2d_pver_fs {
+  -- Arrays of size (pcols, pver) --
+  ftem : double,          -- temporary array for outfld
+  
+  n2o : double,      -- nitrous oxide mass mixing ratio
+  ch4 : double,      -- methane mass mixing ratio
+  cfc11 : double,    -- cfc11 mass mixing ratio
+  cfc12 : double,    -- cfc12 mass mixing ratio
+}
+
+fspace radctl_2d_pverr_fs {
+  -- Arrays of size (pcols, pverr) --
+
+  pbr : double,     -- Model mid-level pressures (dynes/cm2)
+
+  o3vmr : double,   -- Ozone volume mixing ratio
+  o3mmr : double,   -- Ozone mass mixing ratio
+  rh : double,      -- level relative humidity (fraction)
+
+  esat : double,    -- saturation vapor pressure
+  qsat : double,    -- saturation specific humidity
 }
