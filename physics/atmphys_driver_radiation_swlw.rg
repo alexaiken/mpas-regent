@@ -22,7 +22,6 @@ local asin = regentlib.asin(double)
 local cos = regentlib.cos(double)
 local acos = regentlib.acos(double)
 
-<<<<<<< HEAD
 struct solar_vars {
   declin : double,
   solcon : double
@@ -30,9 +29,6 @@ struct solar_vars {
 
 __demand(__inline)
 task radconst(julian : double) : solar_vars
-=======
-task radconst(julian : double)
->>>>>>> lw to and from MPAS drafts
   var obecl : double
   var sinob : double
   var sxlong : double
@@ -68,12 +64,9 @@ task radconst(julian : double)
   eccfac = 1.000110 + 0.034221 * cos(rjul) + 0.001280 * sin(rjul) + 0.000719 * 
            cos(2 * rjul) + 0.000077 * sin(2 * rjul)
   solcon = constants.solcon_0 * eccfac
-<<<<<<< HEAD
   
   var solar : solar_vars = solar_vars { declin = declin, solcon = solcon }
   return solar
-=======
->>>>>>> lw to and from MPAS drafts
 end
 
 ----------------
@@ -94,12 +87,8 @@ end
 
 task driver_radiation_sw(cr : region(ispace(int2d), cell_fs))
   radiation_sw_from_MPAS()
-<<<<<<< HEAD
   var solar : solar_vars = radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
   --format.println("solar.declin = {}, solar.solcon = {}", solar.declin, solar.solcon)
-=======
-  radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
->>>>>>> lw to and from MPAS drafts
   camrad()
   radiation_sw_to_MPAS()
 end
@@ -379,7 +368,6 @@ end
 task radiation_lw_to_MPAS(cr : region (ispace(int2d), cell_fs),
                           radt_lw_scheme : regentlib.string,
                           microp_scheme : regentlib.string,
-<<<<<<< HEAD
                           microp_re : bool)
 where 
   reads (cr.{glw_p, lwcf_p, lwdnb_p, lwdnbc_p, lwdnt_p, lwdntc_p, lwupb_p, lwupbc_p, lwupt_p, 
@@ -390,15 +378,6 @@ do
 
   format.println("Calling radiation_lw_to_MPAS...")
 
-=======
-                          config_microp_re : bool)
-where 
-  reads (cr.glw_p, cr.lwcf_p, cr.lwdnb_p, cr.lwdnbc_p, cr.lwdnt_p, cr.lwdntc_p, cr.lwupb_p, cr.lwupbc_p, cr.lwupt_p, 
-         cr.lwuptc_p, cr.olrtoa_p, cr.rthratenlw_p, cr.rrecloud_p, cr.rreice_p, cr.rresnow_p),
-  writes (cr.glw, cr.lwcf, cr.lwdnb, cr.lwdnbc, cr.lwdnt, cr.lwdntc, cr.lwupb, cr.lwupbc, cr.lwupt, cr.lwuptc, cr.
-          olrtoa, cr.rthratenlw, cr.rre_cloud, cr.rre_ice, cr.rre_snow)
-do
->>>>>>> lw to and from MPAS drafts
   for j = jts, jte do
     for i = 0, nCellsSolve do
       cr[{i, 0}].glw    = cr[{i, 0}].glw_p
@@ -421,15 +400,9 @@ do
     end
   end
 
-<<<<<<< HEAD
   if ([rawstring](radt_lw_scheme) == "rrtmg_lw") then
     if ([rawstring](microp_scheme) == "mp_thompson" or [rawstring](microp_scheme) == "mp_wsm6") then
       if (microp_re) then
-=======
-  if ([rawstring](radt_lw_scheme) == "radt_lw_scheme") then
-    if ([rawstring](microp_scheme) == "mp_thompson" or [rawstring](microp_scheme) == "mp_wsm6") then
-      if (config_microp_re) then
->>>>>>> lw to and from MPAS drafts
         for j = jts, jte do
           for k = 0, nVertLevels do
             for i = 0, nCellsSolve do
@@ -484,11 +457,7 @@ do
   --  rrtmg_lwrad() -- o3input will be an argument
   --else if
   if ([rawstring](radt_lw_scheme) == "cam_lw") then
-<<<<<<< HEAD
     var solar : solar_vars = radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
-=======
-    radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
->>>>>>> lw to and from MPAS drafts
     radt = constants.config_dt / 60.0
     camrad()
   end
