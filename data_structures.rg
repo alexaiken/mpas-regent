@@ -171,11 +171,9 @@ fspace cell_fs {
     rw_save : double, --"predicted value of rho*omega/zz, saved before acoustic steps" dimensions="nVertLevelsP1 nCells Time" units="kg m^{-2} s^{-1}"
     wwAvg : double, --"time-averaged rho*omega/zz used in scalar transport" "nVertLevelsP1 nCells Time"
     invAreaCell : double, --"Inverse of Voronoi cell area"
-    theta_m : double, --"Moist potential temperature: theta*(1+q_v*R_v/R_d)" --nVertLevels nCells Time"
+    theta_m : double, --"Moist potential temperature: theta*(1+q_v*R_v/R_d)" --nVertLevels nCells Time" alias:tend_rt
 
     tend_rho : double, --name_in_code="rho_zz" "Tendency of dry density from dynamics" dimensions="nVertLevels nCells Time" units="kg m^{-3} s^{-1}" description=
-    tend_rt : double, --NOT IN REGISTRY: TO FIGURE OUT
-    tend_rw : double, --NOT IN REGISTRY: TO FIGURE OUT
 
     coftz : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="s K" description="coefficient for implicit contribution of omega vertical derivative to the theta_m update"
     cofwz : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1} K^{-1}" description="coefficient for implicit contribution of density to the vertical velocity update"
@@ -191,12 +189,12 @@ fspace cell_fs {
     exner: double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="Exner function"
     exner_base: double, --type="real" dimensions="nVertLevels nCells Time" units="unitless" description="Base-state Exner function"
 
-    w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-1}" description="Vertical velocity at vertical cell faces"
+    w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-1}" description="Vertical velocity at vertical cell faces" aliases:w_tend,tend_rw,tend_w
     specZoneMaskCell: double, --type="real" dimensions="nCells" default_value="0.0" units="-" description="0/1 mask on cells, defined as 1 for cells in the limited-area specified zone"/>
     edgesOnCell_sign: double[constants.maxEdges], --TODO: duplicate of edgesOnCellSign; type="real" dimensions="maxEdges nCells" units="-" description="Sign for edges surrounding a cell: positive for positive outward normal velocity"
     cqw : double, -- type = "reel" dimensions="nVertLevels nCells Time" units="unitless" description="rho_d/rho_m at w points"
     qtot : double, -- defined in timestep for use in compute_dyn_tend and other subroutines
-    rho_base : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Base state dry air density"
+    rho_base : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="Base state dry air density" alias:rb
     rtheta_base : double, -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="reference state rho*theta/zz"
     rtheta_p : double, -- type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="rho*theta_m/zz perturbation from the reference state value"
     relhum : double, -- type="real" dimensions="nVertLevels nCells Time" units="percent" description="Relative humidity"
@@ -216,7 +214,7 @@ fspace cell_fs {
 
     ---vars first seen in atm_init_coupled_diagnostics --
     pressure_base : double,  --type="real" dimensions="nVertLevels nCells Time" units="Pa"  description="Base state pressure"/>
-    pressure_p : double,  --type="real" dimensions="nVertLevels nCells Time" units="Pa"  description="Base state pressure"/>
+    pressure_p : double,  --type="real" dimensions="nVertLevels nCells Time" units="Pa"  description="Base state pressure"/> alias:pp
     theta : double, --type="real" dimensions="nVertLevels nCells Time" units="K" description="Potential temperature"/>
     rho_p : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="rho/zz perturbation from the reference state value, advanced over acoustic steps"/>
     theta_base : double, --type="real" dimensions="nVertLevels nCells Time" units="K" description="Base state potential temperature"/>
@@ -226,7 +224,6 @@ fspace cell_fs {
 
     --vars first seen in atm_set_smlstep_pert_variables --
     bdyMaskCell : int, --type="integer" dimensions="nCells" default_value="0" units="-" description="Limited-area specified/relaxation zone index for cells"
-    w_tend : double, --Note: not found in Registry.xml
 
     --vars first seen in atm_compute_dyn_tend_work --
     defc_a : double[constants.maxEdges], --type="real" dimensions="maxEdges nCells" units="unitless" description="Coefficients for computing the off-diagonal components of the horizontal deformation"
@@ -235,13 +232,7 @@ fspace cell_fs {
     h_divergence : double, --type="real" dimensions="nVertLevels nCells Time" units="???" description="???"
     tend_rho_physics : double, --Note: not found in Registry.xml
     dpdz : double, --Note: not found in Registry.xml
-    rb : double, --Note: not found in Registry.xml
-    rr_save : double, --Note: not found in Registry.xml
-    --pp : double, --Note: not found in Registry.xml
     delsq_divergence : double, --Note: not found in Registry.xml
-    ur_cell : double, --Note: not found in Registry.xml
-    vr_cell : double, --Note: not found in Registry.xml
-    tend_w : double, --type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-2}" description="Tendency of w from dynamics"
     delsq_w : double, --Note: not found in Registry.xml
     tend_w_euler : double, --Note: not found in Registry.xml
     tend_theta : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3} s^{-1}" description="tendency of coupled potential temperature rho*theta_m/zz from dynamics and physics, updated each RK step"
@@ -263,7 +254,7 @@ fspace cell_fs {
 
     --vars first seen in atm_rk_integration_setup--
     rtheta_p_save : double, --type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}" description="predicted value rtheta_p, saved before acoustic steps"
-    rho_p_save : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="predicted value rho_p, saved before acoustic steps" 
+    rho_p_save : double, --type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}" description="predicted value rho_p, saved before acoustic steps" alias:rr_save
     w_2 : double, --Note: not found in Registry.xml. Predicted value of w, saved before acoustic steps
     theta_m_2 : double, --Note: not found in Registry.xml. Predicted value of theta_m, saved before acoustic steps
     rho_zz_2 : double, --Note: not found in Registry.xml. Predicted value of rho_zz, saved before acoustic steps
@@ -277,8 +268,8 @@ fspace cell_fs {
     uReconstructY : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Cartesian y-component of reconstructed horizontal velocity at cell centers"
     uReconstructZ : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Cartesian z-component of reconstructed horizontal velocity at cell centers"
     coeffs_reconstruct : double[constants.maxEdges][3], --type="real" dimensions="R3 maxEdges nCells" units="unitless" description="Coefficients to reconstruct velocity vectors at cell centers"
-    uReconstructZonal : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Zonal component of reconstructed horizontal velocity at cell centers"
-    uReconstructMeridional : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Meridional component of reconstructed horizontal velocity at cell centers"
+    uReconstructZonal : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Zonal component of reconstructed horizontal velocity at cell centers" alias:ur_cell
+    uReconstructMeridional : double, --type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}" description="Meridional component of reconstructed horizontal velocity at cell centers" alias:vr_cell
 
     -- Physics - Radiation
     --vars first seen in radiation_lw_from_MPAS
