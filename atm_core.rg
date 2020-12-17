@@ -45,14 +45,16 @@ task atm_do_timestep(cr : region(ispace(int2d), cell_fs),
                      er : region(ispace(int2d), edge_fs),
                      vr : region(ispace(int2d), vertex_fs),
                      vert_r : region(ispace(int1d), vertical_fs),
+                     aer_r : region(ispace(int2d), aerosol_fs),
+                     ozn_r : region(ispace(int2d), ozn_fs),
                      dt : double)
 where
-  reads writes (cr, er, vr, vert_r) 
+  reads writes (cr, er, vr, vert_r, aer_r, ozn_r) 
 do
 
   --if(moist_physics) then
   physics_timetracker()
-  physics_driver()
+  physics_driver(cr, aer_r, ozn_r)
   --end
 
   atm_timestep(cr, er, vr, vert_r, dt)

@@ -3,6 +3,7 @@ require "data_structures"
 require "physics/ra_cam"
 
 local constants = require("constants")
+local format = require("std/format")
 
 local nCellsSolve = constants.nCells --simplification
 local nAerLevels = constants.nAerLevels
@@ -21,7 +22,13 @@ local asin = regentlib.asin(double)
 local cos = regentlib.cos(double)
 local acos = regentlib.acos(double)
 
-task radconst(julian : double)
+struct solar_vars {
+  declin : double,
+  solcon : double
+}
+
+__demand(__inline)
+task radconst(julian : double) : solar_vars
   var obecl : double
   var sinob : double
   var sxlong : double
@@ -57,6 +64,9 @@ task radconst(julian : double)
   eccfac = 1.000110 + 0.034221 * cos(rjul) + 0.001280 * sin(rjul) + 0.000719 * 
            cos(2 * rjul) + 0.000077 * sin(2 * rjul)
   solcon = constants.solcon_0 * eccfac
+  
+  var solar : solar_vars = solar_vars { declin = declin, solcon = solcon }
+  return solar
 end
 
 ----------------
@@ -77,7 +87,8 @@ end
 
 task driver_radiation_sw(cr : region(ispace(int2d), cell_fs))
   radiation_sw_from_MPAS()
-  radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
+  var solar : solar_vars = radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
+  --format.println("solar.declin = {}, solar.solcon = {}", solar.declin, solar.solcon)
   camrad()
   radiation_sw_to_MPAS()
 end
@@ -102,8 +113,7 @@ task radiation_lw_from_MPAS(cr : region(ispace(int2d), cell_fs),
                             microp_scheme : regentlib.string,
                             config_microp_re : bool,
                             config_o3climatology : bool,
-                            xtime_s : double,
-                            degrad : double)
+                            xtime_s : double)
 where
   reads (cr.{cldfrac, lat, lon, m_ps, pres_hyd_p, re_cloud, re_ice, re_snow, sfc_albedo, sfc_emiss,
              skintemp, snow, xice, xland},
@@ -386,7 +396,7 @@ do
     end
   end
 
-  if ([rawstring](radt_lw_scheme) == "radt_lw_scheme") then
+  if ([rawstring](radt_lw_scheme) == "rrtmg_lw") then
     if ([rawstring](microp_scheme) == "mp_thompson" or [rawstring](microp_scheme) == "mp_wsm6") then
       if (config_microp_re) then
         for j = jts, jte do
@@ -414,6 +424,8 @@ do
 end
 
 task driver_radiation_lw(cr : region(ispace(int2d), cell_fs),
+                         aer_r : region(ispace(int2d), aerosol_fs),
+                         ozn_r : region(ispace(int2d), ozn_fs),
                          radt_lw_scheme : regentlib.string,
                          config_o3climatology : bool,
                          microp_scheme : regentlib.string,
@@ -434,7 +446,7 @@ do
   --  rrtmg_lwrad() -- o3input will be an argument
   --else if
   if ([rawstring](radt_lw_scheme) == "cam_lw") then
-    radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
+    var solar : solar_vars = radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
     radt = constants.config_dt / 60.0
     camrad()
   end
