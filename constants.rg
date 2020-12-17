@@ -80,6 +80,8 @@ constants.solcon_0 = terralib.constant(double, 1370.0)          -- solar constan
 constants.nMonths = 12
 constants.cam_abs_dim1 = 1 -- TODO: What is this???
 constants.cam_abs_dim2 = constants.nVertLevels + 1
+constants.amd = 28.9644                                         -- Molecular weight of dry air (kg/kmol)
+constants.amo = terralib.constant(double, 48.0000)              -- Molecular weight of ozone (g/mol)
 
 --TODO: Radiation-related constants that we need to find, so these are placeholders for now
 constants.nOznLevels = 1

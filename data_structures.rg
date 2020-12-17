@@ -697,3 +697,9 @@ fspace radctl_2d_pverr_fs {
   esat : double,    -- saturation vapor pressure
   qsat : double,    -- saturation specific humidity
 }
+
+fspace radctl_2d_pverrp_fs {
+  -- Arrays of size (pcols, pverrp) --
+
+  pnm : double,     -- Model interface pressures (dynes/cm2)
+}

@@ -211,7 +211,55 @@ do
   end
 end
 
-task radinp()
+
+-- From MPAS-Model/src/core_atmosphere/physics/physics_wrf/module_ra_cam.F
+--
+-- Purpose: 
+-- Set latitude and time dependent arrays for input to solar
+-- and longwave radiation.
+-- Convert model pressures to cgs, and compute ozone mixing ratio, needed for
+-- the solar radiation.
+--
+-- NOTE: variable eccf is unused everywhere, so not included in regent version
+task radinp(cr : region(ispace(int2d), cell_fs),
+            radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
+            radctl_2d_pverrp_r : region(ispace(int2d), radctl_2d_pverrp_fs),
+            ncol : int,         -- number of atmospheric columns
+            pver : int,
+            pverp : int)
+where
+  reads (cr.{pmid, pint}, radctl_2d_pverr_r.o3vmr),
+  writes (radctl_2d_pverr_r.{pbr, o3mmr}, radctl_2d_pverrp_r.pnm)
+do
+  ---------------------------Local variables-----------------------------
+  var i : int           -- Longitude loop index
+  var k : int           -- Vertical loop index
+
+  var calday : double   -- current calendar day
+  var vmmr : double     -- Ozone volume mixing ratio
+  var delta : double    -- Solar declination angle
+  -----------------------------------------------------------------------
+
+  -- Convert pressure from pascals to dynes/cm2
+  for k=0, pver do
+    for i=0, ncol do
+        radctl_2d_pverr_r[{i, k}].pbr = cr[{i, k}].pmid * 10.0
+        radctl_2d_pverrp_r[{i, k}].pnm = cr[{i, k}].pint * 10.0
+      end
+  end
+  for i=0, ncol do
+    radctl_2d_pverrp_r[{i, pverp}].pnm = cr[{i, pverp}].pint * 10.0
+  end
+
+  -- Convert ozone volume mixing ratio to mass mixing ratio:
+  vmmr = constants.amo / constants.amd
+  for k=0, pver do
+    for i=0, ncol do
+      radctl_2d_pverr_r[{i, k}].o3mmr = vmmr * radctl_2d_pverr_r[{i, k}].o3vmr
+    end
+  end
+
+  return
 end
 
 task aqsat()

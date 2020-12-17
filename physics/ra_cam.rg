@@ -21,7 +21,7 @@ task radctl(cr : region(ispace(int2d), cell_fs),
             levsiz : double,
             pin : region(ispace(int1d), double),
             ozncyc : bool)
-where reads (ozmixmj, cr.pmid, pin, ozmix),
+where reads (cr.{pmid, pint}, ozmixmj, ozmix, pin),
       writes (ozmix)
 do
 
@@ -35,19 +35,18 @@ do
   var if11 : int
   var if12 : int
 
-  var eccf : double          -- Earth/sun distance factor
-
   var radctl_1d_r = region(ispace(int1d, pcols), radctl_1d_fs)
   var radctl_2d_pver_r = region(ispace(int2d, {pcols, pver}), radctl_2d_pver_fs)
   var radctl_2d_pverr_r = region(ispace(int2d, {pcols, pverr}), radctl_2d_pverr_fs)
-
-  -----------------------------
+  var radctl_2d_pverrp_r = region(ispace(int2d, {pcols, pverrp}), radctl_2d_pverrp_fs)
+  -------------------------------------------------------------------------
 
   oznint(julian, ozmixmj, ozmix, levsiz, pcols, ozncyc)
 
   radozn(cr, radctl_2d_pverr_r, ncol, pcols, pver, pin, levsiz, ozmix)
 
-  radinp()
+  radinp(cr, radctl_2d_pverr_r, radctl_2d_pverrp_r, ncol, pver, pverp)
+
   aqsat()
   get_rf_scales()
   get_aerosol()
@@ -62,7 +61,8 @@ task camrad(cr : region(ispace(int2d), cell_fs),
             levsiz : int,
             julian : double,
             ozncyc : bool)
-where reads (cr.pmid)
+where 
+  reads (cr.{pmid, pint})
 do
   -----------------------------Local variables-----------------------------
 
