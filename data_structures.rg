@@ -237,7 +237,7 @@ fspace cell_fs {
     dpdz : double, --Note: not found in Registry.xml
     rb : double, --Note: not found in Registry.xml
     rr_save : double, --Note: not found in Registry.xml
-    pp : double, --Note: not found in Registry.xml
+    --pp : double, --Note: not found in Registry.xml
     delsq_divergence : double, --Note: not found in Registry.xml
     ur_cell : double, --Note: not found in Registry.xml
     vr_cell : double, --Note: not found in Registry.xml
