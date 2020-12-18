@@ -22,6 +22,7 @@ fspace cell_fs {
     cellsOnCell : int[constants.maxEdges],
     verticesOnCell : int[constants.maxEdges],
     evc : int[3*constants.maxEdges],   --edge pair associated with vertex v and mesh cell i. This is stored as (vertexID, edge1, edge2), and each cell has 10 of those triples arranged sequentially in the array
+    scalars : double[constants.nScalars],
 
     -----------begin halo fields------------------
     neighbor0 : int1d,

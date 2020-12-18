@@ -39,6 +39,7 @@ constants.gravity = 9.80616
 constants.rvord = terralib.constant(double, `(constants.rv/constants.rgas))
 constants.config_epssm = 0.1
 constants.prandtl = terralib.constant(double, 1.0)
+constants.nScalars = 8
 
 constants.nRelaxZone = 5
 
@@ -78,12 +79,11 @@ constants.tmelt = 273.16                                        -- freezing T of
 constants.daysperyear = 365
 constants.solcon_0 = terralib.constant(double, 1370.0)          -- solar constant [W/m2]
 constants.nMonths = 12
-constants.cam_abs_dim1 = 1 -- TODO: What is this???
+constants.cam_abs_dim1 = 4
 constants.cam_abs_dim2 = constants.nVertLevels + 1
 
---TODO: Radiation-related constants that we need to find, so these are placeholders for now
-constants.nOznLevels = 1
-constants.nAerLevels = 1
+constants.nAerLevels = 29
+constants.nOznLevels = 59
 constants.nAerosols = 12
 
 -- Physics - Radiation (parameters)
