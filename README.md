@@ -25,9 +25,11 @@ You can then log onto sherlock by doing ssh <sunetID>@login.sherlock.stanford.ed
 Once you are on sherlock, do the following:
 
 **load modules** <br />
+```
 module load python <br />
 module load openmpi/2.0.2 <br />
 module load netcdf <br />
+```
 
 **clone legion repo** <br />
 git clone -b master https://github.com/StanfordLegion/legion.git <br />
