@@ -1,7 +1,7 @@
 # mpas-regent
 
 ## Resources to learn about MPAS
-
+hello
 I would start by going to https://mpas-dev.github.io/ and poking around, especially the links about the atmospheric model.
 
 Then, you can skim through the tutorial here: http://www2.mmm.ucar.edu/projects/mpas/tutorial/Boulder2019/index.html <br /> 
@@ -164,7 +164,7 @@ make install
 Step 6: **Install MPAS**   <br />
 git clone https://github.com/MPAS-Dev/MPAS-Model.git 
 cd MPAS-Model
-make gfortran CORE=init_atmosphere 
+make gfortran CORE=init_atmosphere
 
 Unfortunately however, I still have not been able to get MPAS to work.  I have an ongoing thread on the MPAS forum and they are trying to help me troubleshoot there. The thread is https://forum.mmm.ucar.edu/phpBB3/viewtopic.php?f=12&t=9462.
 
