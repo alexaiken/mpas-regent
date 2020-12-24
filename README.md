@@ -1,7 +1,6 @@
 # mpas-regent
 
 ## Resources to learn about MPAS
-hello
 I would start by going to https://mpas-dev.github.io/ and poking around, especially the links about the atmospheric model.
 
 Then, you can skim through the tutorial here: http://www2.mmm.ucar.edu/projects/mpas/tutorial/Boulder2019/index.html <br /> 
