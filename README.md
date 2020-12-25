@@ -8,7 +8,7 @@ The link is [here](https://drive.google.com/drive/folders/1d3mViA53ELeKhiph5kzJn
 
 The [user guide](http://www2.mmm.ucar.edu/projects/mpas/mpas_atmosphere_users_guide_7.0.pdf) is also very helpful. It is also in the google drive. Pages 65-69 are particularly useful for understanding the Voronoi mesh, as well as making sense of the variables in the mesh files. It might also provide some motivation for why we designed the data structures the way we did.
 
-When you get to the stage where you want to understand the MPAS codebase, we have a google doc [here](https://docs.google.com/document/d/1yF4sEZyL1xUkHHfx-uYcRANpZyboRIZo3iiaydksnlw/edit)
+When you get to the stage where you want to understand the MPAS codebase, we have a google doc [here](https://docs.google.com/document/d/1yF4sEZyL1xUkHHfx-uYcRANpZyboRIZo3iiaydksnlw/edit).
 
 
 
@@ -16,7 +16,7 @@ When you get to the stage where you want to understand the MPAS codebase, we hav
 
 First, get Prof. Aiken to invite you to sherlock.
 
-You can then log onto sherlock by doing ssh <sunetID>@login.sherlock.stanford.edu, and then typing in your Stanford password and 2FA. 
+You can then log onto sherlock by doing `ssh <sunetID>@login.sherlock.stanford.edu`, and then typing in your Stanford password and 2FA. 
 
 Sherlock is a cluster computer consisting of many nodes, which are just individual machines.  Sherlock is built using a "condo" model where owners buy nodes that are added to the cluster.  Owners have priority on their partitions (the nodes they own) and can also access other owners' nodes when they are not being used.  Sherlock is quite heterogeneous; different nodes have different processor capabilities and different amounts of memory.  The aaiken partition, to which you have access, has 4 nodes with GPUs and 4 nodes with CPUs only; we will be using the GPU nodes for this class.
 
@@ -51,7 +51,7 @@ An example output from this command is
 8436915 aaiken bash aaiken R 2:11 1 sh02-14n03
 ```
 
-The name of the node you have been allocated is the last entry on this line, in this case sh02-14n03.  You can now ssh to that node.
+The name of the node you have been allocated is the last entry on this line, in this case `sh02-14n03`.  You can now ssh to that node.
 
 Once you are on the node you are ready to run Regent.  The build we will be using is in
 ```
@@ -82,12 +82,10 @@ export TERRA_PATH="$HOME/mpas-regent/mesh_loading/?.rg;$HOME/mpas-regent/dynamic
 ```
 
 ## Helpful tricks for working in Sherlock
-You can avoid having to 2FA multiple times when logging into Sherlock by following the instructions here: 
-https://www.sherlock.stanford.edu/docs/advanced-topics/connection/#avoiding-multiple-duo-prompts <br />
+You can avoid having to 2FA multiple times when logging into Sherlock by following the instructions [here](https://www.sherlock.stanford.edu/docs/advanced-topics/connection/#avoiding-multiple-duo-prompts).
 
 
-You can also edit files in Sherlock using VSCODE by doing something similar to this: 
-https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEberhardt <br />
+You can also edit files in Sherlock directly from VSCode by doing something similar to [this](https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEberhardt).
 
 
 ## Installing MPAS 
@@ -151,6 +149,7 @@ Here is the output from the final timesteps:
 ![Day15](images/day15.png)
 ![Day16](images/day16.png)
 
+The full output it uploaded [here](https://drive.google.com/file/d/1y5W3Cc3nkfvd43yQkYWjXiJX3FsWeSi6/view?usp=sharing).
 
 ## Overview of project:
 
