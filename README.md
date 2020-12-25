@@ -156,7 +156,7 @@ The full output it uploaded [here](https://drive.google.com/file/d/1y5W3Cc3nkfvd
 ## Overview of project:
 
 ### Mesh loading
-If you navigate to MPAS-Atmosphere -> MPAS-Atmosphere meshes, you will find some MPAS meshes. If you download them, you will see that they have a grid.nc file. This contains the mesh data in netcdf format. If you have netcdf installed (you can load it easily on Sherlock), you can manipulate these files and see their contents easy using ncdump. Syntax for ncdump can be found [here](http://www.bic.mni.mcgill.ca/users/sean/Docs/netcdf/guide.txn_79.html#:~:text=The%20ncdump%20tool%20generates%20an,variable%20data%20in%20the%20file.&text=Thus%20ncdump%20and%20ncgen%20can,between%20binary%20and%20ASCII%20representations)>
+If you navigate to MPAS-Atmosphere -> MPAS-Atmosphere meshes, you will find some MPAS meshes. If you download them, you will see that they have a grid.nc file. This contains the mesh data in netcdf format. If you have netcdf installed (you can load it easily on Sherlock), you can manipulate these files and see their contents easy using ncdump. Syntax for ncdump can be found [here](http://www.bic.mni.mcgill.ca/users/sean/Docs/netcdf/guide.txn_79.html#:~:text=The%20ncdump%20tool%20generates%20an,variable%20data%20in%20the%20file.&text=Thus%20ncdump%20and%20ncgen%20can,between%20binary%20and%20ASCII%20representations).
 
 For example, you can do `ncdump x1.2562.grid.nc >> output.txt` to dump the contents of the grid file into a txt file called `output.txt`, and `ncdump -v "latCell"` to dump the contents of variable `latCell`.
 
@@ -168,7 +168,7 @@ In the grid folder that you download, there is a `.graph.info` file. The graph.i
 
 If you'd like to partition the cells into N partitions, you run `gpmetis graph.info N`, which creates a file `graph.info.part.N`. 
 
-This file has `nCells` rows, and each row has a number from 0-(N-1), which I assume to mean the partition that each cell is split into. 
+This file has `nCells` rows, and each row has a number from `0-(N-1)`, which I assume to mean the partition that each cell is split into. 
 
 I have a task called `read_file` in `mesh_loading.rg` that parses this graph.info file and returns an array where each element is the partition number of that cell index. We then assign this partition number to the cell and partition in regent based on this.
 
@@ -181,7 +181,7 @@ and `partition_halo_2` is the outer halo, so it is `partition_s2  - partition_ha
 
 To understand the halo code, I would recommend reading the sections about images and preimages at the [Regent reference] (http://regent-lang.org/reference/).  (And ask any questions that may come up, it's a little confusing).
 
-You can also read about dependent partitioning [here](https://drive.google.com/drive/u/1/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W)
+You can also read about dependent partitioning [here](https://drive.google.com/drive/u/1/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W).
 
 A significant TODO would be to find a better way to do dependent partitioning/haloes - because we require each of the 10^2 neighbours to be values in the cell region for dependent partitioning, our cell data structure has 100 fields which is very messy...
 ### 
@@ -227,9 +227,18 @@ We turn the mesh into a 'patch' using `mpas_patches.py`.
 
 The file mpas_patches.py is a helper script that is used to create a MatPlotLib ‘patch collection’ of each of the individual grid cells.
 
-We then use matplotlib to plot the 'patch' object. Edits to 
+We then use matplotlib to plot the 'patch' object. 
 
-The script can be run by doing: `python mpas-plotting.py <netcdf output file> -v <variable>`: e.g. `python mpas_plot_pressure.py timestep_output.nc -v pressure_p`.
+The steps to plot the output are as follows:
+
+Step 1: Run `main.rg` to produce `timestep_output.nc`
+Step 2: copy `timestep_output.nc` locally
+Step 3: Copy the plotting folder locally from https://github.com/alexaiken/mpas-regent/tree/master/plotting (both files)
+Step 4: Put the `timestep_output` file in this local plotting folder
+Step 5: run `python mpas_plotting.py timestep_output.nc -v pressure_p`
+Step 6: You should get this plot:
+
+![Day16](images/plot_output_pressure_p.png)
   
 The plot headers can be edited in `mpas_plot_pressure.py` - in general there is no need to touch `mpas_patches.py`.
 
