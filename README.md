@@ -136,6 +136,7 @@ ln -s ${HOME}/MPAS-Model/atmosphere_model .
 ```
 
 This might take a while, I think I went away for dinner for an hour and came back. Eventually, I had this output:
+![Output from atmosphere core](images/atmosphere_output.png)
 
 Step 6: Install ncl following the instructions [here](https://www.ncl.ucar.edu/Download/conda.shtml):
 ```
@@ -147,6 +148,9 @@ Step 7: Run the bwave_surface_p.ncl script to produce plots of surface pressure 
 ```
 ncl bwave_surface_p.ncl
 ```
+Here is the output from the final timesteps:
+![Day15](images/day15.png)
+![Day16](images/day16.png)
 
 
 ## Overview of project:
