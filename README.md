@@ -22,7 +22,7 @@ Sherlock is a cluster computer consisting of many nodes, which are just individu
 
 When you login you will be on a head node, which is shared by multiple users. Don't do any significant computations on the head node, as that can affect other users.  You should only use the head node to allocate resources and run jobs on the compute nodes.  If you do try to run a Regent program on the head node it will fail because the particular build of Regent we are using assumes the presence of GPUs, which the head nodes do not have.
 
-## Allocating A Compute Node
+## Allocating a compute node
 
 To allocate a compute node run the following command
 ```
@@ -184,7 +184,6 @@ To understand the halo code, I would recommend reading the sections about images
 You can also read about dependent partitioning [here](https://drive.google.com/drive/u/1/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W).
 
 A significant TODO would be to find a better way to do dependent partitioning/haloes - because we require each of the 10^2 neighbours to be values in the cell region for dependent partitioning, our cell data structure has 100 fields which is very messy...
-### 
 
 
 ## File by file overview
@@ -232,10 +231,10 @@ We then use matplotlib to plot the 'patch' object.
 The steps to plot the output are as follows:
 
 Step 1: Run `main.rg` to produce `timestep_output.nc`</br>
-Step 2: copy `timestep_output.nc` locally </br>
+Step 2: Copy `timestep_output.nc` locally </br>
 Step 3: Copy the plotting folder locally from https://github.com/alexaiken/mpas-regent/tree/master/plotting (both files) </br>
 Step 4: Put the `timestep_output` file in this local plotting folder </br>
-Step 5: run `python mpas_plotting.py timestep_output.nc -v pressure_p` </br>
+Step 5: Run `python mpas_plotting.py timestep_output.nc -v pressure_p` </br>
 Step 6: You should get this plot:
 
 ![Day16](images/plot_output_pressure_p.png)
