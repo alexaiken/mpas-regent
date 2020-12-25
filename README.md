@@ -15,63 +15,73 @@ When you get to the stage where you want to understand the MPAS codebase, we hav
 
 
 
-## Instructions to run regent on Sherlock:
-
+## Getting set up on Sherlock
 
 First, get Prof. Aiken to invite you to sherlock.
 
 You can then log onto sherlock by doing ssh <sunetID>@login.sherlock.stanford.edu, and then typing in your Stanford password and 2FA. 
-  
-Once you are on sherlock, do the following:
 
-**load modules** <br />
+Sherlock is a cluster computer consisting of many nodes, which are just individual machines.  Sherlock is built using a "condo" model where owners buy nodes that are added to the cluster.  Owners have priority on their partitions (the nodes they own) and can also access other owners' nodes when they are not being used.  Sherlock is quite heterogeneous; different nodes have different processor capabilities and different amounts of memory.  The aaiken partition, to which you have access, has 4 nodes with GPUs and 4 nodes with CPUs only; we will be using the GPU nodes for this class.
+
+When you login you will be on a head node, which is shared by multiple users. Don't do any significant computations on the head node, as that can affect other users.  You should only use the head node to allocate resources and run jobs on the compute nodes.  If you do try to run a Regent program on the head node it will fail because the particular build of Regent we are using assumes the presence of GPUs, which the head nodes do not have.
+
+## Allocating A Compute Node
+
+To allocate a compute node run the following command
 ```
-module load python <br />
-module load openmpi/2.0.2 <br />
-module load netcdf <br />
+salloc --gres gpu:1 --cpus-per-task 4 -p aaiken --time 1:00:00
 ```
 
-**clone legion repo** <br />
-git clone -b master https://github.com/StanfordLegion/legion.git <br />
-cd legion/language <br />
+This command requests the allocation of 1 GPU and 4 CPUs on a single node for one hour (which should be enough time for this assignment, but you can ask for more time if you need it).  Again, we need at least one GPU available to satisfy the particular build configuration of Regent, even though we won't use the GPU in this assignment.  The salloc command will immediately print something like
+```
+salloc: Pending job allocation 8436915
+salloc: job 8436915 queued and waiting for resources
+```
 
+When the resources have been allocated to you (which may take a couple of minutes) you will see additional information along the lines of
 
+```
+salloc: job 8436915 has been allocated resources
+salloc: Granted job allocation 8436915
+```
 
-**launch SLURM job** <br />
-salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=05:00:00 <br />
-srun --pty bash <br />
+The question now is: What node have you been allocated?  The salloc command doesn't say, so you need to run
+```
+squeue | grep <Your SUNet ID>
+```
+An example output from this command is
+```
+8436915 aaiken bash aaiken R 2:11 1 sh02-14n03
+```
 
-**untar terra and llvm builds** <br />
-wget sapling.stanford.edu/~eslaught/terra.build.tar.gz <br />
-tar -xzf terra.build.tar.gz <br />
-wget sapling.stanford.edu/~eslaught/llvm.tar.gz <br />
-tar -xzf llvm.tar.gz <br />
+The name of the node you have been allocated is the last entry on this line, in this case sh02-14n03.  You can now ssh to that node.
 
-**setup** <br />
-CC=gcc CXX=g++ CONDUIT=ibv ./scripts/setup_env.py <br />
+Once you are on the node you are ready to run Regent.  The build we will be using is in
+```
+/home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language
+```
 
+You may want to give this directory an alias, such as `$REGENT_HOME`, in your `.bash_profile` so that you don't need to type it every time you run Regent.
 
-It should be good to run now: Regent is not added to the path by default, so when running regent scripts, you have to invoke the regent.py file directly:
+To run Regent programs, you will want to use the following syntax:
 
-LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg <br />
+```
+$REGENT_HOME/regent.py <file_name>.rg
+```
 
-
-In the future, when you login to Sherlock, you have to do the following:
-
-module load python <br />
-module load openmpi/2.0.2 <br />
-module load netcdf <br />
-
-salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=20 --time=02:00:00 <br />
-
-LAUNCHER="srun" ~/legion/language/regent.py <file_name>.rg <br />
 
 ## Running regent-mpas
-In the top level directory, run LAUNCHER="srun" ~/legion/language/regent.py main.rg. <br />. You have to run this in your regent-mpas folder, because we use relative paths to access some of the helper files.
- 
-Please also add the following to your ~/.bash_profile so that terra knows where to look for the files we "require". You will need to edit some of the filepaths depending on how you saves mpas-regent - I have it in a file called regent_project_2020, for e.g. - you should remove that otherwise. <br />
+In the top level directory, run 
 
-export TERRA_PATH="$HOME/mpas-regent/mesh_loading/?.rg;$HOME/mpas-regent/dynamics/?.rg;$HOME/mpas-regent/?.rg;$HOME/mpas-regent/vertical_init/?.rg" <br />
+```
+$REGENT_HOME/regent.py main.rg
+```
+You have to run this in your `regent-mpas` folder, because we use relative paths to access some of the helper files.
+ 
+Please also add the following to your `~/.bash_profile` so that terra knows where to look for the files we "require". You will need to edit some of the filepaths depending on how you saves mpas-regent - I have it in a file called regent_project_2020, for e.g. - you should remove that otherwise. 
+
+```
+export TERRA_PATH="$HOME/mpas-regent/mesh_loading/?.rg;$HOME/mpas-regent/dynamics/?.rg;$HOME/mpas-regent/?.rg;$HOME/mpas-regent/vertical_init/?.rg" ```
 
 ## Helpful tricks for working in Sherlock
 You can avoid having to 2FA multiple times when logging into Sherlock by following the instructions here: 
@@ -82,27 +92,7 @@ You can also edit files in Sherlock using VSCODE by doing something similar to t
 https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEberhardt <br />
 
 
-
-## Running GPU Nodes / Regent with CUDA 
-Elliott has put up a Regent build with CUDA here on Sherlock: /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
-Thus, all we need to do is:
-
-1) module load cuda <br />
-2) cd /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language <br />
-3) source env.sh <br />
-
-4) Navigate to the folder with the main.rg regent file i want to run: <br />
-e.g.
-cd $HOME/mpas-regent
-  
-5) salloc --partition=aaiken --tasks 1 --nodes=1 --cpus-per-task=10 --gres=gpu:4 --time=02:00:00 <br />
-6) LAUNCHER="srun" /home/groups/aaiken/eslaught/regent_build_cuda_2020-09-03/language/regent.py main.rg <br />
-
-
-
-
-
-## Installing MPAS (Still does not work)
+## Installing MPAS 
 
 Step 1: **Environment Variables**  <br />
 
