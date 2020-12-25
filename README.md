@@ -231,11 +231,11 @@ We then use matplotlib to plot the 'patch' object.
 
 The steps to plot the output are as follows:
 
-Step 1: Run `main.rg` to produce `timestep_output.nc`
-Step 2: copy `timestep_output.nc` locally
-Step 3: Copy the plotting folder locally from https://github.com/alexaiken/mpas-regent/tree/master/plotting (both files)
-Step 4: Put the `timestep_output` file in this local plotting folder
-Step 5: run `python mpas_plotting.py timestep_output.nc -v pressure_p`
+Step 1: Run `main.rg` to produce `timestep_output.nc`</br>
+Step 2: copy `timestep_output.nc` locally </br>
+Step 3: Copy the plotting folder locally from https://github.com/alexaiken/mpas-regent/tree/master/plotting (both files) </br>
+Step 4: Put the `timestep_output` file in this local plotting folder </br>
+Step 5: run `python mpas_plotting.py timestep_output.nc -v pressure_p` </br>
 Step 6: You should get this plot:
 
 ![Day16](images/plot_output_pressure_p.png)
