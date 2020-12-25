@@ -93,72 +93,60 @@ https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEber
 
 
 ## Installing MPAS 
+Step 0: Follow the attached script [here] (https://drive.google.com/file/d/1l9SuVG6McN817YEMmhxuQuyauPTs6xbP/view?usp=sharing) to install all dependencies. I did all of this locally. It might be easier to go through the steps one by one instead of running the whole script at once, I found that helped me find out where it was going wrong. There are some lines that will need to be changed (mostly around filepaths), I have made notes of that in the script. 
 
-Step 1: **Environment Variables**  <br />
+Step 1: Obtain Model source code 
 
-You’ll need to add the openmpi installation directory to your path, as I have done. In general, you can also modify the PNETCDF and PIO environment variables to be wherever you want to install them.
-
-My ~/.bash_profile file looked like this:
-PATH=$PATH:$HOME/.local/bin:$HOME/bin:$HOME/openmpi_install/bin  <br />
-export PATH  <br />
-
-export CC=gcc  <br />
-export FC=gfortran  <br />
-export F77=gfortran  <br />
-export MPICC=mpicc  <br />
-export MPIF90=mpif90  <br />
-export MPIF77=mpif90  <br />
-
-export OPENMPI=$HOME/openmpi_install  <br />
-export PNETCDF=$HOME/pnetcdf_install  <br />
-export MPIFC=mpif90  <br />
-export PNETCDF_PATH=$PNETCDF  <br />
-export PIO=$HOME/pio_install  <br />
-￼
-
-Step 2: **Other modules**  <br />
-ml purge
-ml libfabric/1.10.1 gcc/9.1.0
-
-Step 3: **Install OpenMPI**  <br />
-wget https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.4.tar.bz2
-tar -xvf openmpi-4.0.4.tar.bz2
-cd openmpi-4.0.4
-./configure --prefix=$OPENMPI --with-pmi-libdir=/usr/lib64 --with-pmix=internal --with-libevent=internal --with-slurm --without-verbs
-make 
-make install
-
-(You can change —prefix=$OPENMPI to be wherever you want openMPI to be installed to)
-Be sure to add the openmpi install directory to your path, as I have done above.
-
-Step 4: **Install PNETCDF**  <br />
-Wget https://parallel-netcdf.github.io/Release/parallel-netcdf-1.8.1.tar.gz
-tar -xvf parallel-netcdf-1.8.1.tar
-cd parallel-netcdf-1.8.1
-./configure --prefix=$PNETCDF --disable-cxx 
-make 
-make install
-
-Wget https://parallel-netcdf.github.io/Release/pnetcdf-1.12.1.tar.gz
-tar -xvf pnetcdf-1.12.1.tar.gz
-cd pnetcdf-1.12.1 
-
-
-Step 5: **Install PIO**  <br />
-wget https://github.com/NCAR/ParallelIO/archive/pio1_7_1.tar.gz
-tar -xvf ParallelIO-pio1_7_1.tar
-cd ParallelIO-pio1_7_1/pio
-./configure --prefix=$PIO --disable-netcdf --disable-mpiio 
-make 
-make install
-
-Step 6: **Install MPAS**   <br />
-git clone https://github.com/MPAS-Dev/MPAS-Model.git 
+```
+git clone https://github.com/MPAS-Dev/MPAS-Model.git
 cd MPAS-Model
-make gfortran CORE=init_atmosphere
+```
 
-Unfortunately however, I still have not been able to get MPAS to work.  I have an ongoing thread on the MPAS forum and they are trying to help me troubleshoot there. The thread is https://forum.mmm.ucar.edu/phpBB3/viewtopic.php?f=12&t=9462.
+Step 2: Compile MPAS init_atmosphere and atmosphere cores:
+```
+make -j4 gfortran CORE=init_atmosphere PRECISION=single USE_PIO2=true
+make clean CORE=atmosphere
+make -j4 gfortran CORE=atmosphere PRECISION=single USE_PIO2=true
+```
 
+
+Step 3: Download the idealized initial conditions: I used the Jablonowski and Williamson baroclinic wave, which is the same one we are trying to use in the Regent implementation
+
+```
+wget http://www2.mmm.ucar.edu/projects/mpas/test_cases/v7.0/jw_baroclinic_wave.tar.gz
+tar xzvf jw_baroclinic_wave.tar.gz
+cd jw_baroclinic_wave
+```
+
+
+Step 4: Link the previously compiled init_atmosphere core (from step 2) and run it:
+
+```
+ln -s ${HOME}/MPAS-Model/init_atmosphere_model .  (here, $HOME refers to your top level directory, you can see how I set it in the Dependencies script)
+./init_atmosphere_model
+```
+
+In another terminal window, if you enter tail -f log.init_atmosphere.0000.out you can see its progress, and eventually you should get this output: 
+
+Step 5: Link the previously compiled atmosphere core and run it:
+
+```
+ln -s ${HOME}/MPAS-Model/atmosphere_model .
+./atmosphere_model
+```
+
+This might take a while, I think I went away for dinner for an hour and came back. Eventually, I had this output:
+
+Step 6: Install ncl following the instructions [here] (https://www.ncl.ucar.edu/Download/conda.shtml):
+```
+conda create -n ncl_stable -c conda-forge ncl
+source activate ncl_stable
+```
+
+Step 7: Run the bwave_surface_p.ncl script to produce plots of surface pressure each simulated day. 
+```
+ncl bwave_surface_p.ncl
+```
 
 
 ## Overview of project:
