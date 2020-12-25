@@ -94,7 +94,7 @@ https://www.youtube.com/watch?v=vpK4rXLc0WY&feature=youtu.be&ab_channel=RyanEber
 
 
 ## Installing MPAS 
-Step 0: Follow the attached script [here] (https://drive.google.com/file/d/1l9SuVG6McN817YEMmhxuQuyauPTs6xbP/view?usp=sharing) to install all dependencies. I did all of this locally. It might be easier to go through the steps one by one instead of running the whole script at once, I found that helped me find out where it was going wrong. There are some lines that will need to be changed (mostly around filepaths), I have made notes of that in the script. 
+Step 0: Follow the attached script [here](https://drive.google.com/file/d/1l9SuVG6McN817YEMmhxuQuyauPTs6xbP/view?usp=sharing) to install all dependencies. I did all of this locally. It might be easier to go through the steps one by one instead of running the whole script at once, I found that helped me find out where it was going wrong. There are some lines that will need to be changed (mostly around filepaths), I have made notes of that in the script. 
 
 Step 1: Obtain Model source code 
 
@@ -138,7 +138,7 @@ ln -s ${HOME}/MPAS-Model/atmosphere_model .
 
 This might take a while, I think I went away for dinner for an hour and came back. Eventually, I had this output:
 
-Step 6: Install ncl following the instructions [here] (https://www.ncl.ucar.edu/Download/conda.shtml):
+Step 6: Install ncl following the instructions [here](https://www.ncl.ucar.edu/Download/conda.shtml):
 ```
 conda create -n ncl_stable -c conda-forge ncl
 source activate ncl_stable
