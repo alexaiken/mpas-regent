@@ -1,4 +1,3 @@
-/≥
 ## Resources to learn about MPAS
 I would start by going to https://mpas-dev.github.io/ and poking around, especially the links about the atmospheric model.
 
@@ -127,6 +126,7 @@ ln -s ${HOME}/MPAS-Model/init_atmosphere_model .  (here, $HOME refers to your to
 ```
 
 In another terminal window, if you enter `tail -f log.init_atmosphere.0000.out` you can see its progress, and eventually you should get this output: 
+![Output from init atmosphere core](images/init_atmosphere_output.png)
 
 Step 5: Link the previously compiled atmosphere core and run it:
 
