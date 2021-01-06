@@ -20,7 +20,12 @@ end
 
 task physics_driver(cr : region(ispace(int2d), cell_fs),
                     aer_r : region(ispace(int2d), aerosol_fs),
-                    ozn_r : region(ispace(int2d), ozn_fs))
+                    ozn_r : region(ispace(int2d), ozn_fs),
+                    xtime_s : int)
+where
+  reads writes (cr, aer_r, ozn_r)
+do
+
   allocate_forall_physics()
   MPAS_to_physics()
 
@@ -31,7 +36,7 @@ task physics_driver(cr : region(ispace(int2d), cell_fs),
   --driver_radiation_sw(cr, aer_r, ozn_r)
 
   allocate_radiation_lw()
-  --driver_radiation_lw(cr, aer_r, ozn_r, "cam_lw", true, "mp_thompson", false) --Last 4 arguments: radt_lw_scheme, o3climatology, microp_scheme, microp_re
+  driver_radiation_lw(cr, aer_r, ozn_r, "cam_lw", "mp_thompson", true, false, xtime_s) --Last 4 arguments: radt_lw_scheme, microp_scheme, o3climatology, microp_re, xtime_s
 
   update_radiation_diagnostics()
 

@@ -43,7 +43,8 @@ task main()
   atm_core_init(cell_region, edge_region, vertex_region, vertical_region)
 
   for i = 0, constants.NUM_TIMESTEPS do
-    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, aerosol_region, ozn_region, i)
+    var itimestep = 1 -- TODO: Figure out how this is advanced
+    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, aerosol_region, ozn_region, i, itimestep)
   end
 
   atm_compute_output_diagnostics(cell_region)

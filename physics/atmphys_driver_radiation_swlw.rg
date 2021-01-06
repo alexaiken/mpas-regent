@@ -107,18 +107,17 @@ task vinterp_ozn()
 end
 
 task radiation_lw_from_MPAS(cr : region(ispace(int2d), cell_fs),
-                            ozn_r : region(ispace(int2d), ozn_fs),
                             aer_r : region(ispace(int2d), aerosol_fs),
+                            ozn_r : region(ispace(int2d), ozn_fs),
                             radt_lw_scheme : regentlib.string,
                             microp_scheme : regentlib.string,
-                            config_microp_re : bool,
-                            config_o3climatology : bool,
+                            o3climatology : bool,
+                            microp_re : bool,
                             xtime_s : double)
 where
   reads (cr.{cldfrac, lat, lon, m_ps, pres_hyd_p, re_cloud, re_ice, re_snow, sfc_albedo, sfc_emiss,
              skintemp, snow, xice, xland},
-         aer_r.{aerosols, m_hybi},
-         ozn_r.{o3clim, ozmixm, pin}),
+         aer_r.m_hybi, ozn_r.{o3clim, pin}),
   writes (cr.{absnxt_p, abstot_p, cemiss_p, cldfrac_p, coszr_p, emstot_p, f_ice, f_rain, glw_p, gsw_p,
               lwcf_p, lwdnb_p, lwdnbc_p, lwdnt_p, lwdntc_p, lwupb_p, lwupbc_p, lwupt_p, lwuptc_p, m_psn_p, 
               m_psp_p, o3vmr, olrtoa_p, p2d, recloud_p, reice_p, resnow_p, rrecloud_p, rreice_p, rresnow_p, 
@@ -127,8 +126,10 @@ where
               xland_p, xlat_p, xlon_p},
           aer_r.{aerosolcn_p, aerosolcp_p, m_hybi_p},
           ozn_r.{o3clim_p, ozmixm_p, pin_p}),
-  reads writes (cr.o32d)
+  reads writes (cr.o32d, aer_r.aerosols, ozn_r.ozmixm) -- move everything except o32d back to "reads" once we figure out how to fill arrays
 do
+
+  format.println("Calling radiation_lw_from_MPAS...")
 
   for j = jts, jte do
     for i = 0, nCellsSolve do
@@ -181,7 +182,7 @@ do
 
   if ([rawstring](radt_lw_scheme) == "rrtmg_lw") then -- string should be trimmed
     if ([rawstring](microp_scheme) == "mp_thompson" or [rawstring](microp_scheme) == "mp_wsm6") then
-      if (config_microp_re) then
+      if (microp_re) then
 
         for j = jts, jte do
           for k = 0, nVertLevels do
@@ -225,7 +226,7 @@ do
       end
     end
 
-    if (config_o3climatology) then
+    if (o3climatology) then
       -- ozone mixing ratio:
       for k = 0, nOznLevels do
         ozn_r[{0, k}].pin_p = ozn_r[{0, k}].pin
@@ -367,13 +368,16 @@ end
 task radiation_lw_to_MPAS(cr : region (ispace(int2d), cell_fs),
                           radt_lw_scheme : regentlib.string,
                           microp_scheme : regentlib.string,
-                          config_microp_re : bool)
+                          microp_re : bool)
 where 
-  reads (cr.glw_p, cr.lwcf_p, cr.lwdnb_p, cr.lwdnbc_p, cr.lwdnt_p, cr.lwdntc_p, cr.lwupb_p, cr.lwupbc_p, cr.lwupt_p, 
-         cr.lwuptc_p, cr.olrtoa_p, cr.rthratenlw_p, cr.rrecloud_p, cr.rreice_p, cr.rresnow_p),
-  writes (cr.glw, cr.lwcf, cr.lwdnb, cr.lwdnbc, cr.lwdnt, cr.lwdntc, cr.lwupb, cr.lwupbc, cr.lwupt, cr.lwuptc, cr.
-          olrtoa, cr.rthratenlw, cr.rre_cloud, cr.rre_ice, cr.rre_snow)
+  reads (cr.{glw_p, lwcf_p, lwdnb_p, lwdnbc_p, lwdnt_p, lwdntc_p, lwupb_p, lwupbc_p, lwupt_p, 
+             lwuptc_p, olrtoa_p, rthratenlw_p, rrecloud_p, rreice_p, rresnow_p}),
+  writes (cr.{glw, lwcf, lwdnb, lwdnbc, lwdnt, lwdntc, lwupb, lwupbc, lwupt, lwuptc, olrtoa, 
+              rthratenlw, rre_cloud, rre_ice, rre_snow})
 do
+
+  format.println("Calling radiation_lw_to_MPAS...")
+
   for j = jts, jte do
     for i = 0, nCellsSolve do
       cr[{i, 0}].glw    = cr[{i, 0}].glw_p
@@ -398,7 +402,7 @@ do
 
   if ([rawstring](radt_lw_scheme) == "rrtmg_lw") then
     if ([rawstring](microp_scheme) == "mp_thompson" or [rawstring](microp_scheme) == "mp_wsm6") then
-      if (config_microp_re) then
+      if (microp_re) then
         for j = jts, jte do
           for k = 0, nVertLevels do
             for i = 0, nCellsSolve do
@@ -427,20 +431,27 @@ task driver_radiation_lw(cr : region(ispace(int2d), cell_fs),
                          aer_r : region(ispace(int2d), aerosol_fs),
                          ozn_r : region(ispace(int2d), ozn_fs),
                          radt_lw_scheme : regentlib.string,
-                         config_o3climatology : bool,
                          microp_scheme : regentlib.string,
-                         config_microp_re : bool)
+                         o3climatology : bool,
+                         microp_re : bool,
+                         xtime_s : int)
 where
-  reads writes (cr)
+  reads writes (cr, aer_r, ozn_r)
 do
 
-  var radt : double
-  --radiation_lw_from_MPAS()
+  format.println("Calling driver_radiation_lw...")
 
+  var radt : double
+
+  -- TODO: Move the following allocations to allocate_forall_physics()
+  fill(aer_r.m_hybi, 1.0)
+  fill(ozn_r.o3clim, 0.0)
+  fill(ozn_r.pin, 0.0)
+  radiation_lw_from_MPAS(cr, aer_r, ozn_r, radt_lw_scheme, microp_scheme, o3climatology, microp_re, xtime_s)
   -- I don't think we are actually doing rrtmg?
   --if ([rawstring](radt_lw_scheme) == "rrtmg_lw") then
   --  var o3input : int = 0
-  --  if (config_o3climatology) then
+  --  if (o3climatology) then
   --    o3input = 2
   --  end
   --  rrtmg_lwrad() -- o3input will be an argument
@@ -451,5 +462,5 @@ do
     camrad()
   end
 
-  --radiation_lw_to_MPAS(cr, radt_lw_scheme, microp_scheme, config_microp_re)
+  radiation_lw_to_MPAS(cr, radt_lw_scheme, microp_scheme, microp_re)
 end

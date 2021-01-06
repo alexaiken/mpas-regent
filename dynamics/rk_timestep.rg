@@ -522,6 +522,6 @@ where
 do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 
-  atm_srk3(cr, er, vr, vert_r, dt)
+  --atm_srk3(cr, er, vr, vert_r, dt)
 
 end
