@@ -1167,9 +1167,12 @@ do
 -------- BEGIN W SECTION ---------
 
   --  horizontal advection for w
-
   for iCell in cell_range do
     cr[iCell].w = 0.0
+  end
+
+  __demand(__openmp)
+  for iCell in cell_range do
     for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
       var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
       var edge_sign = cr[{iCell.x, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].dvEdge * 0.5
@@ -1191,7 +1194,11 @@ do
           cr[iCell].flux_arr += scalar_weight * cr[{iAdvCell, iCell.y}].w
         end
       end
+    end
+  end
 
+  for iCell in cell_range do
+    for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
       if (iCell.y > 0) then
         cr[iCell].w -= cr[{iCell.x, 0}].edgesOnCell_sign[i] * cr[iCell].ru_edge_w * cr[iCell].flux_arr
       end
@@ -1311,7 +1318,7 @@ do
   -- add in mixing terms for w
   for iCell in cell_range do
     if (iCell.y > 0) then
-      cr[iCell].tend_w += cr[iCell].tend_w_euler
+      cr[iCell].w += cr[iCell].tend_w_euler
     end
   end
 
