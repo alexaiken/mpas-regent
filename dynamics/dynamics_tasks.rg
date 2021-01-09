@@ -1692,7 +1692,7 @@ where reads writes (cr, er) do
 end
 
 task atm_recover_large_step_variables()
-  cio.printf("recovering large step vars\n")
+  cio.printf("recovering large step vars test\n")
 end
 
 task atm_rk_dynamics_substep_finish(cr : region(ispace(int2d), cell_fs),
