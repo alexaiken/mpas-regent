@@ -1763,7 +1763,7 @@ do
 end
 
 task atm_recover_large_step_variables()
-  cio.printf("recovering large step vars\n")
+  cio.printf("recovering large step vars test\n")
 end
 
 -- Comments on mpas_reconstruct
