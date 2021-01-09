@@ -1830,8 +1830,8 @@ do
 		for k = 0, nVertLevels do
       er[{iEdge, k}].ruAvg = er[{iEdge, k}].ru_save + (er[{iEdge, k}].ruAvg * invNs)
 			er[{iEdge, k}].ru = er[{iEdge, k}].ru_save * er[{iEdge, k}].ru_p
-			er[{iEdge, k}].u = 2.*er[{iEdge, k}].ru / (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
-		end
+			er[{iEdge, k}].u = 2*er[{iEdge, k}].ru / (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
+    end
 	end
 
   for iCell = 0, nCells do
