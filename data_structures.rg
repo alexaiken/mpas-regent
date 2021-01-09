@@ -486,6 +486,11 @@ fspace vertical_fs {
   -- vars first seen in atm_compute_dyn_tend_work --
   u_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="u reference profile"
   v_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="v reference profile"
+
+  --vars first seen in atm_recover_large_step_variables_work--
+  cf1 : double, --type="real" dimensions="" units="unitless" description="Surface interpolation weight for level k=1 value"
+  cf2 : double, --type="real" dimensions="" units="unitless" description="Surface interpolation weight for level k=1 value"
+  cf3 : double, --type="real" dimensions="" units="unitless" description="Surface interpolation weight for level k=1 value"
 }
 
 fspace ozn_fs {

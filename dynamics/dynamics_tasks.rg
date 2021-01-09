@@ -1762,8 +1762,118 @@ do
   end
 end
 
-task atm_recover_large_step_variables()
-  cio.printf("recovering large step vars test\n")
+
+task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
+                                    er : region(ispace(int2d), edge_fs),
+                                    vert_r : region(ispace(int1d), vertical_fs),
+                                    ns : int,
+                                    rk_step : int,
+                                    dt : double)
+where
+  reads writes (cr, er, vert_r)
+do
+
+  var rgas = constants.rgas
+  var rcv = rgas / (constants.cp - rgas)
+  var p0 = 100000
+
+  --! Avoid FP errors caused by a potential division by zero below by 
+  --! initializing the "garbage cell" of rho_zz to a non-zero value
+  for k = 0, nVertLevels do
+    cr[{nCells, k}].rho_zz = 1.0
+  end
+
+  --! compute new density everywhere so we can compute u from ru.
+  --! we will also need it to compute theta_m below
+  var invNs = 1 / [double](ns)
+
+  for iCell = 0, nCells do
+    for k = 0, nVertLevels do
+      cr[{iCell, k}].rho_p = cr[{iCell, k}].rho_p_save + cr[{iCell, k}].rho_pp
+			cr[{iCell, k}].rho_zz = cr[{iCell, k}].rho_p + cr[{iCell, k}].rho_base
+    end
+
+    cr[{iCell, 0}].w = 0.0
+
+    for k = 1, nVertLevels do
+			cr[{iCell, k}].wwAvg = cr[{iCell, k}].rw_save + (cr[{iCell, k}].wwAvg * invNs)
+      cr[{iCell, k}].rw = cr[{iCell, k}].rw_save + cr[{iCell, k}].rw_p
+      --! pick up part of diagnosed w from omega - divide by density later
+      cr[{iCell, k}].w = cr[{iCell, k}].rw / (vert_r[k].fzm*cr[{iCell, k}].zz + vert_r[k].fzp*cr[{iCell, k-1}].zz)
+		end
+
+    cr[{iCell, nVertLevels}].w = 0.0
+
+    if (rk_step == 3) then
+			for k = 0, nVertLevels do
+        cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp -dt * cr[{iCell, k}].rho_zz * cr[{iCell, k}].rt_diabatic_tend
+        cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
+        cr[{iCell, k}].exner = cr[{iCell, k}].zz * (rgas/p0) * pow((cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base), rcv)
+        --! pressure_p is perturbation pressure
+        cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz*rgas * (cr[{iCell, k}].exner*cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
+			end
+		else
+			for k = 0, nVertLevels do
+        cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp
+				cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
+			end
+		end 
+	end
+
+  --! recover time-averaged ruAvg on all edges of owned cells (for upcoming scalar transport).  
+  --! we solved for these in the acoustic-step loop.  
+  --! we will compute ru and u here also, given we are here, even though we only need them on nEdgesSolve
+
+  for iEdge = 0, nEdges do
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+		for k = 0, nVertLevels do
+      er[{iEdge, k}].ruAvg = er[{iEdge, k}].ru_save + (er[{iEdge, k}].ruAvg * invNs)
+			er[{iEdge, k}].ru = er[{iEdge, k}].ru_save * er[{iEdge, k}].ru_p
+			er[{iEdge, k}].u = 2.*er[{iEdge, k}].ru / (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
+		end
+	end
+
+  for iCell = 0, nCells do
+
+    --!  finish recovering w from (rho*omega)_p.  as when we formed (rho*omega)_p from u and w, we need
+    --!  to use the same flux-divergence operator as is used for the horizontal theta transport
+    --!  (See Klemp et al 2003).
+
+		if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
+			for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+				var iEdge = cr[{iCell, 0}].edgesOnCell[i]
+				var flux = (vert_r[0].cf1*er[{iEdge, 0}].ru + vert_r[0].cf2*er[{iEdge, 1}].ru+ vert_r[0].cf3*er[{iEdge, 2}].ru)
+        cr[{iCell, 0}].w = cr[{iCell, 0}].w + cr[{iCell, 0}].edgesOnCell_sign[i] * (cr[{iCell, 0}].zb_cell[i] + copysign(1.0, flux)*cr[{iCell, 0}].zb3_cell[i])*flux
+				for k = 1, nVertLevels do
+					var flux = vert_r[k].fzm*er[{iEdge, k}].ru * (vert_r[k].fzp * er[{iEdge, k-1}].ru)
+          cr[{iCell, k}].w = cr[{iCell, k}].w + cr[{iCell, 0}].edgesOnCell_sign[i] * (cr[{iCell, k}].zb_cell[i] + copysign(1.0, flux)*cr[{iCell, k}].zb3_cell[i])*flux
+				end
+			end
+      cr[{iCell, 1}].w = cr[{iCell, 1}].w / (vert_r[0].cf1*cr[{iCell, 0}].rho_zz + vert_r[0].cf2*cr[{iCell, 1}].rho_zz + vert_r[0].cf3*cr[{iCell, 2}].rho_zz) 
+		
+			for k = 1, nVertLevels do
+        cr[{iCell, k}].w = cr[{iCell, k}].w / (vert_r[k].fzm*cr[{iCell, k}].rho_zz + vert_r[k].fzp*cr[{iCell, k-1}].rho_zz)
+			end
+		end
+	end
+
+  
+end
+
+
+task atm_recover_large_step_variables(cr : region(ispace(int2d), cell_fs),
+                                    er : region(ispace(int2d), edge_fs),
+                                    vert_r : region(ispace(int1d), vertical_fs),
+                                    ns : int,
+                                    rk_step : int,
+                                    dt : double)
+where
+  reads writes (cr, er, vert_r)
+do
+  cio.printf("recovering large step vars\n")
+  atm_recover_large_step_variables_work(cr, er, vert_r, ns, rk_step, dt)
+
 end
 
 -- Comments on mpas_reconstruct

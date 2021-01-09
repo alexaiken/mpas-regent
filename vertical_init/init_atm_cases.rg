@@ -36,7 +36,7 @@ where
                     rw, surface_pressure, theta_base, theta_m, x, y, z, zgrid, zz},
                 er.{dvEdge, dcEdge, ru, u, v, x, y, z, zb, zb3},
                 vr.{areaTriangle, kiteAreasOnVertex, x, y, z},
-                vertr.{dzu, fzm, fzp})
+                vertr.{dzu, fzm, fzp, cf1, cf2, cf3})
 do
 
 -- local vars/constants defined at beginning of subroutine
@@ -227,9 +227,9 @@ do
 
   var COF1 = (2.*vertr[1].dzu+vertr[2].dzu)/(vertr[1].dzu + vertr[2].dzu) * dzw[0]/ vertr[1].dzu
   var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu)*dzw[0]/ vertr[2].dzu
-  var CF1  = vertr[1].fzp + COF1
-  var CF2  = vertr[1].fzm - COF1 - COF2
-  var CF3  = COF2
+  vertr[0].cf1  = vertr[1].fzp + COF1
+  vertr[0].cf2  = vertr[1].fzm - COF1 - COF2
+  vertr[0].cf3  = COF2
 
 
 
@@ -719,7 +719,7 @@ do
 
 --------PSURF is never used, in mpas it only exists for purposes of logging. excluding because of this
 --  for i=0,10 do
---    psurf = (cf1*(pressure_base(1,i)+pp(1,i)) + cf2*(pressure_base(2,i)+pp(2,i)) + cf3*(pressure_base(3,i)+pp(3,i)))/100.
+--    psurf = (vertr[0].cf1*(pressure_base(1,i)+pp(1,i)) + vertr[0].cf2*(pressure_base(2,i)+pp(2,i)) + vertr[0].cf3*(pressure_base(3,i)+pp(3,i)))/100.
 --
 --        psurf = (pressure_base(1,i)+pp(1,i)) + .5*dzw[1]*gravity        &
 --                      *(1.25*(rr(1,i)+rb(1,i))*(1.+scalars(index_qv,1,i))   &
