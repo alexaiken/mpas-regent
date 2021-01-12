@@ -1171,7 +1171,6 @@ do
     cr[iCell].w = 0.0
   end
 
-  __demand(__openmp)
   for iCell in cell_range do
     for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
       var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
@@ -1739,12 +1738,12 @@ do
   var rdts = 1.0 / dts
   var coef_divdamp = 2.0 * smdiv * constants.config_len_disp * rdts
 
-  var edge_range = rect1d { 0, nEdges - 1 }
+  var edge_range_1d = rect1d { 0, nEdges - 1 }
 
-  for iEdge in edge_range do
+  for iEdgex in edge_range_1d do
 
-    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    var cell1 = er[{iEdgex, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdgex, 0}].cellsOnEdge[1]
 
     -- update edges for block-owned cells
     -- if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
@@ -1754,15 +1753,15 @@ do
         -- scaled 3d divergence damping
         var divCell1 = -(cr[{cell1, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp_old)
         var divCell2 = -(cr[{cell2, k}].rtheta_pp - cr[{cell2, k}].rtheta_pp_old)
-        er[{iEdge, k}].ru_p += coef_divdamp * (divCell2 - divCell1) * 
-                              (1.0 - er[{iEdge, 0}].specZoneMaskEdge) 
+        er[{iEdgex, k}].ru_p += coef_divdamp * (divCell2 - divCell1) * 
+                              (1.0 - er[{iEdgex, 0}].specZoneMaskEdge) 
                               / (cr[{cell1, k}].theta_m + cr[{cell2, k}].theta_m)
       end
     -- end
   end
 end
 
-
+__demand(__cuda)
 task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     vert_r : region(ispace(int1d), vertical_fs),
@@ -1770,95 +1769,106 @@ task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
                                     rk_step : int,
                                     dt : double)
 where
-  reads writes (cr, er, vert_r)
+  reads (cr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, exner_base, nEdgesOnCell, rho_base, rho_p_save, rho_pp, 
+             rt_diabatic_tend, rtheta_base, rtheta_p_save, rtheta_pp, rw_p, rw_save, zb_cell, zb3_cell, zz},
+         er.{cellsOnEdge, ru_p, ru_save},
+         vert_r.{cf1, cf2, cf3, fzm, fzp}),
+  writes (cr.{pressure_p, theta_m}, er.u),
+  reads writes (cr.{exner, rho_p, rho_zz, rtheta_p, rw, w, wwAvg},
+                er.{ruAvg, ru})
 do
 
   var rgas = constants.rgas
   var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
 
-  --! Avoid FP errors caused by a potential division by zero below by 
-  --! initializing the "garbage cell" of rho_zz to a non-zero value
-  for k = 0, nVertLevels do
-    cr[{nCells, k}].rho_zz = 1.0
+  var garbage_range = rect2d { int2d {nCells, 0}, int2d {nCells, nVertLevels - 1} }
+  var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
+  var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
+
+  -- Avoid FP errors caused by a potential division by zero below by 
+  -- initializing the "garbage cell" of rho_zz to a non-zero value
+  for iCell in garbage_range do
+    cr[iCell].rho_zz = 1.0
   end
 
-  --! compute new density everywhere so we can compute u from ru.
-  --! we will also need it to compute theta_m below
+  -- compute new density everywhere so we can compute u from ru.
+  -- we will also need it to compute theta_m below
   var invNs = 1 / [double](ns)
 
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].rho_p = cr[{iCell, k}].rho_p_save + cr[{iCell, k}].rho_pp
-			cr[{iCell, k}].rho_zz = cr[{iCell, k}].rho_p + cr[{iCell, k}].rho_base
+  for iCell in cell_range do
+    cr[iCell].rho_p = cr[iCell].rho_p_save + cr[iCell].rho_pp
+    cr[iCell].rho_zz = cr[iCell].rho_p + cr[iCell].rho_base
+
+    cr[iCell].w = 0.0
+
+    --if (iCell.x == 0) then
+      --format.println("w = {} / ({} * {} + {} * {})", cr[iCell].rw, vert_r[iCell.y].fzm, cr[iCell].zz, vert_r[iCell.y].fzp, cr[iCell - {0, 1}].zz) 
+    --end
+
+    cr[iCell].wwAvg *= invNs
+    cr[iCell].wwAvg += cr[iCell].rw_save
+    cr[iCell].rw = cr[iCell].rw_save + cr[iCell].rw_p
+    -- pick up part of diagnosed w from omega - divide by density later
+    cr[iCell].w = cr[iCell].rw / (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz)
+
+    if (iCell.y == nVertLevels) then
+      cr[iCell].w = 0.0
     end
 
-    cr[{iCell, 0}].w = 0.0
+    if (rk_step == 2) then
+      cr[iCell].rtheta_p = cr[iCell].rtheta_p_save + cr[iCell].rtheta_pp - dt * cr[iCell].rho_zz * cr[iCell].rt_diabatic_tend
+      cr[iCell].theta_m = (cr[iCell].rtheta_p + cr[iCell].rtheta_base) / cr[iCell].rho_zz
+      cr[iCell].exner = cr[iCell].zz * (rgas / p0) * pow((cr[iCell].rtheta_p + cr[iCell].rtheta_base), rcv)
+      -- pressure_p is perturbation pressure
+      cr[iCell].pressure_p = cr[iCell].zz * rgas * (cr[iCell].exner * cr[iCell].rtheta_p + cr[iCell].rtheta_base * (cr[iCell].exner - cr[iCell].exner_base))
+    else
+      cr[iCell].rtheta_p = cr[iCell].rtheta_p_save + cr[iCell].rtheta_pp
+      cr[iCell].theta_m = (cr[iCell].rtheta_p + cr[iCell].rtheta_base) / cr[iCell].rho_zz
+    end 
+  end
 
-    for k = 1, nVertLevels do
-			cr[{iCell, k}].wwAvg = cr[{iCell, k}].rw_save + (cr[{iCell, k}].wwAvg * invNs)
-      cr[{iCell, k}].rw = cr[{iCell, k}].rw_save + cr[{iCell, k}].rw_p
-      --! pick up part of diagnosed w from omega - divide by density later
-      cr[{iCell, k}].w = cr[{iCell, k}].rw / (vert_r[k].fzm*cr[{iCell, k}].zz + vert_r[k].fzp*cr[{iCell, k-1}].zz)
-		end
+  -- recover time-averaged ruAvg on all edges of owned cells (for upcoming scalar transport).  
+  -- we solved for these in the acoustic-step loop.  
+  -- we will compute ru and u here also, given we are here, even though we only need them on nEdgesSolve
 
-    cr[{iCell, nVertLevels}].w = 0.0
+  for iEdge in edge_range do
+    var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge.x, 0}].cellsOnEdge[1]
+    er[iEdge].ruAvg *= invNs
+    er[iEdge].ruAvg += er[iEdge].ru_save
+    er[iEdge].ru = er[iEdge].ru_save * er[iEdge].ru_p
+    er[iEdge].u = 2 * er[iEdge].ru / (cr[{cell1, iEdge.y}].rho_zz + cr[{cell2, iEdge.y}].rho_zz)
+  end
 
-    if (rk_step == 3) then
-			for k = 0, nVertLevels do
-        cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp -dt * cr[{iCell, k}].rho_zz * cr[{iCell, k}].rt_diabatic_tend
-        cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
-        cr[{iCell, k}].exner = cr[{iCell, k}].zz * (rgas/p0) * pow((cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base), rcv)
-        --! pressure_p is perturbation pressure
-        cr[{iCell, k}].pressure_p = cr[{iCell, k}].zz*rgas * (cr[{iCell, k}].exner*cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base * (cr[{iCell, k}].exner - cr[{iCell, k}].exner_base))
-			end
-		else
-			for k = 0, nVertLevels do
-        cr[{iCell, k}].rtheta_p = cr[{iCell, k}].rtheta_p_save + cr[{iCell, k}].rtheta_pp
-				cr[{iCell, k}].theta_m = (cr[{iCell, k}].rtheta_p + cr[{iCell, k}].rtheta_base) / cr[{iCell, k}].rho_zz
-			end
-		end 
-	end
+  for iCell in cell_range do
 
-  --! recover time-averaged ruAvg on all edges of owned cells (for upcoming scalar transport).  
-  --! we solved for these in the acoustic-step loop.  
-  --! we will compute ru and u here also, given we are here, even though we only need them on nEdgesSolve
+    -- finish recovering w from (rho*omega)_p.  as when we formed (rho*omega)_p from u and w, we need
+    -- to use the same flux-divergence operator as is used for the horizontal theta transport
+    -- (See Klemp et al 2003).
 
-  for iEdge = 0, nEdges do
-    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
-		for k = 0, nVertLevels do
-      er[{iEdge, k}].ruAvg = er[{iEdge, k}].ru_save + (er[{iEdge, k}].ruAvg * invNs)
-			er[{iEdge, k}].ru = er[{iEdge, k}].ru_save * er[{iEdge, k}].ru_p
-			er[{iEdge, k}].u = 2*er[{iEdge, k}].ru / (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz)
+    if (cr[{iCell.x, 0}].bdyMaskCell <= nRelaxZone) then
+      for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
+        var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
+        var flux = (vert_r[0].cf1 * er[{iEdge, 0}].ru + vert_r[0].cf2 * er[{iEdge, 1}].ru + vert_r[0].cf3 * er[{iEdge, 2}].ru)
+        cr[{iCell.x, 0}].w += cr[{iCell.x, 0}].edgesOnCell_sign[i] * (cr[{iCell.x, 0}].zb_cell[i] + copysign(1.0, flux) * cr[{iCell.x, 0}].zb3_cell[i]) * flux
+        var flux2 = vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].ru * (vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].ru)
+        cr[iCell].w += cr[{iCell, 0}].edgesOnCell_sign[i] * (cr[iCell].zb_cell[i] + copysign(1.0, flux2) * cr[iCell].zb3_cell[i]) * flux2
+      end
     end
-	end
+  end
 
-  for iCell = 0, nCells do
+  for iCell in cell_range do
+    if (cr[{iCell.x, 0}].bdyMaskCell <= nRelaxZone) then
+      if (iCell.y == 0) then
+        cr[{iCell.x, 0}].w /= (vert_r[0].cf1 * cr[{iCell.x, 0}].rho_zz + vert_r[0].cf2 * cr[{iCell.x, 1}].rho_zz + vert_r[0].cf3 * cr[{iCell.x, 2}].rho_zz)
+      end
 
-    --!  finish recovering w from (rho*omega)_p.  as when we formed (rho*omega)_p from u and w, we need
-    --!  to use the same flux-divergence operator as is used for the horizontal theta transport
-    --!  (See Klemp et al 2003).
-
-		if (cr[{iCell, 0}].bdyMaskCell <= nRelaxZone) then
-			for i = 0, cr[{iCell, 0}].nEdgesOnCell do
-				var iEdge = cr[{iCell, 0}].edgesOnCell[i]
-				var flux = (vert_r[0].cf1*er[{iEdge, 0}].ru + vert_r[0].cf2*er[{iEdge, 1}].ru+ vert_r[0].cf3*er[{iEdge, 2}].ru)
-        cr[{iCell, 0}].w = cr[{iCell, 0}].w + cr[{iCell, 0}].edgesOnCell_sign[i] * (cr[{iCell, 0}].zb_cell[i] + copysign(1.0, flux)*cr[{iCell, 0}].zb3_cell[i])*flux
-				for k = 1, nVertLevels do
-					var flux = vert_r[k].fzm*er[{iEdge, k}].ru * (vert_r[k].fzp * er[{iEdge, k-1}].ru)
-          cr[{iCell, k}].w = cr[{iCell, k}].w + cr[{iCell, 0}].edgesOnCell_sign[i] * (cr[{iCell, k}].zb_cell[i] + copysign(1.0, flux)*cr[{iCell, k}].zb3_cell[i])*flux
-				end
-			end
-      cr[{iCell, 1}].w = cr[{iCell, 1}].w / (vert_r[0].cf1*cr[{iCell, 0}].rho_zz + vert_r[0].cf2*cr[{iCell, 1}].rho_zz + vert_r[0].cf3*cr[{iCell, 2}].rho_zz) 
-		
-			for k = 1, nVertLevels do
-        cr[{iCell, k}].w = cr[{iCell, k}].w / (vert_r[k].fzm*cr[{iCell, k}].rho_zz + vert_r[k].fzp*cr[{iCell, k-1}].rho_zz)
-			end
-		end
-	end
-
-  
+      if (iCell.y > 0) then
+        cr[iCell].w /= (vert_r[iCell.y].fzm * cr[iCell].rho_zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].rho_zz)
+      end
+    end
+  end
 end
 
 

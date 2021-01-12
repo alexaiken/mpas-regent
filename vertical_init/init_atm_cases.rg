@@ -2,6 +2,7 @@ import "regent"
 require "data_structures"
 
 local constants = require("constants")
+local format = require("std/format")
 
 local nCells = constants.nCells
 local nEdges = constants.nEdges
@@ -217,10 +218,12 @@ do
     vertr[k].dzu = .5*(dzw[k]+dzw[k-1])
     vertr[k].rdzu  =  1.0/vertr[k].dzu
     vertr[k].fzp = .5* dzw[k]/vertr[k].dzu
-    vertr[k].fzm =.5* dzw[k-1]/vertr[k].dzu
+    vertr[k].fzm = .5* dzw[k-1]/vertr[k].dzu
     rdzwp[k] = dzw[k-1]/(dzw[k]*(dzw[k]+dzw[k-1]))
     rdzwm[k] = dzw[k]/(dzw[k-1]*(dzw[k]+dzw[k-1]))
   end
+
+  --format.println("INIT ATM CASES: fzm = {}, fzp = {}", vertr[0].fzm, vertr[0].fzp)
 
 
 --!**********  how are we storing cf1, cf2 and cf3?

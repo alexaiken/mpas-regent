@@ -469,7 +469,7 @@ do
       atm_divergence_damping_3d(cr, er, rk_sub_timestep[rk_step])
     end
 
-    atm_recover_large_step_variables(cr, er, vert_r, number_sub_steps[rk_step], rk_step, dt)
+    --atm_recover_large_step_variables(cr, er, vert_r, number_sub_steps[rk_step], rk_step, dt)
 
     -- SKIPPING if(config_apply_lbcs @ line 934)
 
