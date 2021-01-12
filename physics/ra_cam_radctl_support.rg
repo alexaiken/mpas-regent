@@ -253,10 +253,8 @@ do
 
   -- Convert ozone volume mixing ratio to mass mixing ratio:
   vmmr = constants.amo / constants.amd
-  for k=0, pver do
-    for i=0, ncol do
-      radctl_2d_pverr_r[{i, k}].o3mmr = vmmr * radctl_2d_pverr_r[{i, k}].o3vmr
-    end
+  for cell in radctl_2d_pverr_r do
+    radctl_2d_pverr_r[cell].o3mmr = vmmr * radctl_2d_pverr_r[cell].o3vmr
   end
 
   return
