@@ -78,14 +78,17 @@ end
 task radiation_sw_to_MPAS()
 end
 
-task driver_radiation_sw(cr : region(ispace(int2d), cell_fs))
-where reads writes (cr)
+task driver_radiation_sw(cr : region(ispace(int2d), cell_fs),
+                         phys_tbls : region(ispace(int1d), phys_tbls_fs))
+where 
+  reads (phys_tbls),
+  reads writes (cr)
 do
   radiation_sw_from_MPAS()
   radconst(0, 0, 0)
   var curr_julday : double = 0.0 --TODO: Placeholder
   var ozncyc : bool = true --TODO: Placeholder
-  camrad(cr, constants.nOznLevels, curr_julday, ozncyc)
+  camrad(cr, phys_tbls, constants.nOznLevels, curr_julday, ozncyc)
   radiation_sw_to_MPAS()
 end
 
@@ -357,11 +360,14 @@ task radiation_lw_to_MPAS()
 end
 
 task driver_radiation_lw(cr : region(ispace(int2d), cell_fs),
+                         phys_tbls : region(ispace(int1d), phys_tbls_fs),
                          radt_lw_scheme : regentlib.string,
                          config_o3climatology : bool,
                          microp_scheme : regentlib.string,
                          config_microp_re : bool)
-where reads writes (cr)
+where 
+  reads (phys_tbls),
+  reads writes (cr)
 do
   var radt : double
   --radiation_lw_from_MPAS()
@@ -379,7 +385,7 @@ do
     radt = constants.config_dt / 60.0
     var curr_julday : double = 0.0 --TODO: Placeholder
     var ozncyc : bool = true --TODO: Placeholder
-    camrad(cr, constants.nOznLevels, curr_julday, ozncyc)
+    camrad(cr, phys_tbls, constants.nOznLevels, curr_julday, ozncyc)
   end
 
   --radiation_lw_to_MPAS(cr, radt_lw_scheme, microp_scheme, config_microp_re)

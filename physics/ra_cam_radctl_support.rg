@@ -260,7 +260,66 @@ do
   return
 end
 
-task aqsat()
+--
+-- Saturation vapor pressure table lookup
+--
+task estblf(td : double,            -- Temperature for saturation lookup  
+            phys_tbls : region(ispace(int1d), phys_tbls_fs))
+where
+  reads (phys_tbls.{tmin, tmax, estbl})
+do
+  var e : double = max(min(td, phys_tbls[0].tmax), phys_tbls[0].tmin)   -- partial pressure
+  var i : int = int(e - phys_tbls[0].tmin) + 1
+  var ai : double = int(e - phys_tbls[0].tmin)
+
+  return (phys_tbls[0].tmin + ai - e + 1.0) * 
+         phys_tbls[0].estbl[i] - (phys_tbls[0].tmin + ai - e) * 
+         phys_tbls[0].estbl[i + 1]
+end
+
+-- From MPAS-Model/src/core_atmosphere/physics/physics_wrf/module_ra_cam_support.F
+--
+-- Purpose: 
+-- Utility procedure to look up and return saturation vapor pressure from
+-- precomputed table, calculate and return saturation specific humidity
+-- (g/g),for input arrays of temperature and pressure (dimensioned ii,kk)
+-- This routine is useful for evaluating only a selected region in the
+-- vertical.
+task aqsat(cr : region(ispace(int2d), cell_fs),
+           phys_tbls : region(ispace(int1d), phys_tbls_fs),
+           radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
+           ilen : int,           -- Length of vectors in I direction which
+           klen : int)          -- Length of K direction
+where
+  reads (cr.{pmid, t}, phys_tbls),
+  reads writes (radctl_2d_pverr_r.{esat, qsat})
+do
+  var omeps = 1.0 - constants.ep_2
+  var k : int
+  var i : int
+  for k = 0, klen do
+    for i = 0, ilen do
+      radctl_2d_pverr_r[{i, k}].esat = estblf(cr[{i, k}].t, phys_tbls)
+
+      --
+      -- Saturation specific humidity
+      --
+      radctl_2d_pverr_r[{i, k}].qsat = 
+        constants.ep_2 * radctl_2d_pverr_r[{i, k}].esat 
+        / (cr[{i, k}].pmid - omeps * radctl_2d_pverr_r[{i, k}].esat)
+
+      --
+      -- The following check is to avoid the generation of negative values
+      -- that can occur in the upper stratosphere and mesosphere
+      --
+      radctl_2d_pverr_r[{i, k}].qsat = min(1.0, radctl_2d_pverr_r[{i, k}].qsat)
+
+      if (radctl_2d_pverr_r[{i, k}].qsat < 0.0) then
+        radctl_2d_pverr_r[{i, k}].qsat = 1.0
+        radctl_2d_pverr_r[{i, k}].esat = cr[{i, k}].pmid
+      end
+    end
+  end
 end
 
 task get_rf_scales()
