@@ -10,8 +10,11 @@ local format = require("std/format")
 task atm_core_init(cr : region(ispace(int2d), cell_fs),
                    er : region(ispace(int2d), edge_fs),
                    vr : region(ispace(int2d), vertex_fs),
-                   vert_r : region(ispace(int1d), vertical_fs))
-where reads writes (cr, er, vr, vert_r) do
+                   vert_r : region(ispace(int1d), vertical_fs),
+                   phys_tbls : region(ispace(int1d), phys_tbls_fs))
+where 
+  reads writes (cr, er, vr, vert_r, phys_tbls) 
+do
   format.println("Calling atm_core_init...")
 
   atm_compute_signs(cr, er, vr)
@@ -28,7 +31,7 @@ where reads writes (cr, er, vr, vert_r) do
   mpas_reconstruct_2d(cr, er, false, true) --bools are includeHalos and on_a_sphere
 
   -- if (moist_physics) then
-  physics_init(cr, er)
+  physics_init(cr, er, phys_tbls)
   -- endif
 
   atm_compute_mesh_scaling(cr, er, true)
@@ -42,12 +45,15 @@ task atm_do_timestep(cr : region(ispace(int2d), cell_fs),
                      er : region(ispace(int2d), edge_fs),
                      vr : region(ispace(int2d), vertex_fs),
                      vert_r : region(ispace(int1d), vertical_fs),
+                     phys_tbls : region(ispace(int1d), phys_tbls_fs),
                      dt : double)
-where reads writes (cr, er, vr, vert_r) 
+where 
+  reads (phys_tbls),
+  reads writes (cr, er, vr, vert_r) 
 do
   --if(moist_physics) then
   physics_timetracker()
-  physics_driver(cr)
+  physics_driver(cr, phys_tbls)
   --end
 
   atm_timestep(cr, er, vr, vert_r, dt)

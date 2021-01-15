@@ -7,9 +7,9 @@ require "physics/atmphys_camrad_init"
 -- Radiation work in progress
 -- TODO correct arguments
 task physics_init(cr : region(ispace(int2d), cell_fs),
-                  er : region(ispace(int2d), edge_fs))
-where reads (cr),
-      writes (cr)
+                  er : region(ispace(int2d), edge_fs),
+                  phys_tbls : region(ispace(int1d), phys_tbls_fs))
+where reads writes (cr, phys_tbls)
 do
 
   -- SKIPPING LOTS OF mpas_atmphys_init.F:physics_init(...)
@@ -19,5 +19,5 @@ do
   -- If we're in the "cam_sw" case, then "init_radiation_lw" 
   -- and "init_radiation_sw" are identical, and only need to be
   -- called once, so we can directly call camradinit() 
-  camradinit(cr, er)
+  camradinit(cr, er, phys_tbls)
 end

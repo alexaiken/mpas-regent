@@ -29,6 +29,7 @@ task main()
   var edge_region = region(edge_id_space, edge_fs)
   var vertex_region = region(vertex_id_space, vertex_fs)
   var vertical_region = region(vertical_id_space, vertical_fs)
+  var phys_tbls = region(ispace(int1d, 1), phys_tbls_fs)
   var ozn_region = region(ozn_id_space, ozn_fs)
   var aerosol_region = region(aerosol_id_space, aerosol_fs)
 
@@ -40,10 +41,10 @@ task main()
 
   init_atm_case_jw(cell_region, edge_region, vertex_region, vertical_region)
 
-  atm_core_init(cell_region, edge_region, vertex_region, vertical_region)
+  atm_core_init(cell_region, edge_region, vertex_region, vertical_region, phys_tbls)
 
   for i = 0, constants.NUM_TIMESTEPS do
-    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, i)
+    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, phys_tbls, i)
   end
 
   atm_compute_output_diagnostics(cell_region)

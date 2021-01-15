@@ -633,6 +633,35 @@ fspace vertical_fs {
   v_init : double, --type="real" dimensions="nVertLevels" units="m s^{-1}" description="v reference profile"
 }
 
+fspace phys_tbls_fs
+{
+  estblh2o : double[constants.ntemp],   -- table of H2O saturation vapor pressures
+
+  -- Table of saturation vapor pressure values es from tmin degrees
+  -- to tmax+1 degrees k in one degree increments.  ttrice defines the
+  -- transition region where es is a combination of ice & water values
+  estbl : double[constants.plenest],    -- table values of saturation vapor pressure
+
+  itype : double,
+  pcf : double[5],          -- polynomial coeffs -> es transition water to ice
+
+  -- es table parameters
+  tmin : double,            -- Minimum temperature (K)
+  tmax : double,            -- Maximum temperature (K)
+  ttrice : double,          -- Trans. range from es over h2o to es over ice
+  icephs : bool,            -- Ice phase (true or false)
+
+  -- Physical constants required for es calculation
+  epsqs : double,
+  hlatv : double,           -- latent heat of evaporation ~ J/kg
+  hlatf : double,           -- latent heat of fusion ~ J/kg
+  rgasv : double,
+  cp : double,
+  tmelt : double,
+
+  lentbl : int
+}
+
 fspace ozn_fs {
   o3clim : double, --type="real" dimensions="nOznLevels nCells Time" units="mol mol^{-1}" description="climatological ozone on prescribed pressure levels at current time"
   pin : double, --type="real"  dimensions="nOznLevels" units="Pa" description="fixed pressure levels at which climatological ozone is defined"
@@ -696,4 +725,10 @@ fspace radctl_2d_pverr_fs {
 
   esat : double,    -- saturation vapor pressure
   qsat : double,    -- saturation specific humidity
+}
+
+fspace radctl_2d_pverrp_fs {
+  -- Arrays of size (pcols, pverrp) --
+
+  pnm : double,     -- Model interface pressures (dynes/cm2)
 }
