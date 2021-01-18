@@ -1802,10 +1802,6 @@ do
 
     cr[iCell].w = 0.0
 
-    --if (iCell.x == 0) then
-      --format.println("w = {} / ({} * {} + {} * {})", cr[iCell].rw, vert_r[iCell.y].fzm, cr[iCell].zz, vert_r[iCell.y].fzp, cr[iCell - {0, 1}].zz) 
-    --end
-
     cr[iCell].wwAvg *= invNs
     cr[iCell].wwAvg += cr[iCell].rw_save
     cr[iCell].rw = cr[iCell].rw_save + cr[iCell].rw_p

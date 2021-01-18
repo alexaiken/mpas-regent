@@ -223,7 +223,6 @@ do
     rdzwm[k] = dzw[k]/(dzw[k-1]*(dzw[k]+dzw[k-1]))
   end
 
-  --format.println("INIT ATM CASES: fzm = {}, fzp = {}", vertr[0].fzm, vertr[0].fzp)
 
 
 --!**********  how are we storing cf1, cf2 and cf3?
