@@ -495,6 +495,10 @@ fspace cell_fs {
     tauxcl : double,    -- cloud water optical depth
     tauxci : double,    -- cloud ice optical depth
 
+    -- From aerosol_init() -- 
+    m_psp : double,     -- REAL,  DIMENSION( ims:ime, jms:jme),  INTENT(OUT )
+    m_psn : double,     -- REAL,  DIMENSION( ims:ime, jms:jme),  INTENT(OUT )
+
     -----------end physics fields----------------
     ---------------------------------------------
 }

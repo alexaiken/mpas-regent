@@ -91,7 +91,8 @@ do
   radconst(0, 0, 0)
   var curr_julday : double = 0.0 --TODO: Placeholder
   var ozncyc : bool = true --TODO: Placeholder
-  camrad(cr, phys_tbls, constants.nOznLevels, curr_julday, ozncyc)
+  var paerlev : int = 0 --TODO: Placeholder
+  camrad(cr, phys_tbls, constants.nOznLevels, curr_julday, ozncyc, paerlev)
   radiation_sw_to_MPAS()
 end
 
@@ -399,7 +400,8 @@ do
     radt = constants.config_dt / 60.0
     var curr_julday : double = 0.0 --TODO: Placeholder
     var ozncyc : bool = true --TODO: Placeholder
-    camrad(cr, phys_tbls, constants.nOznLevels, curr_julday, ozncyc)
+    var paerlev : int = 0 --TODO: Placeholder
+    camrad(cr, phys_tbls, constants.nOznLevels, curr_julday, ozncyc, paerlev)
   end
 
   --radiation_lw_to_MPAS(cr, radt_lw_scheme, microp_scheme, config_microp_re)
