@@ -53,7 +53,7 @@ where
   reads writes (cr, er, vr, vert_r, aer_r, ozn_r) 
 do
 
-  format.println("Calling atm_do_timestep, timestep = {}", dt)
+  format.println("Calling atm_do_timestep, timestep = {}", [int](dt))
 
   --if(moist_physics) then
   physics_timetracker()

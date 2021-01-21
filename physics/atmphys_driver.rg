@@ -2,6 +2,7 @@ import "regent"
 require "data_structures"
 require "physics/atmphys_driver_cloudiness"
 require "physics/atmphys_driver_radiation_swlw"
+local format = require("std/format")
 
 task physics_timetracker()
 end
@@ -33,7 +34,7 @@ do
   driver_cloudiness()
 
   allocate_radiation_sw()
-  --driver_radiation_sw(cr, aer_r, ozn_r)
+  driver_radiation_sw(cr, aer_r, ozn_r)
 
   allocate_radiation_lw()
   driver_radiation_lw(cr, aer_r, ozn_r, "cam_lw", "mp_thompson", true, false, xtime_s) --Last 4 arguments: radt_lw_scheme, microp_scheme, o3climatology, microp_re, xtime_s

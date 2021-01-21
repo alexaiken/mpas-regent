@@ -85,10 +85,14 @@ end
 task radiation_sw_to_MPAS()
 end
 
-task driver_radiation_sw(cr : region(ispace(int2d), cell_fs))
+task driver_radiation_sw(cr : region(ispace(int2d), cell_fs),
+                         aer_r : region(ispace(int2d), aerosol_fs),
+                         ozn_r : region(ispace(int2d), ozn_fs))
+where
+  reads writes (cr, aer_r, ozn_r)
+do
   radiation_sw_from_MPAS()
   var solar : solar_vars = radconst(0.0) --TODO: Placeholder! Actual argument is "julday" = Current Julian day (= 0.0 at 0Z on January 1st).
-  --format.println("solar.declin = {}, solar.solcon = {}", solar.declin, solar.solcon)
   camrad()
   radiation_sw_to_MPAS()
 end

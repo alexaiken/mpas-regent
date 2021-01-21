@@ -2,6 +2,7 @@ import "regent"
 require "data_structures"
 
 local constants = require("constants")
+local format = require("std/format")
 local c = regentlib.c
 
 fabs = regentlib.fabs(double)
@@ -63,7 +64,7 @@ task getfactors(cycflag : bool,
   end
 
   if validfactors(fact1, fact2) ~= true then
-    c.printf("Bad fact1 and/or fact2=%.3f,%.3f", fact1, fact2)
+    format.println("Bad fact1 and/or fact2=%.3f,%.3f", fact1, fact2)
   end
 
   return fact1
