@@ -26,7 +26,9 @@ task radctl(cr : region(ispace(int2d), cell_fs),
             pin : region(ispace(int1d), double),
             ozncyc : bool,
             aerosoljp : region(ispace(int3d), double),
-            aerosoljn : region(ispace(int3d), double))
+            aerosoljn : region(ispace(int3d), double),
+            m_hybi : region(ispace(int1d), double),
+            paerlev : int)
 where reads (
         cr.{pmid, pint, t}, 
         phys_tbls, 
@@ -55,6 +57,7 @@ do
   var radctl_2d_pverr_r = region(ispace(int2d, {pcols, pverr}), radctl_2d_pverr_fs)
   var radctl_2d_pverrp_r = region(ispace(int2d, {pcols, pverrp}), radctl_2d_pverrp_fs)
   
+  var aerosol = region(ispace(int3d, {pcols, pver, naer_all}), double) -- aerosol mass mixing ratios
   var scales = region(ispace(int1d, naer_all), double)  -- scaling factors for aerosols
   -------------------------------------------------------------------------
 
@@ -66,10 +69,8 @@ do
 
   aqsat(cr, phys_tbls, radctl_2d_pverr_r, ncol, pver)
 
-  get_rf_scales(scales)
-
   get_aerosol(cr, lchnk, julian, aerosoljp, aerosoljn, m_hybi, paerlev, 
-              naer, pint, pcols, pver, pverp, pverr, pverrp, aerosol, scales)
+              pint, pcols, pver, pverp, pverr, pverrp, aerosol, scales)
 
   aerosol_indirect()
   radcswmx()
@@ -143,6 +144,8 @@ do
   var aerosoljp = region(ispace(int3d, {constants.nCells, paerlev, naer_c}), double)
   var aerosoljn = region(ispace(int3d, {constants.nCells, paerlev, naer_c}), double)
 
+  var m_hybi = region(ispace(int1d, paerlev), double)
+
   -----------------------------
 
   format.println("Calling camrad...")
@@ -166,7 +169,9 @@ do
     pin, 
     ozncyc,
     aerosoljp, 
-    aerosoljn
+    aerosoljn, 
+    m_hybi, 
+    paerlev
   )
 
   format.println("Camrad done")
