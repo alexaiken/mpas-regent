@@ -3,12 +3,11 @@ require "data_structures"
 
 local constants = require("constants")
 local c = regentlib.c
+local inf = 1.0/0.0
 
 fabs = regentlib.fabs(double)
 floor = regentlib.floor(double)
 fmod = regentlib.fmod(double, double)
-float = regentlib.float(int)
-int = regentlib.int(double)
 
 -- Struct of two factors
 struct two_factors {
@@ -336,24 +335,171 @@ end
 
 -- From MPAS-Model/src/core_atmosphere/physics/physics_wrf/module_ra_cam_support.F
 --
-task get_rf_scales(scales : region(ispace(int1d), double)) -- scaling factors for aerosols
-  scales(idxBG) = bgscl_rf
-  scales(idxSUL) = sulscl_rf
-  scales(idxSSLT) = ssltscl_rf
+-- Input: match surface pressure, cam interface pressure,
+--        month index, number of columns, chunk index
+--
+-- Output: Aerosol mass mixing ratio (AEROSOL_mmr)
+--
+-- Method:
+--         interpolate column mass (cumulative) from match onto
+--           cam's vertical grid (pressure coordinate)
+--         convert back to mass mixing ratio
+--
+task vert_interpolate(cr : region(ispace(int2d), cell_fs),              -- surface pressure at a particular month
+                      Match_ps : region(ispace(int1d), double),
+                      aerosolc : region(ispace(int3d), double),
+                      m_hybi : region(ispace(int1d), double),
+                      paerlev : int,
+                      AEROSOL_mmr : region(ispace(int3d), double),      -- aerosol mmr from MATCH
+                      pcols : int,
+                      pver : int,
+                      pverp : int,
+                      ncol : int)       -- chunk index and number of columns
+where
+  reads (cr.pint)                       -- interface pressure from CAM
+do
 
-  var i : int
-  do i = idxCARBONfirst, idxCARBONfirst + numCARBON-1
-    scales(i) = carscl_rf
+  -----------------------------Local variables-----------------------------
+
+  var m : int                           -- index to aerosol species
+  var kupper : int[pcols]               -- last upper bound for interpolation
+  var i : int                           -- loop vars for interpolation
+  var k : int 
+  var kk : int
+  var kkstart : int 
+  var kount : int
+  var isv : int                         -- loop indices to save
+  var ksv : int 
+  var msv : int            
+
+  var bad : bool                        -- indicates a bad point found
+  var lev_interp_comp : bool            -- interpolation completed for a level
+
+  var AEROSOL : region(ispace(int3d, {pcols,pverp,naer}), double)  
+                                        -- cumulative mass of aerosol in column beneath upper
+                                        -- interface of level in column at particular month
+  var dpl : double                      -- lower and upper intepolation factors
+  var dpu : double
+  var v_coord : double                  -- vertical coordinate
+  var m_to_mmr : double                 -- mass to mass mixing ratio conversion factor
+  var AER_diff : double                 -- temp var for difference between aerosol masses
+
+  -------------------------------------------------------------------------
+
+  -- Initialize index array
+  for i = 0, ncol do
+    kupper[i] = 1
   end
 
-  do i = idxDUSTfirst, idxDUSTfirst + numDUST-1
-    scales(i) = dustscl_rf
+  -- assign total mass to topmost level   
+  for i = 0, ncol do
+    for m = 0, constants.nAerLevels do
+      AEROSOL[{i,0,m}] = aerosolc[{i,0,m}]
+    end
   end
 
-  scales(idxVOLC) = volcscl_rf
-end
+  -- At every pressure level, interpolate onto that pressure level
+  for k = 1, pver do
 
-task vert_interpolate()
+    -- Top level we need to start looking is the top level for the previous k
+    -- for all longitude points
+
+    kkstart = paerlev
+    for i = 0, ncol do
+      kkstart = min0(kkstart, kupper[i])
+    end
+    kount = 0
+
+    -- Store level indices for interpolation
+
+    -- for the pressure interpolation should be comparing
+    -- pint(column,lev) with M_hybi(lev)*M_ps_cam_col(month,column,chunk)
+
+    lev_interp_comp = false
+    for kk = kkstart, paerlev - 1 do
+      if (not lev_interp_comp) then
+        for i = 0, ncol do
+          v_coord = cr[{i,k}].pint
+          if (M_hybi[kk] * Match_ps[i] < v_coord and 
+              v_coord <= M_hybi[kk + 1] * Match_ps[i]) then
+            kupper[i] = kk
+            kount = kount + 1
+          end
+        end
+
+        -- If all indices for this level have been found, do the interpolation and
+        -- go to the next level
+
+        -- Interpolate in pressure.
+        if (kount == ncol) then
+          for i = 0, ncol do
+            for m = 0, naer do
+              dpu = cr[{i,k}].pint - M_hybi[kupper[i]] * Match_ps[i]
+              dpl = M_hybi[kupper[i]+1] * Match_ps[i] - cr[{i,k}].pint
+              AEROSOL[{i,k,m}] =
+                (aerosolc[{i, kupper[i], m}] * dpl +
+                aerosolc[{i, kupper[i] + 1, m}] * dpu) / (dpl + dpu)
+            end
+          end
+          lev_interp_comp = true
+        end
+      end
+    end
+
+    -- If we've fallen through the kk=1,levsiz-1 loop, we cannot interpolate and
+    -- must extrapolate from the bottom or top pressure level for at least some
+    -- of the longitude points.
+
+    if(not lev_interp_comp) then
+      for i = 0, ncol do
+        for m = 1, naer do
+          if (cr[{i,k}].pint < M_hybi[0] * Match_ps[i]) then
+            AEROSOL[{i,k,m}] =  aerosolc[{i,0,m}]
+          elseif (cr[{i,k}].pint > M_hybi[paerlev] * Match_ps[i]) then
+            AEROSOL[{i,k,m}] = 0.0
+          else
+            dpu = cr[{i,k}].pint - M_hybi[kupper[i]] * Match_ps[i]
+            dpl = M_hybi[kupper[i] + 1] * Match_ps[i] - cr[{i,k}].pint
+            AEROSOL[{i,k,m}] =
+              (aerosolc[{i, kupper[i], m}] * dpl +
+              aerosolc[{i, kupper[i] + 1, m}] * dpu) / (dpl + dpu)
+          end
+        end
+      end
+    end
+  end
+
+  -- aerosol mass beneath lowest interface (pverp) must be 0
+  for m = 0, naer do
+    for i = 0, ncol do
+      AEROSOL[{i, pverp, m}] = 0.
+    end
+  end
+
+  -- Set mass in layer to zero whenever it is less than
+  -- 1.e-40 kg/m^2 in the layer
+  for cell in AEROSOL do
+    if (AEROSOL[{i,k,m}] < 1.e-40) then
+      AEROSOL[{i,k,m}] = 0.
+    end
+  end
+
+  -- Set mass in layer to zero whenever it is less than
+  --   10^-15 relative to column total mass
+  -- convert back to mass mixing ratios.
+  -- exit if mmr is negative
+  for m = 0, naer do
+    for k = 0, pver do
+      for i = 0, ncol do
+        AER_diff = AEROSOL[{i,k,m}] - AEROSOL[{i,k+1,m}]
+        if (abs(AER_diff) < 1e-15 * AEROSOL[{i,0,m}]) then
+          AER_diff = 0.
+        end
+        m_to_mmr = gravmks / (cr[{i,k+1}].pint - cr[{i,k}].pint)
+        AEROSOL_mmr[{i,k,m}] = AER_diff * m_to_mmr
+      end
+    end
+  end
 end
 
 task background()
@@ -391,36 +537,33 @@ task get_aerosol(cr : region(ispace(int2d), cell_fs),
                  julian : double,
                  aerosoljp : region(ispace(int3d), double),
                  aerosoljn : region(ispace(int3d), double),
-                 m_hybi : double[paerlev],
+                 m_hybi : region(ispace(int1d), double),
                  paerlev : int,
-                 naer_c : int,
-                 pint : double[pcols, pverp],       -- midpoint pres
                  pcols : int, 
                  pver : int,
                  pverp : int,
                  pverr : int,
                  pverrp : int,
-                 AEROSOLt : double[pcols, pver, naer_all],          -- aerosols
-                 scale : double[naer_all])          -- scale each aerosol by this amount
+                 AEROSOLt : region(ispace(int3d), double),       -- aerosols
+                 scale : region(ispace(int1d), double))          -- scale each aerosol by this amount
 where
-  reads (cr.{m_psp, m_psn}),
-  writes ()
+  reads (cr.{pint})
 do
-  --
-  -- Local workspace
-  --
+
+  -----------------------------Local variables-----------------------------
+
   var caldayloc : double            -- calendar day of current timestep
   var fact1 : double                -- time interpolation factors
   var fact2 : double                  
 
   var nm : int = 1                  -- index to prv month in array. init to 1 and toggle between 1 and 2
   var np : int = 2                  -- index to nxt month in array. init to 2 and toggle between 1 and 2
-  var mo_nxt : int = bigint         -- index to nxt month in file
+  var mo_nxt : int = 2147483647     -- index to nxt month in file
   var mo_prv : int                  -- index to previous month
 
   var cdaym : double = inf          -- calendar day of prv month
   var cdayp : double = inf          -- calendar day of next month
-  var Mid : double[12] = [16.5, 46.0, 75.5, 106.0, 136.5, 167.0, 197.5, 228.5, 259.0, 289.5, 320.0, 350.5]              
+  var Mid : double[12] = {16.5, 46.0, 75.5, 106.0, 136.5, 167.0, 197.5, 228.5, 259.0, 289.5, 320.0, 350.5}              
                                     -- Days into year for mid month date
 
   var i : int                       -- spatial indices
@@ -439,33 +582,35 @@ do
   -- aerosolm(pcols,pver) is value of preceeding month's aerosol mmr
   -- aerosolp(pcols,pver) is value of next month's aerosol mmr
   --  (think minus and plus or values to left and right of point to be interpolated)
-  var AEROSOLm : double[pcols,pver,naer]      -- aerosol mmr from MATCH in column at previous (minus) month
+  var AEROSOLm = region(ispace(int3d, {pcols,pver,naer}), double)  -- aerosol mmr from MATCH in column at previous (minus) month
 
   -- values beyond (or at) current time step "the plus month"
-  var AEROSOLp : double[pcols,pver,naer]          -- aerosol mmr from MATCH in column at next (plus) month
+  var AEROSOLp = region(ispace(int3d, {pcols,pver,naer}), double)  -- aerosol mmr from MATCH in column at next (plus) month
 
+  -------------------------------------------------------------------------
+  
   -- JULIAN starts from 0.0 at 0Z on 1 Jan.
-  intJULIAN = JULIAN + 1.0_r8    -- offset by one day
+  intJULIAN = JULIAN + 1.0    -- offset by one day
   -- jan 1st 00z is julian=1.0 here
-  IJUL = int(intJULIAN)
+  IJUL = intJULIAN
   -- Note that following will drift. 
   -- Need to use actual month/day info to compute julian.
-  intJULIAN = intJULIAN - float(IJUL)
+  intJULIAN = intJULIAN - IJUL
   IJUL = fmod(IJUL, 365)
   if (IJUL == 0) then
     IJUL = 365
   end
   caldayloc = intJULIAN + IJUL
 
-  if (caldayloc < Mid(1)) then
+  if (caldayloc < Mid[0]) then
     mo_prv = 12
     mo_nxt =  1
-  else if (caldayloc >= Mid(12)) then
+  elseif (caldayloc >= Mid[11]) then
     mo_prv = 12
     mo_nxt =  1
   else
-    do i = 2 , 12
-      if (caldayloc < Mid(i)) then
+    do i = 1 , 11
+      if (caldayloc < Mid[i]) then
         mo_prv = i-1
         mo_nxt = i
         exit
@@ -478,37 +623,39 @@ do
   cdayp = Mid[mo_nxt]
 
   -- Determine time interpolation factors.  1st arg says we are cycling 1 year of data
-  getfactors(true, mo_nxt, cdaym, cdayp, caldayloc, fact1, fact2)
+  getfactors(true, mo_nxt, cdaym, cdayp, caldayloc, fact1, fact2) -- TODO check
 
   -- interpolate (prv and nxt month) bounding datasets onto cam vertical grid.
   -- compute mass mixing ratios on CAMS's pressure coordinate
   --  for both the "minus" and "plus" months
   ncol = pcols
 
-  call vert_interpolate(m_psp, aerosoljp, m_hybi, paerlev, naer_c, pint, nm, AEROSOLm, pcols, pver, pverp, ncol, c)
-  call vert_interpolate(m_psn, aerosoljn, m_hybi, paerlev, naer_c, pint, np, AEROSOLp, pcols, pver, pverp, ncol, c)
+  vert_interpolate(cr, m_psp, aerosoljp, m_hybi, paerlev, AEROSOLm, pcols, pver, pverp, ncol)
+  vert_interpolate(cr, m_psn, aerosoljn, m_hybi, paerlev, AEROSOLp, pcols, pver, pverp, ncol)
 
   -- Time interpolate.
-  for m = 0, naer
-    for k = 0, pver
-      for i = 0, ncol
-        AEROSOLt[i,k,m] = AEROSOLm[i,k,m] * fact1 + AEROSOLp[i,k,m] * fact2
-      end
-    end
+  for cell in AEROSOLt do
+    AEROSOLt[cell] = AEROSOLm[cell] * fact1 + AEROSOLp[cell] * fact2
   end
 
   -- get background aerosol (tuning) field
-  background(c, ncol, pint, pcols, pverr, pverrp, AEROSOLt[:, :, idxBG])
+  background() -- TODO
 
   -- find volcanic aerosol masses
-  AEROSOLt[:,:,idxVOLC] = 0._r8
+  for i = 0, ncol do
+    for k = 0, pver do
+      AEROSOLt[{i, k, idxVOLC}] = 0.0
+    end
+  end
 
   -- exit if mmr is negative (we have previously set
   --  cumulative mass to be a decreasing function.)
-  speciesmin[:] = 0.        -- speciesmin(m) = 0 is minimum mmr for each species
+  for i = 0, naer do
+    speciesmin[i] = 0.0        -- speciesmin(m) = 0 is minimum mmr for each species
+  end
 
   -- scale any AEROSOLS as required
-  scale_aerosols(AEROSOLt, pcols, pver, ncol, c, scale)
+  scale_aerosols() -- TODO
 
 end
 
