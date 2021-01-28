@@ -128,5 +128,5 @@ for task in task_arr:
 u = dot.unflatten(stagger=5)
 
 
-u.render('dynamics_tasks.gv', view=True)
+u.render('output/dynamics_tasks.gv', view=True)
 

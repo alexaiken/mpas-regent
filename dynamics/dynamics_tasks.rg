@@ -46,9 +46,8 @@ sqrt = regentlib.sqrt(double)
 task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
                        er : region(ispace(int2d), edge_fs),
                        vr : region(ispace(int2d), vertex_fs))
-where 
-  reads (cr.{edgesOnCell, nEdgesOnCell, verticesOnCell}, er.{cellsOnEdge, verticesOnEdge, zb, zb3},
-         vr.{cellsOnVertex, edgesOnVertex}), 
+where
+  reads (cr.{edgesOnCell, nEdgesOnCell, verticesOnCell}, er.{cellsOnEdge, verticesOnEdge, zb, zb3}, vr.{cellsOnVertex, edgesOnVertex}),
   writes (cr.{edgesOnCellSign, kiteForCell, zb_cell, zb3_cell}, vr.edgesOnVertexSign)
 do
 
@@ -332,9 +331,7 @@ task atm_compute_solve_diagnostics(cr : region(ispace(int2d), cell_fs),
                                    hollingsworth : bool,
                                    rk_step : int)
 where
-  reads (cr.{edgesOnCell, edgesOnCellSign, h, invAreaCell, kiteForCell, nEdgesOnCell, verticesOnCell},
-         er.{cellsOnEdge, dcEdge, dvEdge, edgesOnEdge_ECP, nEdgesOnEdge, u, verticesOnEdge, weightsOnEdge},
-         vr.{edgesOnVertex, edgesOnVertexSign, fVertex, invAreaTriangle, kiteAreasOnVertex}),
+  reads (cr.{edgesOnCell, edgesOnCellSign, h, invAreaCell, kiteForCell, nEdgesOnCell, verticesOnCell}, er.{cellsOnEdge, dcEdge, dvEdge, edgesOnEdge_ECP, nEdgesOnEdge, u, verticesOnEdge, weightsOnEdge}, vr.{edgesOnVertex, edgesOnVertexSign, fVertex, invAreaTriangle, kiteAreasOnVertex}),
   writes (er.{h_edge, pv_edge}),
   reads writes (cr.{divergence, ke}, er.{ke_edge, v}, vr.{ke_vertex, pv_vertex, vorticity})
 do
@@ -397,8 +394,8 @@ do
     -- *** approximation here because we don't have inner triangle areas
     for iVertex in vertex_range do
       var r = 0.25 * vr[{iVertex.x, 0}].invAreaTriangle
-      vr[iVertex].ke_vertex = (er[{vr[{iVertex.x, 0}].edgesOnVertex[0], iVertex.y}].ke_edge 
-                              + er[{vr[{iVertex.x, 0}].edgesOnVertex[1], iVertex.y}].ke_edge 
+      vr[iVertex].ke_vertex = (er[{vr[{iVertex.x, 0}].edgesOnVertex[0], iVertex.y}].ke_edge
+                              + er[{vr[{iVertex.x, 0}].edgesOnVertex[1], iVertex.y}].ke_edge
                               + er[{vr[{iVertex.x, 0}].edgesOnVertex[2], iVertex.y}].ke_edge) * r
     end
 
@@ -458,15 +455,15 @@ end
 
 -- Comments:
 -- This function contains nCellsSolve, moist_start, moist_end, and scalars,
--- which we are currently not sure how to translate 
+-- which we are currently not sure how to translate
 __demand(__cuda)
-task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs), 
+task atm_compute_moist_coefficients(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs))
 where
   reads (er.cellsOnEdge),
   writes (cr.cqw, er.cqu),
   reads writes (cr.qtot)
-do 
+do
 
   format.println("Calling atm_compute_moist_coefficients...")
 
@@ -554,7 +551,7 @@ do
     if (iCell.y > 0) then
       cr[iCell].cofwr = .5 * dtseps * constants.gravity * (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz)
     end
-    
+
     cr[iCell].coftz = 0.0
     if (iCell.y > 0) then
       cr[iCell].cofwz = dtseps * c2 * (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz) * vert_r[iCell.y].rdzu * cr[iCell].cqw * (vert_r[iCell.y].fzm * cr[iCell].exner + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].exner)
@@ -568,14 +565,14 @@ do
 
   for iCell in cell_range do
     if (iCell.y > 0) then --k=2,nVertLevels
-      cr[iCell].a_tri = -1.0 * cr[iCell].cofwz * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz 
+      cr[iCell].a_tri = -1.0 * cr[iCell].cofwz * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz
                         + cr[iCell].cofwr * vert_r[iCell.y - 1].cofrz - cr[iCell - {0, 1}].cofwt * cr[iCell - {0, 1}].coftz * vert_r[iCell.y - 1].rdzw
 
-      cr[iCell].b_tri = 1.0 + cr[iCell].cofwz * (cr[iCell].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz + cr[iCell].coftz 
-                       * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz) - cr[iCell].coftz * (cr[iCell].cofwt * vert_r[iCell.y].rdzw 
+      cr[iCell].b_tri = 1.0 + cr[iCell].cofwz * (cr[iCell].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz + cr[iCell].coftz
+                       * vert_r[iCell.y - 1].rdzw * cr[iCell - {0, 1}].zz) - cr[iCell].coftz * (cr[iCell].cofwt * vert_r[iCell.y].rdzw
                        - cr[iCell].cofwt * vert_r[iCell.y - 1].rdzw) + cr[iCell].cofwr * ((vert_r[iCell.y].cofrz - vert_r[iCell.y - 1].cofrz))
 
-      cr[iCell].c_tri = -1.0 * cr[iCell].cofwz * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz 
+      cr[iCell].c_tri = -1.0 * cr[iCell].cofwz * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw * cr[iCell].zz
                        - cr[iCell].cofwr * vert_r[iCell.y].cofrz + cr[iCell].cofwt * cr[iCell + {0, 1}].coftz * vert_r[iCell.y].rdzw
     end
   end
@@ -599,7 +596,7 @@ task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs),
                               config_h_ScaleWithMesh : bool)
 where
-  reads (cr.meshDensity, er.cellsOnEdge), 
+  reads (cr.meshDensity, er.cellsOnEdge),
   writes (cr.meshScalingRegionalCell, er.{meshScalingDel2, meshScalingDel4, meshScalingRegionalEdge})
 do
 
@@ -652,7 +649,7 @@ task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs),
                                   er : region(ispace(int2d), edge_fs),
                                   vert_r : region(ispace(int1d), vertical_fs))
 where
-  reads (cr.{edgesOnCell, edgesOnCellSign, nEdgesOnCell, rho_base, theta, theta_base, theta_m, w, 
+  reads (cr.{edgesOnCell, edgesOnCellSign, nEdgesOnCell, rho_base, theta, theta_base, theta_m, w,
              zb_cell, zb3_cell, zz},
          er.{cellsOnEdge, u},
          vert_r.{fzm, fzp}),
@@ -686,7 +683,7 @@ do
   for iCell in cell_range do
     cr[iCell].rw = 0
     if (iCell.y > 0 and iCell.y < nVertLevels) then -- Original Fortran: do k = 2, nVertLevels
-      cr[iCell].rw = cr[iCell].w * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].rho_zz + vert_r[iCell.y].fzm * cr[iCell].rho_zz) 
+      cr[iCell].rw = cr[iCell].w * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].rho_zz + vert_r[iCell.y].fzm * cr[iCell].rho_zz)
                      * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz + vert_r[iCell.y].fzm * cr[iCell].zz)
     end
   end
@@ -697,8 +694,8 @@ do
       var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
       if (iCell.y > 0) then -- Original Fortran: do k = 2, nVertLevels
         var flux = vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].ru + vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].ru
-        cr[iCell].rw -= cr[{iCell.x, 0}].edgesOnCellSign[i] 
-                        * (cr[iCell].zb_cell[i] + copysign(1.0, flux) * cr[iCell].zb3_cell[i]) * flux 
+        cr[iCell].rw -= cr[{iCell.x, 0}].edgesOnCellSign[i]
+                        * (cr[iCell].zb_cell[i] + copysign(1.0, flux) * cr[iCell].zb3_cell[i]) * flux
                         * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz + vert_r[iCell.y].fzm * cr[iCell].zz)
       end
     end
@@ -707,11 +704,11 @@ do
   for iCell in cell_range do
     cr[iCell].rho_p = cr[iCell].rho_zz - cr[iCell].rho_base
     cr[iCell].rtheta_base = cr[iCell].theta_base * cr[iCell].rho_base
-    cr[iCell].rtheta_p = cr[iCell].theta_m * cr[iCell].rho_p + cr[iCell].rho_base 
+    cr[iCell].rtheta_p = cr[iCell].theta_m * cr[iCell].rho_p + cr[iCell].rho_base
                          * (cr[iCell].theta_m - cr[iCell].theta_base)
     cr[iCell].exner = pow(cr[iCell].zz * (rgas/p0) * (cr[iCell].rtheta_p + cr[iCell].rtheta_base), rcv)
     cr[iCell].exner_base = pow(cr[iCell].zz * (rgas/p0) * (cr[iCell].rtheta_base), rcv)
-    cr[iCell].pressure_p = cr[iCell].zz * rgas * (cr[iCell].exner * cr[iCell].rtheta_p + cr[iCell].rtheta_base 
+    cr[iCell].pressure_p = cr[iCell].zz * rgas * (cr[iCell].exner * cr[iCell].rtheta_p + cr[iCell].rtheta_base
                                                   * (cr[iCell].exner - cr[iCell].exner_base))
     cr[iCell].pressure_base = cr[iCell].zz * rgas * cr[iCell].exner_base * cr[iCell].rtheta_base
 
@@ -728,7 +725,7 @@ end
 __demand(__cuda)
 task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs))
 where
-  reads (cr.{pressure_base, pressure_p, rho_zz, theta_m, zz}), 
+  reads (cr.{pressure_base, pressure_p, rho_zz, theta_m, zz}),
   writes (cr.{pressure, rho, theta})
 do
   format.println("Calling atm_compute_output_diagnostics...")
@@ -747,7 +744,7 @@ __demand(__cuda)
 task atm_rk_integration_setup(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs))
 where
-  reads (cr.{rho_p, rho_zz, rtheta_p, rw, theta_m, w}, er.{ru, u}), 
+  reads (cr.{rho_p, rho_zz, rtheta_p, rw, theta_m, w}, er.{ru, u}),
   writes (cr.{rho_p_save, rho_zz_2, rho_zz_old_split, rtheta_p_save, rw_save, theta_m_2, w_2}, er.{ru_save, u_2})
 do
 
@@ -784,7 +781,7 @@ end
 
 __demand(__inline)
 task flux3(q_im2 : double, q_im1 : double, q_i : double, q_ip1 : double, ua : double, coef3 : double) : double
-  return flux4(q_im2, q_im1, q_i, q_ip1, ua) 
+  return flux4(q_im2, q_im1, q_i, q_ip1, ua)
          + coef3*fabs(ua)*((q_ip1-q_im2)-3.*(q_i-q_im1))/12.0
 end
 
@@ -799,15 +796,15 @@ end
 -- A large number of variables appeared to be missing from the registry. I have inferred their types
 -- and regions to the best of my ability, but may have gotten some of them wrong.
 -- They are as follows:
---    cr: tend_rho_physics, dpdz, rr_save, delsq_divergence, delsq_w, 
+--    cr: tend_rho_physics, dpdz, rr_save, delsq_divergence, delsq_w,
 --    tend_w_euler, theta_m_save, delsq_theta, tend_theta_euler, tend_rtheta_physics
 --    er: tend_u_euler, delsq_u, tend_ru_physics
 --    vr: delsq_vorticity
 -- Variable c_s appears to be a renaming of constants.config_smagorinsky_coef.
--- Some pieces of code were inside an #ifdef CURVATURE. I have ignored the ifdefs and put the code in 
+-- Some pieces of code were inside an #ifdef CURVATURE. I have ignored the ifdefs and put the code in
 -- unconditionally.
 -- Some config values should be configurable, rather than constants. These are currently in constants.rg.
--- I have also used previous conventions like removing "_RKIND", looping over all cells instead of 
+-- I have also used previous conventions like removing "_RKIND", looping over all cells instead of
 -- cellSolveStart to cellStartEnd, using copysign and fabs for sign and abs, etc.
 
 __demand(__cuda)
@@ -825,16 +822,16 @@ where
   reads (cr.{cqw, defc_a, defc_b, divergence, edgesOnCell, edgesOnCell_sign, invAreaCell, ke, lat,
              nEdgesOnCell, pressure_p, qtot, rho_base, rho_zz, rho_p_save, rt_diabatic_tend, rw, rw_save, t_init, tend_rho_physics,
              tend_rtheta_physics, theta_m, theta_m_save, uReconstructZonal, uReconstructMeridional, w, zgrid, zz},
-         er.{advCellsForEdge, adv_coefs, adv_coefs_3rd, angleEdge, cellsOnEdge, cqu, dcEdge, dvEdge, 
-             edgesOnEdge, invDcEdge, invDvEdge, lat, meshScalingDel2, meshScalingDel4, nAdvCellsForEdge, 
-             nEdgesOnEdge, pv_edge, rho_edge, ru, ru_save, tend_ru_physics, u, v, verticesOnEdge, 
+         er.{advCellsForEdge, adv_coefs, adv_coefs_3rd, angleEdge, cellsOnEdge, cqu, dcEdge, dvEdge,
+             edgesOnEdge, invDcEdge, invDvEdge, lat, meshScalingDel2, meshScalingDel4, nAdvCellsForEdge,
+             nEdgesOnEdge, pv_edge, rho_edge, ru, ru_save, tend_ru_physics, u, v, verticesOnEdge,
              weightsOnEdge, zxu},
-         vr.{edgesOnVertex, edgesOnVertex_sign, invAreaTriangle, vorticity}, 
+         vr.{edgesOnVertex, edgesOnVertex_sign, invAreaTriangle, vorticity},
          vert_r.{fzm, fzp, rdzu, rdzw, u_init, v_init}),
   writes (cr.{rthdynten, tend_rho, tend_rtheta_adv}),
   reads writes (cr.{delsq_divergence, delsq_theta, delsq_w, dpdz, flux_arr, h_divergence, kdiff, ru_edge_w,
-                    tend_theta, tend_theta_euler, w, tend_w_euler, wdtz, wdwz}, 
-                er.{delsq_u, q, tend_u, tend_u_euler, u_mix, wduz}, 
+                    tend_theta, tend_theta_euler, w, tend_w_euler, wdtz, wdwz},
+                er.{delsq_u, q, tend_u, tend_u_euler, u_mix, wduz},
                 vr.delsq_vorticity)
 do
 
@@ -872,16 +869,16 @@ do
             var e = cr[{iCell.x, 0}].edgesOnCell[iEdge]
             d_diag[k]     += cr[{iCell.x, 0}].defc_a[iEdge] * er[{e, k}].u
                               - cr[{iCell.x, 0}].defc_b[iEdge] * er[{e, k}].v
-            d_off_diag[k] += cr[{iCell.x, 0}].defc_b[iEdge] * er[{e, k}].u 
+            d_off_diag[k] += cr[{iCell.x, 0}].defc_b[iEdge] * er[{e, k}].u
                               + cr[{iCell.x, 0}].defc_a[iEdge] * er[{e, k}].v
           end
         end
 
-        -- here is the Smagorinsky formulation, 
+        -- here is the Smagorinsky formulation,
         -- followed by imposition of an upper bound on the eddy viscosity
 
         -- Original: kdiff(k,iCell) = min((c_s * config_len_disp)**2 * sqrt(d_diag(k)**2 + d_off_diag(k)**2),(0.01*config_len_disp**2) * invDt)
-        cr[iCell].kdiff = min(pow(c_s * constants.config_len_disp, 2.0) 
+        cr[iCell].kdiff = min(pow(c_s * constants.config_len_disp, 2.0)
                               * sqrt(pow(d_diag[iCell.y], 2.0) + pow(d_off_diag[iCell.y], 2.0)),
                               (0.01 * pow(constants.config_len_disp, 2.0)) * invDt)
       end
@@ -960,12 +957,12 @@ do
     var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge.x, 0}].cellsOnEdge[1]
 
-    -- horizontal pressure gradient 
+    -- horizontal pressure gradient
     if (rk_step == 0) then
       --Unable to find: tend_u_euler, pp, dpdz
       --It looks like tend_u_euler is from er and the others are from cr
-      er[iEdge].tend_u_euler = -er[iEdge].cqu * ( (cr[{cell2, iEdge.y}].pressure_p - cr[{cell1, iEdge.y}].pressure_p) * er[{iEdge.x, 0}].invDcEdge 
-                                / (0.5 * (cr[{cell2, iEdge.y}].zz + cr[{cell1, iEdge.y}].zz)) 
+      er[iEdge].tend_u_euler = -er[iEdge].cqu * ( (cr[{cell2, iEdge.y}].pressure_p - cr[{cell1, iEdge.y}].pressure_p) * er[{iEdge.x, 0}].invDcEdge
+                                / (0.5 * (cr[{cell2, iEdge.y}].zz + cr[{cell1, iEdge.y}].zz))
                                 - 0.5 * er[iEdge].zxu * (cr[{cell1, iEdge.y}].dpdz + cr[{cell2, iEdge.y}].dpdz) )
     end
 
@@ -975,7 +972,7 @@ do
       er[iEdge].wduz = 0.5 * (cr[{cell1, iEdge.y}].rw + cr[{cell2, iEdge.y}].rw) * (vert_r[iEdge.y].fzm * er[iEdge].u + vert_r[iEdge.y].fzp * er[iEdge - {0, 1}].u)
     end
     if (iEdge.y > 1 and iEdge.y < nVertLevels - 1) then
-      er[iEdge].wduz = flux3( er[iEdge - {0, 2}].u, er[iEdge - {0, 1}].u, er[iEdge].u, er[iEdge + {0, 1}].u, 
+      er[iEdge].wduz = flux3( er[iEdge - {0, 2}].u, er[iEdge - {0, 1}].u, er[iEdge].u, er[iEdge + {0, 1}].u,
                                       0.5 * (cr[{cell1, iEdge.y}].rw + cr[{cell2, iEdge.y}].rw), 1.0 )
     end
   end
@@ -1002,18 +999,18 @@ do
 
     -- horizontal ke gradient and vorticity terms in the vector invariant formulation
     -- of the horizontal momentum equation
-    er[iEdge].tend_u += er[iEdge].rho_edge 
+    er[iEdge].tend_u += er[iEdge].rho_edge
                         * ( er[iEdge].q - (cr[{cell2, iEdge.y}].ke - cr[{cell1, iEdge.y}].ke) * er[{iEdge.x, 0}].invDcEdge )
                         - er[iEdge].u * 0.5 * (cr[{cell1, iEdge.y}].h_divergence + cr[{cell2, iEdge.y}].h_divergence)
 
     -- #ifdef CURVATURE
     -- curvature terms for the sphere
-    er[iEdge].tend_u -= ( 2.0 * constants.omega * cos(er[{iEdge.x, 0}].angleEdge) 
-                        * cos(er[{iEdge.x, 0}].lat) * er[iEdge].rho_edge 
-                        * 0.25 * (cr[{cell1, iEdge.y}].w + cr[{cell1, iEdge.y + 1}].w 
+    er[iEdge].tend_u -= ( 2.0 * constants.omega * cos(er[{iEdge.x, 0}].angleEdge)
+                        * cos(er[{iEdge.x, 0}].lat) * er[iEdge].rho_edge
+                        * 0.25 * (cr[{cell1, iEdge.y}].w + cr[{cell1, iEdge.y + 1}].w
                         + cr[{cell2, iEdge.y}].w + cr[{cell2, iEdge.y + 1}].w) )
-                        - ( er[iEdge].u * 0.25 * (cr[{cell1, iEdge.y}].w + cr[{cell1, iEdge.y + 1}].w 
-                        + cr[{cell2, iEdge.y}].w + cr[{cell2, iEdge.y + 1}].w) * er[iEdge].rho_edge 
+                        - ( er[iEdge].u * 0.25 * (cr[{cell1, iEdge.y}].w + cr[{cell1, iEdge.y + 1}].w
+                        + cr[{cell2, iEdge.y}].w + cr[{cell2, iEdge.y + 1}].w) * er[iEdge].rho_edge
                         * inv_r_earth )
     -- #endif
   end -- loop over edges
@@ -1038,12 +1035,12 @@ do
 
       -- Compute diffusion, computed as \nabla divergence - k \times \nabla vorticity
       --                    only valid for h_mom_eddy_visc4 == constant
-      var u_diffusion = (cr[{cell2, iEdge.y}].divergence - cr[{cell1, iEdge.y}].divergence) * r_dc 
+      var u_diffusion = (cr[{cell2, iEdge.y}].divergence - cr[{cell1, iEdge.y}].divergence) * r_dc
                         - (vr[{vertex2, iEdge.y}].vorticity - vr[{vertex1, iEdge.y}].vorticity) * r_dv
       er[iEdge].delsq_u += u_diffusion
       var kdiffu = 0.5 * (cr[{cell1, iEdge.y}].kdiff + cr[{cell2, iEdge.y}].kdiff)
-      -- include 2nd-orer diffusion here 
-      er[iEdge].tend_u_euler += er[iEdge].rho_edge * kdiffu * u_diffusion 
+      -- include 2nd-orer diffusion here
+      er[iEdge].tend_u_euler += er[iEdge].rho_edge * kdiffu * u_diffusion
                                 * er[{iEdge.x, 0}].meshScalingDel2
     end
 
@@ -1054,7 +1051,7 @@ do
         for i = 0, vertexDegree do
           var iEdge = vr[{iVertex.x, 0}].edgesOnVertex[i]
           var edge_sign = vr[{iVertex.x, 0}].invAreaTriangle * er[{iEdge, 0}].dcEdge * vr[{iVertex.x, 0}].edgesOnVertex_sign[i]
-          
+
           vr[iVertex].delsq_vorticity += edge_sign * er[{iEdge, iVertex.y}].delsq_u
         end
       end
@@ -1081,14 +1078,14 @@ do
 
         -- Compute diffusion, computed as \nabla divergence - k \times \nabla vorticity
         --                    only valid for h_mom_eddy_visc4 == constant
-        -- Here, we scale the diffusion on the divergence part a factor of config_del4u_div_factor 
+        -- Here, we scale the diffusion on the divergence part a factor of config_del4u_div_factor
         --    relative to the rotational part.  The stability constraint on the divergence component is much less
         --    stringent than the rotational part, and this flexibility may be useful.
         var u_diffusion = er[iEdge].rho_edge * ( (cr[{cell2, iEdge.y}].delsq_divergence - cr[{cell1, iEdge.y}].delsq_divergence) * r_dc
                           - (vr[{vertex2, iEdge.y}].delsq_vorticity - vr[{vertex1, iEdge.y}].delsq_vorticity) * r_dv )
         er[iEdge].tend_u_euler -= u_diffusion
       end
-    end -- 4th order mixing is active 
+    end -- 4th order mixing is active
 
     -- vertical mixing for u - 2nd order filter in physical (z) space
     if (v_mom_eddy_visc2 > 0.0) then
@@ -1207,7 +1204,7 @@ do
   -- #ifdef CURVATURE
   for iCell in cell_range do
     if (iCell.y > 0) then
-      cr[iCell].w += (cr[iCell].rho_zz * vert_r[iCell.y].fzm 
+      cr[iCell].w += (cr[iCell].rho_zz * vert_r[iCell.y].fzm
                           + cr[iCell - {0, 1}].rho_zz * vert_r[iCell.y].fzp)
                           * ( pow(vert_r[iCell.y].fzm * cr[iCell].uReconstructZonal + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].uReconstructZonal, 2.0)
                             + pow(vert_r[iCell.y].fzm * cr[iCell].uReconstructMeridional + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].uReconstructMeridional, 2.0) ) / r_earth
@@ -1235,7 +1232,7 @@ do
       for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
           var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
 
-          var edge_sign = 0.5 * r_areaCell * cr[{iCell.x, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].dvEdge 
+          var edge_sign = 0.5 * r_areaCell * cr[{iCell.x, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].dvEdge
                           * er[{iEdge, 0}].invDcEdge
 
           var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
@@ -1246,7 +1243,7 @@ do
                             * (cr[{cell2, iCell.y}].w - cr[{cell1, iCell.y}].w)
           cr[iCell].delsq_w += w_turb_flux
           w_turb_flux *= er[{iEdge, 0}].meshScalingDel2 * 0.25
-                         * (cr[{cell1, iCell.y}].kdiff + cr[{cell2, iCell.y}].kdiff 
+                         * (cr[{cell1, iCell.y}].kdiff + cr[{cell2, iCell.y}].kdiff
                            + cr[{cell1, iCell.y - 1}].kdiff + cr[{cell2, iCell.y - 1}].kdiff)
           cr[iCell].tend_w_euler += w_turb_flux
         end
@@ -1262,7 +1259,7 @@ do
           var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
           var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
-          var edge_sign = er[{iEdge, 0}].meshScalingDel4 * r_areaCell * er[{iEdge, 0}].dvEdge 
+          var edge_sign = er[{iEdge, 0}].meshScalingDel4 * r_areaCell * er[{iEdge, 0}].dvEdge
                           * cr[{iCell.x, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].invDcEdge
 
           if (iCell.y > 0) then
@@ -1270,7 +1267,7 @@ do
           end
         end
       end
-    end -- 4th order mixing is active 
+    end -- 4th order mixing is active
   end -- horizontal mixing for w computed in first rk_step
 
   --  vertical advection, pressure gradient and buoyancy for w
@@ -1281,7 +1278,7 @@ do
       cr[iCell].wdwz = 0.25 * (cr[iCell].rw + cr[iCell - {0, 1}].rw)*(cr[iCell].w + cr[iCell - {0, 1}].w)
     end
     if (iCell.y > 1 and iCell.y < nVertLevels - 1) then
-      cr[iCell].wdwz = flux3( cr[iCell - {0, 2}].w, cr[iCell - {0, 1}].w, cr[iCell].w, cr[iCell + {0, 1}].w, 
+      cr[iCell].wdwz = flux3( cr[iCell - {0, 2}].w, cr[iCell - {0, 1}].w, cr[iCell].w, cr[iCell + {0, 1}].w,
                                      0.5 * (cr[iCell].rw + cr[iCell - {0, 1}].rw), 1.0 )
     end
   end
@@ -1294,7 +1291,7 @@ do
 
     if (rk_step == 0) then
       if (iCell.y > 0) then
-        cr[iCell].tend_w_euler -= cr[iCell].cqw * ( vert_r[iCell.y].rdzu * 
+        cr[iCell].tend_w_euler -= cr[iCell].cqw * ( vert_r[iCell.y].rdzu *
                                   (cr[iCell].pressure_p - cr[iCell - {0, 1}].pressure_p)
                                   - (vert_r[iCell.y].fzm * cr[iCell].dpdz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].dpdz) )  -- dpdz is the buoyancy term here.
       end
@@ -1307,7 +1304,7 @@ do
         if (iCell.y > 0) then
           cr[iCell].tend_w_euler += v_mom_eddy_visc2 * (cr[iCell].rho_zz + cr[iCell - {0, 1}].rho_zz)
                                          * 0.5 * ( (cr[iCell + {0, 1}].w - cr[iCell].w) * vert_r[iCell.y].rdzw
-                                         - (cr[iCell].w - cr[iCell - {0, 1}].w) * vert_r[iCell.y - 1].rdzw ) 
+                                         - (cr[iCell].w - cr[iCell - {0, 1}].w) * vert_r[iCell.y - 1].rdzw )
                                          * vert_r[iCell.y].rdzu
         end
       end
@@ -1334,7 +1331,7 @@ do
 
       for j = 0, er[{iEdge, 0}].nAdvCellsForEdge do
         var iAdvCell = er[{iEdge, 0}].advCellsForEdge[j]
-        var scalar_weight = er[{iEdge, 0}].adv_coefs[j] + copysign(1.0, er[{iEdge, iCell.y}].ru) 
+        var scalar_weight = er[{iEdge, 0}].adv_coefs[j] + copysign(1.0, er[{iEdge, iCell.y}].ru)
                             * er[{iEdge, 0}].adv_coefs_3rd[j]
         cr[iCell].flux_arr += scalar_weight * cr[{iAdvCell, iCell.y}].theta_m
       end
@@ -1388,7 +1385,7 @@ do
         for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
 
           var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
-          var edge_sign = er[{iEdge, 0}].meshScalingDel4 * r_areaCell * er[{iEdge, 0}].dvEdge 
+          var edge_sign = er[{iEdge, 0}].meshScalingDel4 * r_areaCell * er[{iEdge, 0}].dvEdge
                           * cr[{iCell.x, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].invDcEdge
 
           var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
@@ -1397,7 +1394,7 @@ do
           cr[iCell].tend_theta_euler -= edge_sign * (cr[{cell2, iCell.y}].delsq_theta - cr[{cell1, iCell.y}].delsq_theta)
         end
       end
-    end -- 4th order mixing is active 
+    end -- 4th order mixing is active
   end -- theta mixing calculated first rk_step
 
   -- vertical advection plus diabatic term
@@ -1407,14 +1404,14 @@ do
     cr[iCell].wdtz = 0.0
     -- Don't change the order of these statements!
     if (iCell.y > 0 and iCell.y < nVertLevels - 1) then
-      cr[iCell].wdtz = ( (cr[iCell].rw_save - cr[iCell].rw) * (vert_r[iCell.y].fzm * cr[iCell].theta_m_save 
+      cr[iCell].wdtz = ( (cr[iCell].rw_save - cr[iCell].rw) * (vert_r[iCell.y].fzm * cr[iCell].theta_m_save
                           + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].theta_m_save) )
     end
     if (iCell.y == 1) then
-      cr[iCell].wdtz += cr[iCell].rw * (vert_r[iCell.y].fzm * cr[iCell].theta_m + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].theta_m) 
+      cr[iCell].wdtz += cr[iCell].rw * (vert_r[iCell.y].fzm * cr[iCell].theta_m + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].theta_m)
     end
     if (iCell.y == nVertLevels - 1) then
-      cr[iCell].wdtz = cr[iCell].rw_save * (vert_r[iCell.y].fzm * cr[iCell].theta_m_save 
+      cr[iCell].wdtz = cr[iCell].rw_save * (vert_r[iCell.y].fzm * cr[iCell].theta_m_save
                        + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].theta_m_save)  -- rtheta_pp redefinition
     end
   end
@@ -1463,7 +1460,7 @@ do
             var z0 = 0.5 * (z2 + z3)
             var zp = 0.5 * (z3 + z4)
             cr[iCell].tend_theta_euler += v_theta_eddy_visc2 * prandtl_inv * cr[iCell].rho_zz
-                                          * ( ((cr[iCell + {0, 1}].theta_m - cr[iCell + {0, 1}].t_init) 
+                                          * ( ((cr[iCell + {0, 1}].theta_m - cr[iCell + {0, 1}].t_init)
                                                 - (cr[iCell].theta_m - cr[iCell].t_init)) / (zp-z0)
                                           - ( (cr[iCell].theta_m - cr[iCell].t_init)
                                               - (cr[iCell - {0, 1}].theta_m - cr[iCell - {0, 1}].t_init)) / (z0-zm) )
@@ -1504,7 +1501,7 @@ task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
                                          er : region(ispace(int2d), edge_fs),
                                          vert_r : region(ispace(int1d), vertical_fs))
 where
-  reads (cr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, nEdgesOnCell, zb_cell, zb3_cell, zz}, 
+  reads (cr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, nEdgesOnCell, zb_cell, zb3_cell, zz},
          er.u_tend, vert_r.{fzm, fzp}),
   reads writes (cr.w)
 do
@@ -1551,12 +1548,12 @@ task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs),
                                     small_step : int)
                                     -- nCellsSolve : int)
 where
-  reads (cr.{a_tri, alpha_tri, coftz, cofwr, cofwt, cofwz, dss, edgesOnCell, edgesOnCellSign, exner, 
-             gamma_tri, invAreaCell, nEdgesOnCell, rho_pp, rho_zz, rtheta_pp, rw, rw_save, specZoneMaskCell, 
-             tend_rho, theta_m, theta_m, w, zz}, 
-         er.{cellsOnEdge, cqu, dvEdge, invDcEdge, specZoneMaskEdge, tend_ru, zxu}, 
+  reads (cr.{a_tri, alpha_tri, coftz, cofwr, cofwt, cofwz, dss, edgesOnCell, edgesOnCellSign, exner,
+             gamma_tri, invAreaCell, nEdgesOnCell, rho_pp, rho_zz, rtheta_pp, rw, rw_save, specZoneMaskCell,
+             tend_rho, theta_m, theta_m, w, zz},
+         er.{cellsOnEdge, cqu, dvEdge, invDcEdge, specZoneMaskEdge, tend_ru, zxu},
          vert_r.{cofrz, fzm, fzp, rdzw}),
-  writes (cr.rtheta_pp_old), 
+  writes (cr.rtheta_pp_old),
   reads writes (cr.{rho_pp, rtheta_pp, rw_p, wwAvg},
                 er.{ruAvg, ru_p})
 do
@@ -1581,7 +1578,7 @@ do
 
   if (small_step ~= 0) then -- not needed on first small step
     -- forward-backward acoustic step integration.
-    -- begin by updating the horizontal velocity u, 
+    -- begin by updating the horizontal velocity u,
     -- and accumulating the contribution from the updated u to the other tendencies.
     for iEdge in edge_range do
       var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]
@@ -1660,15 +1657,15 @@ do
 
       if (iCell.y > 0) then
         cr[iCell].wwAvg += 0.5 * (1.0 - epssm) * cr[iCell].rw_p
-        cr[iCell].rw_p += dts * cr[iCell].w - cr[iCell].cofwz 
-                          * ((cr[iCell].zz * ts[iCell.y] - cr[iCell - {0, 1}].zz * ts[iCell.y - 1]) + resm 
-                          * (cr[iCell].zz * cr[iCell].rtheta_pp - cr[iCell - {0, 1}].zz * cr[iCell - {0, 1}].rtheta_pp)) 
-                          - cr[iCell].cofwr * ((rs[iCell.y] + rs[iCell.y - 1]) + resm * (cr[iCell].rho_pp + cr[iCell - {0, 1}].rho_pp)) 
-                          + cr[iCell].cofwt * (ts[iCell.y] + resm * cr[iCell].rtheta_pp) 
+        cr[iCell].rw_p += dts * cr[iCell].w - cr[iCell].cofwz
+                          * ((cr[iCell].zz * ts[iCell.y] - cr[iCell - {0, 1}].zz * ts[iCell.y - 1]) + resm
+                          * (cr[iCell].zz * cr[iCell].rtheta_pp - cr[iCell - {0, 1}].zz * cr[iCell - {0, 1}].rtheta_pp))
+                          - cr[iCell].cofwr * ((rs[iCell.y] + rs[iCell.y - 1]) + resm * (cr[iCell].rho_pp + cr[iCell - {0, 1}].rho_pp))
+                          + cr[iCell].cofwt * (ts[iCell.y] + resm * cr[iCell].rtheta_pp)
                           + cr[iCell - {0, 1}].cofwt * (ts[iCell.y - 1] +resm * cr[iCell - {0, 1}].rtheta_pp)
 
         -- tridiagonal solve sweeping up and then down the column
-        cr[iCell].rw_p -= cr[iCell].a_tri * cr[iCell - {0, 1}].rw_p 
+        cr[iCell].rw_p -= cr[iCell].a_tri * cr[iCell - {0, 1}].rw_p
         cr[iCell].rw_p *= cr[iCell].alpha_tri
       end
 
@@ -1678,12 +1675,12 @@ do
       --end
 
 
-      -- the implicit Rayleigh damping on w (gravity-wave absorbing) 
+      -- the implicit Rayleigh damping on w (gravity-wave absorbing)
       if (iCell.y > 0) then
-        cr[iCell].rw_p += (cr[iCell].rw_save - cr[iCell].rw) - dts * cr[iCell].dss 
+        cr[iCell].rw_p += (cr[iCell].rw_save - cr[iCell].rw) - dts * cr[iCell].dss
                           * (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz)
                           * (vert_r[iCell.y].fzm * cr[iCell].rho_zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].rho_zz) * cr[iCell].w
-        cr[iCell].rw_p /= (1.0 + dts * cr[iCell].dss) 
+        cr[iCell].rw_p /= (1.0 + dts * cr[iCell].dss)
         cr[iCell].rw_p -= (cr[iCell].rw_save - cr[iCell].rw)
 
         -- accumulate (rho*omega)' for use later in scalar transport
@@ -1693,7 +1690,7 @@ do
       -- update rho_pp and theta_pp given updated rw_p
 
       cr[iCell].rho_pp = rs[iCell.y] - vert_r[iCell.y].cofrz*(cr[iCell + {0, 1}].rw_p - cr[iCell].rw_p)
-      cr[iCell].rtheta_pp = ts[iCell.y] - vert_r[iCell.y].rdzw 
+      cr[iCell].rtheta_pp = ts[iCell.y] - vert_r[iCell.y].rdzw
                             * (cr[iCell + {0, 1}].coftz * cr[iCell + {0, 1}].rw_p - cr[iCell].coftz * cr[iCell].rw_p)
 
     else -- specifed zone in regional_MPAS
@@ -1753,8 +1750,8 @@ do
         -- scaled 3d divergence damping
         var divCell1 = -(cr[{cell1, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp_old)
         var divCell2 = -(cr[{cell2, k}].rtheta_pp - cr[{cell2, k}].rtheta_pp_old)
-        er[{iEdgex, k}].ru_p += coef_divdamp * (divCell2 - divCell1) * 
-                              (1.0 - er[{iEdgex, 0}].specZoneMaskEdge) 
+        er[{iEdgex, k}].ru_p += coef_divdamp * (divCell2 - divCell1) *
+                              (1.0 - er[{iEdgex, 0}].specZoneMaskEdge)
                               / (cr[{cell1, k}].theta_m + cr[{cell2, k}].theta_m)
       end
     -- end
@@ -1769,7 +1766,7 @@ task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
                                     rk_step : int,
                                     dt : double)
 where
-  reads (cr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, exner_base, nEdgesOnCell, rho_base, rho_p_save, rho_pp, 
+  reads (cr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, exner_base, nEdgesOnCell, rho_base, rho_p_save, rho_pp,
              rt_diabatic_tend, rtheta_base, rtheta_p_save, rtheta_pp, rw_p, rw_save, zb_cell, zb3_cell, zz},
          er.{cellsOnEdge, ru_p, ru_save},
          vert_r.{cf1, cf2, cf3, fzm, fzp}),
@@ -1786,7 +1783,7 @@ do
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
 
-  -- Avoid FP errors caused by a potential division by zero below by 
+  -- Avoid FP errors caused by a potential division by zero below by
   -- initializing the "garbage cell" of rho_zz to a non-zero value
   for iCell in garbage_range do
     cr[iCell].rho_zz = 1.0
@@ -1821,11 +1818,11 @@ do
     else
       cr[iCell].rtheta_p = cr[iCell].rtheta_p_save + cr[iCell].rtheta_pp
       cr[iCell].theta_m = (cr[iCell].rtheta_p + cr[iCell].rtheta_base) / cr[iCell].rho_zz
-    end 
+    end
   end
 
-  -- recover time-averaged ruAvg on all edges of owned cells (for upcoming scalar transport).  
-  -- we solved for these in the acoustic-step loop.  
+  -- recover time-averaged ruAvg on all edges of owned cells (for upcoming scalar transport).
+  -- we solved for these in the acoustic-step loop.
   -- we will compute ru and u here also, given we are here, even though we only need them on nEdgesSolve
 
   for iEdge in edge_range do
@@ -1913,7 +1910,7 @@ do
     cr[iCell].uReconstructY = 0.0
     cr[iCell].uReconstructZ = 0.0
   end
-  
+
   for iCell in cell_range do
     -- a more efficient reconstruction where rbf_values*matrix_reconstruct
     -- has been precomputed in coeffs_reconstruct
