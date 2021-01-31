@@ -64,7 +64,7 @@ task getfactors(cycflag : bool,
   end
 
   if validfactors(fact1, fact2) ~= true then
-    format.println("Bad fact1 and/or fact2=%.3f,%.3f", fact1, fact2)
+    c.printf("Bad fact1 and/or fact2=%.3f,%.3f", fact1, fact2)
   end
 
   return fact1

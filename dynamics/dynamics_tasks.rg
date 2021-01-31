@@ -647,7 +647,7 @@ end
 
 --Not sure how to translate: scalars(index_qv,k,iCell)
 --sign(1.0_RKIND,flux) translated as copysign(1.0, flux)
-__demand(__cuda)
+--__demand(__cuda)
 task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs),
                                   er : region(ispace(int2d), edge_fs),
                                   vert_r : region(ispace(int1d), vertical_fs))
@@ -658,7 +658,9 @@ where
          vert_r.{fzm, fzp}),
   writes (cr.{pressure_base, pressure_p}),
   reads writes (cr.{exner, exner_base, rho_p, rho_zz, rtheta_base, rtheta_p, rw, theta_m},
-                er.ru)
+                er.ru,
+                cr.rw_save, cr.rw_p --Remove this
+                )
 do
 
   format.println("Calling atm_init_coupled_diagnostics...")
@@ -688,6 +690,9 @@ do
     if (iCell.y > 0 and iCell.y < nVertLevels) then -- Original Fortran: do k = 2, nVertLevels
       cr[iCell].rw = cr[iCell].w * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].rho_zz + vert_r[iCell.y].fzm * cr[iCell].rho_zz) 
                      * (vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz + vert_r[iCell.y].fzm * cr[iCell].zz)
+    end
+    if (iCell.x < 3) then
+      format.println("atm_init_coupled_diagnostics: Cell ({}, {}): rw = {}, rw_save = {}, rw_p = {}", iCell.x, iCell.y, cr[iCell].rw, cr[iCell].rw_save, cr[iCell].rw_p)
     end
   end
 
@@ -810,7 +815,7 @@ end
 -- I have also used previous conventions like removing "_RKIND", looping over all cells instead of 
 -- cellSolveStart to cellStartEnd, using copysign and fabs for sign and abs, etc.
 
-__demand(__cuda)
+--__demand(__cuda)
 task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
                                vr : region(ispace(int2d), vertex_fs),
@@ -843,6 +848,12 @@ do
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
   var vertex_range = rect2d { int2d {0, 0}, int2d {nVertices - 1, nVertLevels - 1} }
+
+  for iCell in cell_range do
+    if (iCell.x < 3 and iCell.y < 2) then
+      format.println("Compute dyn tend cell beginning ({}, {}) w {} rw {}", iCell.x, iCell.y, cr[iCell].w, cr[iCell].rw)
+    end
+  end
 
   var prandtl_inv = 1.0 / constants.prandtl
   -- Can't find dt
@@ -1202,6 +1213,9 @@ do
         cr[iCell].w -= cr[{iCell.x, 0}].edgesOnCell_sign[i] * cr[iCell].ru_edge_w * cr[iCell].flux_arr
       end
     end
+    if (iCell.x < 3 and iCell.y < 3) then
+      --format.println("Compute dyn tend cell line 1218 ({}, {}) w {} rw {}", iCell.x, iCell.y, cr[iCell].w, cr[iCell].rw)
+    end
   end
 
   -- #ifdef CURVATURE
@@ -1214,12 +1228,20 @@ do
                           + 2.0 * constants.omega * cos(cr[{iCell.x, 0}].lat)
                           * (vert_r[iCell.y].fzm * cr[iCell].uReconstructZonal + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].uReconstructZonal)
                           * (cr[iCell].rho_zz * vert_r[iCell.y].fzm + cr[iCell - {0, 1}].rho_zz * vert_r[iCell.y].fzp)
+      if (iCell.x < 3 and iCell.y < 3) then
+        --format.println("Compute dyn tend cell line 1229 ({}, {}) w {} rw {}", iCell.x, iCell.y, cr[iCell].w, cr[iCell].rw)
+      end
     end
   end
   -- #endif
 
   -- horizontal mixing for w - we could combine this with advection directly (i.e. as a turbulent flux),
   -- but here we can also code in hyperdiffusion if we wish (2nd order at present)
+
+  for iCell in cell_range do
+    cr[iCell].delsq_w = 0.0
+    cr[iCell].tend_w_euler = 0.0
+  end
 
   if (rk_step == 0) then
 
@@ -1229,27 +1251,39 @@ do
     --  we copied code from the theta mixing, hence the theta* names.
 
     for iCell in cell_range do
-      cr[iCell].delsq_w = 0.0
-      cr[iCell].tend_w_euler = 0.0
       var r_areaCell = cr[{iCell.x, 0}].invAreaCell
       for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
-          var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
+        var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
 
-          var edge_sign = 0.5 * r_areaCell * cr[{iCell.x, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].dvEdge 
-                          * er[{iEdge, 0}].invDcEdge
+        var edge_sign = 0.5 * r_areaCell * cr[{iCell.x, 0}].edgesOnCell_sign[i] * er[{iEdge, 0}].dvEdge 
+                        * er[{iEdge, 0}].invDcEdge
 
-          var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-          var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+        var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+        var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
         if (iCell.y > 0) then
+          if (iCell.x < 3 and iCell.y < 3) then
+            --format.println("delsq_w {}", cr[iCell].delsq_w)
+            --format.println("{} {} {} {} {}", edge_sign, er[{iEdge, iCell.y}].rho_edge, er[{iEdge, iCell.y - 1}].rho_edge, cr[{cell2, iCell.y}].w, cr[{cell1, iCell.y}].w)
+          end
           var w_turb_flux = edge_sign * (er[{iEdge, iCell.y}].rho_edge + er[{iEdge, iCell.y - 1}].rho_edge)
                             * (cr[{cell2, iCell.y}].w - cr[{cell1, iCell.y}].w)
           cr[iCell].delsq_w += w_turb_flux
+          if (iCell.x < 3 and iCell.y < 3) then
+            --format.println("delsq_w is now {}", cr[iCell].delsq_w)
+          end
           w_turb_flux *= er[{iEdge, 0}].meshScalingDel2 * 0.25
                          * (cr[{cell1, iCell.y}].kdiff + cr[{cell2, iCell.y}].kdiff 
                            + cr[{cell1, iCell.y - 1}].kdiff + cr[{cell2, iCell.y - 1}].kdiff)
           cr[iCell].tend_w_euler += w_turb_flux
+          if (iCell.x < 3 and iCell.y < 3) then
+            --format.println("cell ({} {}) w_turb_flux {}", iCell.x, iCell.y, w_turb_flux)
+          end
         end
+      end
+
+      if (iCell.x < 3 and iCell.y < 3) then
+        --format.println("cell ({} {}) tend_w_euler {} delsq_w {} line 1277", iCell.x, iCell.y, cr[iCell].tend_w_euler, cr[iCell].delsq_w)
       end
     end
 
@@ -1291,6 +1325,9 @@ do
     if (iCell.y > 0) then
       cr[iCell].w *= cr[{iCell.x, 0}].invAreaCell - vert_r[iCell.y].rdzu * (cr[iCell + {0, 1}].wdwz - cr[iCell].wdwz)
     end
+    if (iCell.x < 3 and iCell.y < 3) then
+      format.println("Compute dyn tend cell line 1313 ({}, {}) w {} rw {}", iCell.x, iCell.y, cr[iCell].w, cr[iCell].rw)
+    end
 
     if (rk_step == 0) then
       if (iCell.y > 0) then
@@ -1318,6 +1355,9 @@ do
   for iCell in cell_range do
     if (iCell.y > 0) then
       cr[iCell].w += cr[iCell].tend_w_euler
+    end
+    if (iCell.x < 3 and iCell.y < 3) then
+      format.println("Compute dyn tend cell line 1344 ({}, {}) w {} rw {} tend_w_euler {}", iCell.x, iCell.y, cr[iCell].w, cr[iCell].rw, cr[iCell].tend_w_euler)
     end
   end
 
@@ -1476,6 +1516,9 @@ do
 
   for iCell in cell_range do
     cr[iCell].tend_theta += cr[iCell].tend_theta_euler + cr[iCell].tend_rtheta_physics
+    if (iCell.x < 3 and iCell.y < 2) then
+      format.println("Compute dyn tend cell ({}, {}) w {} rw {}", iCell.x, iCell.y, cr[iCell].w, cr[iCell].rw)
+    end
   end
 end
 
@@ -1761,7 +1804,7 @@ do
   end
 end
 
-__demand(__cuda)
+--__demand(__cuda)
 task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     vert_r : region(ispace(int1d), vertical_fs),
@@ -1804,6 +1847,9 @@ do
 
     cr[iCell].wwAvg *= invNs
     cr[iCell].wwAvg += cr[iCell].rw_save
+    if (iCell.x < 3) then
+      format.println("Recover large step variables: Cell ({}, {}): rw = {}, rw_save = {}, rw_p = {}", iCell.x, iCell.y, cr[iCell].rw, cr[iCell].rw_save, cr[iCell].rw_p)
+    end
     cr[iCell].rw = cr[iCell].rw_save + cr[iCell].rw_p
     -- pick up part of diagnosed w from omega - divide by density later
     cr[iCell].w = cr[iCell].rw / (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz)

@@ -413,7 +413,7 @@ do
   ---------------- BEGIN Runge-Kutta loop --------------------
   -----------------------------------------------------------
 
-  for rk_step = 0, 3 do
+  for rk_step = 0, 1 do --TODO: CHANGE BACK TO 0,3
     cio.printf("\nRK STEP: %d\n", rk_step)
     if rk_step == 1 then
       --recompute vertical coefficients, same ones for step 3
@@ -439,7 +439,7 @@ do
       atm_divergence_damping_3d(cr, er, rk_sub_timestep[rk_step])
     end
 
-    --atm_recover_large_step_variables(cr, er, vert_r, number_sub_steps[rk_step], rk_step, dt)
+    atm_recover_large_step_variables(cr, er, vert_r, number_sub_steps[rk_step], rk_step, dt)
 
     -- SKIPPING if(config_apply_lbcs @ line 934)
 
@@ -492,6 +492,6 @@ where
 do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 
-  --atm_srk3(cr, er, vr, vert_r, dt)
+  atm_srk3(cr, er, vr, vert_r, dt)
 
 end

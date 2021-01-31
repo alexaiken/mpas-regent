@@ -26,7 +26,7 @@ task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
                       vr : region(ispace(int2d), vertex_fs),
                       vertr : region(ispace(int1d), vertical_fs))
 where
-  reads (cr.lat,
+  reads (cr.lat, cr.w, --remove cr.w
          er.{cellsOnEdge, edgesOnEdge_ECP, lat, lon, nEdgesOnEdge, verticesOnEdge, weightsOnEdge}, 
          vr.{lat, lon}),
   writes (cr.{qsat, relhum, rho, rtheta_base, rtheta_p, surface_pressure, theta, w},
@@ -346,7 +346,10 @@ do
           --qv_2d[k * nlat + i] = env_qv( ztemp, temperature_1d[k], ptemp, rh_max )
         --end
 
-        tt[k] = temperature_1d[k]*(1.0+1.61*qv_2d[k * nlat + i])
+        tt[k] = temperature_1d[k]*(1.0+1.61) -- Correct expression is temperature_1d[k]*(1.0+1.61*qv_2d[k * nlat + i])
+        if (itr == 0 and i < 3) then
+          format.println("temperature_1d[{}] = {}, qv_2d[{}] = {}, tt[{}] = {}", k, temperature_1d[k], k*nlat+i, qv_2d[k * nlat + i], k, tt[k])
+        end
       end
 
       for itrp = 0,25 do
@@ -422,6 +425,9 @@ do
       cr[{i, k}].exner = cr[{i, k}].pressure_p
       cr[{i, k}].pressure_p = 0.0
       cr[{i, k}].rho_p = 0.0
+      if (i < 3 and k < 3) then
+        format.println("cell ({} {}) pressure_p {}", i, k, cr[{i, k}].pressure_p)
+      end
     end
 
 --!     iterations to converge temperature as a function of pressure
@@ -439,6 +445,10 @@ do
       end
       phi = cr[{i, 0}].lat
       for k=0,nz1 do
+
+        if (itr == 0 and i < 3) then
+          format.println("temperature_1d[{}] = {}, teta[{}] = {}, eta[{}] = {}, etav[{}] = {}, phi = {}", k, temperature_1d[k], k, teta[k], k, eta[k], k, etav[k], phi)
+        end
         temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.+0.61*cr[{i, k}].qv)
 
         ztemp   = .5*(cr[{k,i}].zgrid+cr[{i, k+1}].zgrid)
@@ -472,6 +482,9 @@ do
 --        end
 
         tt[k] = temperature_1d[k]*(1.+1.61*cr[{i, k}].qv)
+        if (itr == 0 and i < 3) then
+          format.println("temperature_1d[{}] = {}, cr.[{}, {}].qv = {}, tt[{}] = {}", k, temperature_1d[k], i, k, cr[{i, k}].qv, k, tt[k])
+        end
 
       end
 
@@ -481,6 +494,9 @@ do
       for itrp = 0,25 do
         for k=0,nz1 do
           cr[{i,k}].rho_p  = (cr[{i, k}].pressure_p/(rgas*cr[{i, k}].zz) - cr[{i, k}].rho_base*(tt[k]-t0b))/tt[k]
+          if (i < 3 and k < 3 and itrp == 24) then
+            format.println("cell ({} {}) rho_p {} = ({} / {} - {} * ({} - {}))", i, k, cr[{i, k}].rho_p, cr[{i, k}].pressure_p, cr[{i, k}].zz, cr[{i, k}].rho_base, tt[k], t0b)
+          end
         end
 
         ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+cr[{i, 0}].qv ) -.25*(cr[{i, 2}].rho_p+cr[{i, 2}].rho_base)*(1.+cr[{i, 1}].qv))
@@ -510,6 +526,9 @@ do
       cr[{i, k}].theta_m = tt[k]/cr[{i, k}].exner
       cr[{i, k}].rtheta_p = cr[{i, k}].theta_m * cr[{i,k}].rho_p+cr[{i, k}].rho_base*(cr[{i, k}].theta_m-cr[{i, k}].theta_base)
       cr[{i, k}].rho_zz = cr[{i, k}].rho_base + cr[{i,k}].rho_p
+      if (i < 3 and k < 3) then
+        format.println("rho_zz {} rho_base {} rho_p {}", cr[{i, k}].rho_zz, cr[{i, k}].rho_base, cr[{i, k}].rho_p)
+      end
     end
 
     --calculation of surface pressure:
@@ -696,8 +715,15 @@ do
   --! Compute w from rho_zz and rw
   for iCell=0,nCells do
      for k=1,nVertLevels do
+        if (iCell < 3) then
+          format.println("Init_atm_cases cell ({}, {}) w {} rw {} fzp {} rho_zz {} fzm {}", iCell, k, cr[{iCell, k}].w, cr[{iCell, k}].rw, vertr[k].fzp, cr[{iCell, k}].rho_zz,vertr[k].fzm )
+        end
         cr[{iCell, k}].w = cr[{iCell, k}].rw / (vertr[k].fzp * cr[{iCell, k-1}].rho_zz + vertr[k].fzm * cr[{iCell, k}].rho_zz)
+        if (iCell < 3) then
+          format.println("Init_atm_cases cell ({}, {}) w is now {}", iCell, k, cr[{iCell, k}].w)
+        end
      end
+     cr[{iCell, 0}].w = 0.0
   end
 
 
