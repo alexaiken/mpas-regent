@@ -96,6 +96,35 @@ where
 do
 
 
+task atm_compute_dyn_tend_work(cr : region(ispace(int2d), cell_fs),
+                               er : region(ispace(int2d), edge_fs),
+                               vr : region(ispace(int2d), vertex_fs),
+                               vert_r : region(ispace(int1d), vertical_fs),
+                               rk_step : int,
+                               dt : double,
+                               config_horiz_mixing : regentlib.string,
+                               config_mpas_cam_coef : double,
+                               config_mix_full : bool,
+                               config_rayleigh_damp_u : bool)
+where
+  reads (cr.{cqw, defc_a, defc_b, divergence, edgesOnCell, edgesOnCell_sign, invAreaCell, ke, lat,
+             nEdgesOnCell, pressure_p, qtot, rho_base, rho_zz, rho_p_save, rt_diabatic_tend, rw, rw_save, t_init, tend_rho_physics,
+             tend_rtheta_physics, theta_m, theta_m_save, uReconstructZonal, uReconstructMeridional, w, zgrid, zz},
+         er.{advCellsForEdge, adv_coefs, adv_coefs_3rd, angleEdge, cellsOnEdge, cqu, dcEdge, dvEdge,
+             edgesOnEdge, invDcEdge, invDvEdge, lat, meshScalingDel2, meshScalingDel4, nAdvCellsForEdge,
+             nEdgesOnEdge, pv_edge, rho_edge, ru, ru_save, tend_ru_physics, u, v, verticesOnEdge,
+             weightsOnEdge, zxu},
+         vr.{edgesOnVertex, edgesOnVertex_sign, invAreaTriangle, vorticity},
+         vert_r.{fzm, fzp, rdzu, rdzw, u_init, v_init}),
+  writes (cr.{rthdynten, tend_rho, tend_rtheta_adv}),
+  reads writes (cr.{delsq_divergence, delsq_theta, delsq_w, dpdz, flux_arr, h_divergence, kdiff, ru_edge_w,
+                    tend_theta, tend_theta_euler, w, tend_w_euler, wdtz, wdwz},
+                er.{delsq_u, q, tend_u, tend_u_euler, u_mix, wduz},
+                vr.{delsq_vorticity})
+do
+
+
+
 task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
                                          er : region(ispace(int2d), edge_fs),
                                          vert_r : region(ispace(int1d), vertical_fs))
@@ -152,4 +181,26 @@ where
   reads writes (cr.{wwAvg, wwAvg_split}, er.{ruAvg, ruAvg_split})
 do
 
+
+
+
+############ FROM INIT_ATM_CASSE.RG ########
+task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
+                      er : region(ispace(int2d), edge_fs),
+                      vr : region(ispace(int2d), vertex_fs),
+                      vertr : region(ispace(int1d), vertical_fs))
+where
+  reads (cr.lat,
+         er.{cellsOnEdge, edgesOnEdge_ECP, lat, lon, nEdgesOnEdge, verticesOnEdge, weightsOnEdge}, 
+         vr.{lat, lon}),
+  writes (cr.{qsat, relhum, rho, rtheta_base, rtheta_p, surface_pressure, theta, w},
+          er.{fEdge, zxu},
+          vr.fVertex,
+          vertr.{rdzu, rdzw}),
+  reads writes (cr.{areaCell, dss, exner, hx, pressure_base, pressure_p, qv, rho_base, rho_p, rho_zz, 
+                    rw, surface_pressure, theta_base, theta_m, x, y, z, zgrid, zz},
+                er.{dvEdge, dcEdge, ru, u, v, x, y, z, zb, zb3},
+                vr.{areaTriangle, kiteAreasOnVertex, x, y, z},
+                vertr.{dzu, fzm, fzp, cf1, cf2, cf3})
+do
 
