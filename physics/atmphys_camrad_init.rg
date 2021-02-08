@@ -34,12 +34,13 @@ fspace doublefield {
 -- degrees c, the saturation vapor pressures are assumed to be a weighted
 -- average of the vapor pressure over supercooled water and ice (all
 -- water at 0 c; all ice at -itype c).  Maximum transition range => 40 c
-task gffgch(t : double,
-            estblh2o : region(ispace(int1d), doublefield),
+task gffgch(phys_tbls : region(ispace(int1d), phys_tbls_fs),
+            t : double,
             es_i : int,
-            itype : double)
+            itype : double,
+            set_estblh2o : bool)
 where
-  reads writes (estblh2o)
+  reads writes (phys_tbls.{estbl, estblh2o})
 do
 
   -- Local variables --
@@ -76,8 +77,13 @@ do
     var f4 = 8.1328 * (pow(10.0, e2) - 1.0) / 1000.0
     var f5 = log10(ps)
     var f  = f1 + f2 + f3 + f4 + f5
-    estblh2o[es_i].x = pow(10.0, f) * 100.0
-    eswtr = estblh2o[es_i].x
+    if set_estblh2o then
+      phys_tbls[0].estblh2o[es_i] = pow(10.0, f) * 100.0
+      eswtr = phys_tbls[0].estblh2o[es_i]
+    else -- set estbl
+      phys_tbls[0].estbl[es_i] = pow(10.0, f) * 100.0
+      eswtr = phys_tbls[0].estbl[es_i]
+    end
 
     if (t >= constants.tmelt or itype == 0) then
       itype = itypo
@@ -92,9 +98,13 @@ do
   var term1 : double = 2.01889049 / (t0 / t)
   var term2 : double = 3.56654 * log(t0 / t)
   var term3 : double = 20.947031 * (t0 / t)
-  estblh2o[es_i].x                 = 575.185606e10 * exp(-(term1 + term2 + term3))
+  if set_estblh2o then
+    phys_tbls[0].estblh2o[es_i] = 575.185606e10 * exp(-(term1 + term2 + term3))
+  else -- set estbl
+    phys_tbls[0].estbl[es_i] = 575.185606e10 * exp(-(term1 + term2 + term3))
+  end
 
-  if (t < (constants.tmelt - tr)) then 
+  if (t < (constants.tmelt - tr)) then
     itype = itypo
     return itype
   end
@@ -102,18 +112,22 @@ do
   -- Weighted transition between water and ice --
 
   var weight : double = min((constants.tmelt - t) / tr, 1.0)
-  estblh2o[es_i].x = weight * estblh2o[es_i].x + (1.0 - weight) * eswtr
+  if set_estblh2o then
+    phys_tbls[0].estblh2o[es_i] = weight * phys_tbls[0].estblh2o[es_i] + (1.0 - weight) * eswtr
+  else
+    phys_tbls[0].estbl[es_i] = weight * phys_tbls[0].estbl[es_i] + (1.0 - weight) * eswtr
+  end
   itype = itypo
   return itype
 
 end
 
-task radaeini(estblh2o : region(ispace(int1d), doublefield), -- table of H2O saturation vapor pressures
+task radaeini(phys_tbls : region(ispace(int1d), phys_tbls_fs),
               pstdx : double,     -- Standard pressure (dynes/cm^2)
               mwdryx : double,    -- Molecular weight of dry air 
               mwco2x : double)    -- Molecular weight of carbon dioxide
 where
-  reads writes (estblh2o)
+  reads writes (phys_tbls)
 do
 
   -- Reads in CAM_ABS_DATA.DBL file? 
@@ -129,23 +143,22 @@ do
   -- Fortran loop runs from tmin to tmax inclusive and is 1-indexed
   for t = tmin - 1, tmax, 1 do
     var tdbl = t
-    itype = gffgch(tdbl, estblh2o, t-tmin, itype)
+    itype = gffgch(phys_tbls, tdbl, t-tmin, itype, true)
   end
 end
 
 -- Initialize various constants for radiation scheme; note that
 -- the radiation scheme uses cgs units.
-task radini(estblh2o : region(ispace(int1d), doublefield), -- table of H2O saturation vapor pressures
+task radini(phys_tbls : region(ispace(int1d), phys_tbls_fs),
             gravx : double, 
             cpairx : double, 
             epsilox : double, 
             stebolx : double, 
             pstdx : double)
 where
-  reads writes (estblh2o)
+  reads writes (phys_tbls)
 do
-
-  radaeini(estblh2o, pstdx, constants.mwdry, constants.mwco2)
+  radaeini(phys_tbls, pstdx, constants.mwdry, constants.mwco2)
 end
 
 -- Purpose:
@@ -158,69 +171,64 @@ end
 -- of both es and d(es)/dt for the particular table configuration.
 --
 -- Author: J. Hack
-task gestbl(estbl : region(ispace(int1d), doublefield))
-where
-  reads writes (estbl)
+task gestbl(phys_tbls : region(ispace(int1d), phys_tbls_fs))
+where 
+  reads writes (phys_tbls)
 do
-
-  -- Initialize variables
-  var itype : double = 0
-  var pcf : double[5]                   -- polynomial coeffs -> es transition water to ice
-
   -- Set es table parameters
-  var tmin : double = 173.16            -- Minimum temperature (K) in table
-  var tmax : double = 375.16            -- Maximum temperature (K) in table
-  var ttrice : double = 20.00           -- Trans. range from es over h2o to es over ice
-  var icephs : bool = true              -- Ice phase (true or false)
+  phys_tbls[0].tmin = 173.16            -- Minimum temperature (K) in table
+  phys_tbls[0].tmax = 375.16            -- Maximum temperature (K) in table
+  phys_tbls[0].ttrice = 20.00           -- Trans. range from es over h2o to es over ice
+  phys_tbls[0].icephs = true            -- Ice phase (true or false)
 
   -- Set physical constants required for es calculation
-  var epsqs : double = constants.ep_2
-  var hlatv : double = 2.501e6          -- latent heat of evaporation ~ J/kg
-  var hlatf : double = 3.336e5          -- latent heat of fusion ~ J/kg
-  var rgasv : double = constants.R_v
-  var cp : double = constants.cp
-  var tmelt : double = 273.16           -- freezing T of fresh water ~ K
+  phys_tbls[0].epsqs = constants.ep_2
+  phys_tbls[0].hlatv = 2.501e6          -- latent heat of evaporation ~ J/kg
+  phys_tbls[0].hlatf = 3.336e5          -- latent heat of fusion ~ J/kg
+  phys_tbls[0].rgasv = constants.R_v
+  phys_tbls[0].cp = constants.cp
+  phys_tbls[0].tmelt = 273.16           -- freezing T of fresh water ~ K
 
-  var lentbl = [int](tmax - tmin + 2.000001)
-  if (lentbl > constants.plenest) then
-    -- write(6,9000) tmax, tmin, plenest
-    -- call endrun ('GESTBL')    -- Abnormal termination
-  end
+  phys_tbls[0].lentbl = [int](phys_tbls[0].tmax - phys_tbls[0].tmin + 2.000001)
+  --if (phys_tbls[0].lentbl > constants.plenest) then
+    --write(6,9000) phys_tbls[0].tmax, phys_tbls[0].tmin, constants.plenest
+    --call endrun ('GESTBL')    -- Abnormal termination
+  --end
 
--- Begin building es table.
--- Check whether ice phase requested.
--- If so, set appropriate transition range for temperature
-  if (icephs) then
-    if (ttrice ~= 0.0) then
-      itype = -ttrice
+  -- Begin building es table.
+  -- Check whether ice phase requested.
+  -- If so, set appropriate transition range for temperature
+  if (phys_tbls[0].icephs) then
+    if (phys_tbls[0].ttrice ~= 0.0) then
+      phys_tbls[0].itype = -1.0 * phys_tbls[0].ttrice
     else
-      itype = 1
+      phys_tbls[0].itype = 1
     end
   else
-    itype = 0
+    phys_tbls[0].itype = 0
   end
---
-  var t = tmin - 1.0
-  for n = 0, lentbl do
+  --
+  var t = phys_tbls[0].tmin - 1.0
+  for n = 0, phys_tbls[0].lentbl do
     t += 1.0
-    gffgch(t, estbl, n, itype)
+    gffgch(phys_tbls, t, n, phys_tbls[0].itype, false)
   end
---
-  for n = lentbl, constants.plenest do
-    estbl[n].x = -99999.0
+  --
+  for n = phys_tbls[0].lentbl, constants.plenest do
+    phys_tbls[0].estbl[n] = -99999.0
   end
 
--- Table complete -- Set coefficients for polynomial approximation of
--- difference between saturation vapor press over water and saturation
--- pressure over ice for -ttrice < t < 0 (degrees C). NOTE: polynomial
--- is valid in the range -40 < t < 0 (degrees C).
+  -- Table complete -- Set coefficients for polynomial approximation of
+  -- difference between saturation vapor press over water and saturation
+  -- pressure over ice for -ttrice < t < 0 (degrees C). NOTE: polynomial
+  -- is valid in the range -40 < t < 0 (degrees C).
 
---                  --- Degree 5 approximation ---
-  pcf[0] =  5.04469588506e-01
-  pcf[1] = -5.47288442819e+00
-  pcf[2] = -3.67471858735e-01
-  pcf[3] = -8.95963532403e-03
-  pcf[4] = -7.78053686625e-05
+  --                  --- Degree 5 approximation ---
+  phys_tbls[0].pcf[0] =  5.04469588506e-01
+  phys_tbls[0].pcf[1] = -5.47288442819e+00
+  phys_tbls[0].pcf[2] = -3.67471858735e-01
+  phys_tbls[0].pcf[3] = -8.95963532403e-03
+  phys_tbls[0].pcf[4] = -7.78053686625e-05
 
   --#if !defined(mpas)
     --if (masterproc) then
@@ -230,20 +238,20 @@ do
 
   --return
 
---9000 format('GESTBL: FATAL ERROR *********************************',/, &
---            ' TMAX AND TMIN REQUIRE A LARGER DIMENSION ON THE LENGTH', &
---            ' OF THE SATURATION VAPOR PRESSURE TABLE ESTBL(PLENEST)',/, &
---            ' TMAX, TMIN, AND PLENEST => ', 2f7.2, i3)
+  --9000 format('GESTBL: FATAL ERROR *********************************',/, &
+  --            ' TMAX AND TMIN REQUIRE A LARGER DIMENSION ON THE LENGTH', &
+  --            ' OF THE SATURATION VAPOR PRESSURE TABLE ESTBL(PLENEST)',/, &
+  --            ' TMAX, TMIN, AND PLENEST => ', 2f7.2, i3)
 end
 
 -- initialization of saturation vapor pressures:
-task esinti(estbl : region(ispace(int1d), doublefield))
-where
-  reads writes (estbl)
+task esinti(phys_tbls : region(ispace(int1d), phys_tbls_fs))
+where 
+  reads writes (phys_tbls)
 do
 
   -- Call gestbl to build saturation vapor pressure table.
-  gestbl(estbl)
+  gestbl(phys_tbls)
 end
 
 -- initialization of ozone mixing ratios:
@@ -300,22 +308,15 @@ end
 --    Laura D. Fowler (laura@ucar.edu) / 2014-05-15.
 -- 
 task camradinit(cr : region(ispace(int2d), cell_fs),
-                er : region(ispace(int2d), edge_fs))
-where
-  reads writes (cr)
+                er : region(ispace(int2d), edge_fs),
+                phys_tbls : region(ispace(int1d), phys_tbls_fs))
+where reads writes (cr, phys_tbls)
 do
 
   var pstd : double = 101325.0
 
-  var estblh2o = region(ispace(int1d, constants.ntemp), doublefield)      -- table of H2O saturation vapor pressures
-  radini(estblh2o, constants.gravity, constants.cp, constants.ep_2, constants.stbolt, pstd*10.0)
-
-  -- Table of saturation vapor pressure values es from tmin degrees
-  -- to tmax+1 degrees k in one degree increments.  ttrice defines the
-  -- transition region where es is a combination of ice & water values
-  var estbl = region(ispace(int1d, constants.plenest), doublefield)       -- table values of saturation vapor pressure
-  esinti(estbl)
-  -- TODO correct arguments
+  radini(phys_tbls, constants.gravity, constants.cp, constants.ep_2, constants.stbolt, pstd*10.0)
+  esinti(phys_tbls)
   oznini(cr, er)
   aerosol_init(cr, er)
 end

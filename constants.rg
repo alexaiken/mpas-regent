@@ -13,7 +13,7 @@ constants.FILE_NAME = "mesh_loading/x1.2562.grid.nc"
 constants.GRAPH_FILE_NAME = "mesh_loading/x1.2562.graph.info.part.16"
 constants.NUM_PARTITIONS = 16
 constants.MAXCHAR = 5
-constants.NUM_TIMESTEPS = 20
+constants.NUM_TIMESTEPS = 500
 
 constants.nCells = 2562
 constants.nEdges = 7680
@@ -71,7 +71,7 @@ constants.config_print_global_minmax_sca = false
 -- Physics - Radiation
 constants.R_d = constants.rgas              -- gas constant for dry air [J kg-1 K-1]
 constants.R_v = 461.6                       -- gas constant for water vapor
-constants.ep_2 = terralib.constant(double, `(-constants.R_d / constants.R_v))
+constants.ep_2 = terralib.constant(double, `(-constants.R_d / constants.R_v)) --Ratio of mol. wght of H2O to dry air
 constants.stbolt = 5.67051e-8
 constants.mwdry = 28.966                                        -- molecular weight dry air ~ kg/kmole (shr_const_mwdair)
 constants.mwco2 = terralib.constant(double, 44.0)               -- molecular weight co2
@@ -81,6 +81,8 @@ constants.solcon_0 = terralib.constant(double, 1370.0)          -- solar constan
 constants.nMonths = 12
 constants.cam_abs_dim1 = 4
 constants.cam_abs_dim2 = constants.nVertLevels + 1
+constants.amd = 28.9644                                         -- Molecular weight of dry air (kg/kmol)
+constants.amo = terralib.constant(double, 48.0000)              -- Molecular weight of ozone (g/mol)
 
 constants.nAerLevels = 29
 constants.nOznLevels = 59

@@ -8,13 +8,10 @@ fabs = regentlib.fabs(double)
 floor = regentlib.floor(double)
 fmod = regentlib.fmod(double, double)
 
-
-fspace doublefield {
-  x         : double;
-}
-
-fspace intfield {
-  x         : int;
+-- Struct of two factors
+struct two_factors {
+  fact1 : double,
+  fact2 : double,
 }
 
 -- check sanity of time interpolation factors to within 32-bit roundoff
@@ -42,38 +39,37 @@ task getfactors(cycflag : bool,
                 cdayminus : double,
                 cdayplus : double,
                 cday : double)
-  var fact1 : double
-  var fact2 : double
+  
+  var tf : two_factors
 
   -- Determine time interpolation factors.  Account for December-January
   -- interpolation if dataset is being cycled yearly.
   if cycflag and np1 == 1 then
     var deltat : double = cdayplus + constants.daysperyear - cdayminus
     if cday > cdayplus then
-      fact1 = (cdayplus + constants.daysperyear - cday) / deltat
-      fact2 = (cday - cdayminus) / deltat
+      tf.fact1 = (cdayplus + constants.daysperyear - cday) / deltat
+      tf.fact2 = (cday - cdayminus) / deltat
     else
-      fact1 = (cdayplus - cday) / deltat
-      fact2 = (cday + constants.daysperyear - cdayminus) / deltat
+      tf.fact1 = (cdayplus - cday) / deltat
+      tf.fact2 = (cday + constants.daysperyear - cdayminus) / deltat
     end
   else
     var deltat : double = cdayplus - cdayminus
-    fact1 = (cdayplus - cday) / deltat
-    fact2 = (cday - cdayminus) / deltat
+    tf.fact1 = (cdayplus - cday) / deltat
+    tf.fact2 = (cday - cdayminus) / deltat
   end
 
-  if validfactors(fact1, fact2) ~= true then
-    c.printf("Bad fact1 and/or fact2=%.3f,%.3f", fact1, fact2)
+  if validfactors(tf.fact1, tf.fact2) ~= true then
+    c.printf("Bad fact1 and/or fact2=%.3f,%.3f", tf.fact1, tf.fact2)
   end
 
-  return fact1
+  return tf
 end
 
 task oznint(julian : double,
             ozmixmj : region(ispace(int3d), double),
             ozmix : region(ispace(int2d), double),
             levsiz : int,
-            num_months : int,
             pcols : int,
             ozncyc : bool)
 where
@@ -97,8 +93,8 @@ do
   var date_oz = array(16, 45, 75, 105, 136, 166, 197, 228, 258, 289, 319, 350)
   var np1 : int = 0
   var finddate : bool = false
-  -- do m = 1, num_months
-  for m = 0, num_months do
+  -- do m = 1, constants.nMonths
+  for m = 0, constants.nMonths do
     if(date_oz[m] > intjulian and finddate == false) then
       np1 = m
       finddate = true
@@ -119,8 +115,9 @@ do
     nm = 11
   end
 
-  var fact1 : double = getfactors(ozncyc, np1, cdayozm, cdayozp, intjulian)
-  var fact2 : double = 1.0 - fact1
+  var tf : two_factors = getfactors(ozncyc, np1, cdayozm, cdayozp, intjulian)
+  var fact1 : double = tf.fact1
+  var fact2 : double = tf.fact2
 
   -- Time interpolation
   for k = 0, levsiz do 
@@ -134,17 +131,17 @@ end
 -- Purpose: Interpolate ozone from current time-interpolated values to model levels
 --
 -- Method: Use pressure values to determine interpolation levels
-task radozn(ncol : int,     -- number of atmospheric columns
+task radozn(cr : region(ispace(int2d), cell_fs),
+            radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
+            ncol : int,     -- number of atmospheric columns
             pcols : int,
             pver : int,
-            pmid : region(ispace(int2d), double),    -- level pressures (mks)
             pin : region(ispace(int1d), double),     -- ozone data level pressures (mks)
-            levsiz : int,                                 -- number of ozone layers
-            ozmix : region(ispace(int2d), double),   -- ozone mixing ratio
-            o3vmr : region(ispace(int2d), double))   -- OUTPUT, ozone volume mixing ratio
+            levsiz : int,                            -- number of ozone layers
+            ozmix : region(ispace(int2d), double))   -- ozone mixing ratio
 where
-  reads (pmid, pin, ozmix),
-  writes (o3vmr)
+  reads (cr.pmid, pin, ozmix),
+  writes (radctl_2d_pverr_r.o3vmr)
 do
   --
   -- Initialize index array
@@ -171,7 +168,7 @@ do
     var iter_done : bool = false
     for kk=kkstart, levsiz - 1 do
       for i=0, ncol do
-        if ((pin[kk] < pmid[{i, k}]) and (pmid[{i, k}] < pin[kk + 1])) then
+        if ((pin[kk] < cr[{i, k}].pmid) and (cr[{i, k}].pmid < pin[kk + 1])) then
           kupper[i] = kk
           kount = kount + 1
         end
@@ -184,9 +181,9 @@ do
       if (kount == ncol) then
         iter_done = true
         for i=0, ncol do
-          var dpu : double = pmid[{i, k}] - pin[kupper[i]]
-          var dpl : double = pin[kupper[i] + 1] - pmid[{i, k}]
-          o3vmr[{i, k}] = (ozmix[{i, kupper[i]}] * dpl + ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
+          var dpu : double = cr[{i, k}].pmid - pin[kupper[i]]
+          var dpl : double = pin[kupper[i] + 1] - cr[{i, k}].pmid
+          radctl_2d_pverr_r[{i, k}].o3vmr = (ozmix[{i, kupper[i]}] * dpl + ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
         end
         break
       end
@@ -199,14 +196,14 @@ do
       -- of the longitude points.
       --
       for i=0, ncol do
-        if (pmid[{i, k}] < pin[0]) then
-          o3vmr[{i, k}] = ozmix[{i, 0}] * pmid[{i, k}] / pin[0]
-        elseif (pmid[{i, k}] > pin[levsiz]) then
-          o3vmr[{i, k}] = ozmix[{i, levsiz}]
+        if (cr[{i, k}].pmid < pin[0]) then
+          radctl_2d_pverr_r[{i, k}].o3vmr = ozmix[{i, 0}] * cr[{i, k}].pmid / pin[0]
+        elseif (cr[{i, k}].pmid > pin[levsiz]) then
+          radctl_2d_pverr_r[{i, k}].o3vmr = ozmix[{i, levsiz}]
         else
-          var dpu : double = pmid[{i, k}] - pin[kupper[i]]
-          var dpl : double = pin[kupper[i] + 1] - pmid[{i, k}]
-          o3vmr[{i, k}] = (ozmix[{i, kupper[i]}] * dpl + ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
+          var dpu : double = cr[{i, k}].pmid - pin[kupper[i]]
+          var dpl : double = pin[kupper[i] + 1] - cr[{i, k}].pmid
+          radctl_2d_pverr_r[{i, k}].o3vmr = (ozmix[{i, kupper[i]}] * dpl + ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
         end
       end
     end
@@ -214,10 +211,115 @@ do
   end
 end
 
-task radinp()
+
+-- From MPAS-Model/src/core_atmosphere/physics/physics_wrf/module_ra_cam.F
+--
+-- Purpose: 
+-- Set latitude and time dependent arrays for input to solar
+-- and longwave radiation.
+-- Convert model pressures to cgs, and compute ozone mixing ratio, needed for
+-- the solar radiation.
+--
+-- NOTE: variable eccf is unused everywhere, so not included in regent version
+task radinp(cr : region(ispace(int2d), cell_fs),
+            radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
+            radctl_2d_pverrp_r : region(ispace(int2d), radctl_2d_pverrp_fs),
+            ncol : int,         -- number of atmospheric columns
+            pver : int,
+            pverp : int)
+where
+  reads (cr.{pmid, pint}, radctl_2d_pverr_r.o3vmr),
+  writes (radctl_2d_pverr_r.{pbr, o3mmr}, radctl_2d_pverrp_r.pnm)
+do
+  ---------------------------Local variables-----------------------------
+  var i : int           -- Longitude loop index
+  var k : int           -- Vertical loop index
+
+  var calday : double   -- current calendar day
+  var vmmr : double     -- Ozone volume mixing ratio
+  var delta : double    -- Solar declination angle
+  -----------------------------------------------------------------------
+
+  -- Convert pressure from pascals to dynes/cm2
+  for k=0, pver do
+    for i=0, ncol do
+        radctl_2d_pverr_r[{i, k}].pbr = cr[{i, k}].pmid * 10.0
+        radctl_2d_pverrp_r[{i, k}].pnm = cr[{i, k}].pint * 10.0
+      end
+  end
+  for i=0, ncol do
+    radctl_2d_pverrp_r[{i, pverp}].pnm = cr[{i, pverp}].pint * 10.0
+  end
+
+  -- Convert ozone volume mixing ratio to mass mixing ratio:
+  vmmr = constants.amo / constants.amd
+  for cell in radctl_2d_pverr_r do
+    radctl_2d_pverr_r[cell].o3mmr = vmmr * radctl_2d_pverr_r[cell].o3vmr
+  end
+
+  return
 end
 
-task aqsat()
+--
+-- Saturation vapor pressure table lookup
+--
+task estblf(td : double,            -- Temperature for saturation lookup  
+            phys_tbls : region(ispace(int1d), phys_tbls_fs))
+where
+  reads (phys_tbls.{tmin, tmax, estbl})
+do
+  var e : double = max(min(td, phys_tbls[0].tmax), phys_tbls[0].tmin)   -- partial pressure
+  var i : int = int(e - phys_tbls[0].tmin) + 1
+  var ai : double = int(e - phys_tbls[0].tmin)
+
+  return (phys_tbls[0].tmin + ai - e + 1.0) * 
+         phys_tbls[0].estbl[i] - (phys_tbls[0].tmin + ai - e) * 
+         phys_tbls[0].estbl[i + 1]
+end
+
+-- From MPAS-Model/src/core_atmosphere/physics/physics_wrf/module_ra_cam_support.F
+--
+-- Purpose: 
+-- Utility procedure to look up and return saturation vapor pressure from
+-- precomputed table, calculate and return saturation specific humidity
+-- (g/g),for input arrays of temperature and pressure (dimensioned ii,kk)
+-- This routine is useful for evaluating only a selected region in the
+-- vertical.
+task aqsat(cr : region(ispace(int2d), cell_fs),
+           phys_tbls : region(ispace(int1d), phys_tbls_fs),
+           radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
+           ilen : int,           -- Length of vectors in I direction which
+           klen : int)          -- Length of K direction
+where
+  reads (cr.{pmid, t}, phys_tbls),
+  reads writes (radctl_2d_pverr_r.{esat, qsat})
+do
+  var omeps = 1.0 - constants.ep_2
+  var k : int
+  var i : int
+  for k = 0, klen do
+    for i = 0, ilen do
+      radctl_2d_pverr_r[{i, k}].esat = estblf(cr[{i, k}].t, phys_tbls)
+
+      --
+      -- Saturation specific humidity
+      --
+      radctl_2d_pverr_r[{i, k}].qsat = 
+        constants.ep_2 * radctl_2d_pverr_r[{i, k}].esat 
+        / (cr[{i, k}].pmid - omeps * radctl_2d_pverr_r[{i, k}].esat)
+
+      --
+      -- The following check is to avoid the generation of negative values
+      -- that can occur in the upper stratosphere and mesosphere
+      --
+      radctl_2d_pverr_r[{i, k}].qsat = min(1.0, radctl_2d_pverr_r[{i, k}].qsat)
+
+      if (radctl_2d_pverr_r[{i, k}].qsat < 0.0) then
+        radctl_2d_pverr_r[{i, k}].qsat = 1.0
+        radctl_2d_pverr_r[{i, k}].esat = cr[{i, k}].pmid
+      end
+    end
+  end
 end
 
 task get_rf_scales()
