@@ -42,6 +42,7 @@ task gffgch(phys_tbls : region(ispace(int1d), phys_tbls_fs),
 where
   reads writes (phys_tbls.{estbl, estblh2o})
 do
+
   -- Local variables --
   var eswtr : double    -- Saturation vapor pressure over water
   var tr : double       -- Transition range for es over water to es over ice
@@ -128,6 +129,7 @@ task radaeini(phys_tbls : region(ispace(int1d), phys_tbls_fs),
 where
   reads writes (phys_tbls)
 do
+
   -- Reads in CAM_ABS_DATA.DBL file? 
 
   -- Set up table of H2O saturation vapor pressures for use in calculation effective path RH.  
@@ -247,6 +249,7 @@ task esinti(phys_tbls : region(ispace(int1d), phys_tbls_fs))
 where 
   reads writes (phys_tbls)
 do
+
   -- Call gestbl to build saturation vapor pressure table.
   gestbl(phys_tbls)
 end
@@ -254,8 +257,8 @@ end
 -- initialization of ozone mixing ratios:
 task oznini(cr : region(ispace(int2d), cell_fs),
             er : region(ispace(int2d), edge_fs))
-where reads (cr),
-      writes (cr)
+where
+  reads writes (cr)
 do
   -- TODO
 end
@@ -266,9 +269,10 @@ end
 -- initialization of aerosol concentrations:
 task aerosol_init(cr : region(ispace(int2d), cell_fs),
                   er : region(ispace(int2d), edge_fs))
-where reads (cr),
-      writes (cr)
+where
+  reads writes (cr)
 do
+
   aer_optics_initialize()
 end
 
@@ -308,6 +312,7 @@ task camradinit(cr : region(ispace(int2d), cell_fs),
                 phys_tbls : region(ispace(int1d), phys_tbls_fs))
 where reads writes (cr, phys_tbls)
 do
+
   var pstd : double = 101325.0
 
   radini(phys_tbls, constants.gravity, constants.cp, constants.ep_2, constants.stbolt, pstd*10.0)

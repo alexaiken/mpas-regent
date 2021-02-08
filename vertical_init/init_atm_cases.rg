@@ -2,6 +2,7 @@ import "regent"
 require "data_structures"
 
 local constants = require("constants")
+local format = require("std/format")
 
 local nCells = constants.nCells
 local nEdges = constants.nEdges
@@ -24,9 +25,20 @@ task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
                       er : region(ispace(int2d), edge_fs),
                       vr : region(ispace(int2d), vertex_fs),
                       vertr : region(ispace(int1d), vertical_fs))
-where reads (cr.lat, er.cellsOnEdge, er.edgesOnEdge_ECP, er.lat, er.lon, er.nEdgesOnEdge, er.verticesOnEdge, er.weightsOnEdge, vr.lat, vr.lon),
-writes (cr.qsat, cr.relhum, cr.rho, cr.rtheta_base, cr.rtheta_p, cr.surface_pressure, cr.theta, cr.w, er.fEdge, er.zxu, vr.fVertex, vertr.rdzu, vertr.rdzw),
-reads writes (cr.areaCell, cr.dss, cr.exner, cr.hx, cr.pressure_base, cr.pressure_p, cr.qv, cr.rho_base, cr.rho_p, cr.rho_zz, cr.rw, cr.surface_pressure, cr.theta_base, cr.theta_m, cr.x, cr.y, cr.z, cr.zgrid, cr.zz, er.dvEdge, er.dcEdge, er.ru, er.u, er.v, er.x, er.y, er.z, er.zb, er.zb3, vr.areaTriangle, vr.kiteAreasOnVertex, vr.x, vr.y, vr.z, vertr.dzu, vertr.fzm, vertr.fzp) do
+where
+  reads (cr.lat,
+         er.{cellsOnEdge, edgesOnEdge_ECP, lat, lon, nEdgesOnEdge, verticesOnEdge, weightsOnEdge}, 
+         vr.{lat, lon}),
+  writes (cr.{qsat, relhum, rho, rtheta_base, rtheta_p, surface_pressure, theta, w},
+          er.{fEdge, zxu},
+          vr.fVertex,
+          vertr.{rdzu, rdzw}),
+  reads writes (cr.{areaCell, dss, exner, hx, pressure_base, pressure_p, qv, rho_base, rho_p, rho_zz, 
+                    rw, surface_pressure, theta_base, theta_m, x, y, z, zgrid, zz},
+                er.{dvEdge, dcEdge, ru, u, v, x, y, z, zb, zb3},
+                vr.{areaTriangle, kiteAreasOnVertex, x, y, z},
+                vertr.{dzu, fzm, fzp, cf1, cf2, cf3})
+do
 
 -- local vars/constants defined at beginning of subroutine
   var cp = constants.cp
@@ -206,19 +218,20 @@ reads writes (cr.areaCell, cr.dss, cr.exner, cr.hx, cr.pressure_base, cr.pressur
     vertr[k].dzu = .5*(dzw[k]+dzw[k-1])
     vertr[k].rdzu  =  1.0/vertr[k].dzu
     vertr[k].fzp = .5* dzw[k]/vertr[k].dzu
-    vertr[k].fzm =.5* dzw[k-1]/vertr[k].dzu
+    vertr[k].fzm = .5* dzw[k-1]/vertr[k].dzu
     rdzwp[k] = dzw[k-1]/(dzw[k]*(dzw[k]+dzw[k-1]))
     rdzwm[k] = dzw[k]/(dzw[k-1]*(dzw[k]+dzw[k-1]))
   end
+
 
 
 --!**********  how are we storing cf1, cf2 and cf3?
 
   var COF1 = (2.*vertr[1].dzu+vertr[2].dzu)/(vertr[1].dzu + vertr[2].dzu) * dzw[0]/ vertr[1].dzu
   var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu)*dzw[0]/ vertr[2].dzu
-  var CF1  = vertr[1].fzp + COF1
-  var CF2  = vertr[1].fzm - COF1 - COF2
-  var CF3  = COF2
+  vertr[0].cf1  = vertr[1].fzp + COF1
+  vertr[0].cf2  = vertr[1].fzm - COF1 - COF2
+  vertr[0].cf3  = COF2
 
 
 
@@ -708,7 +721,7 @@ reads writes (cr.areaCell, cr.dss, cr.exner, cr.hx, cr.pressure_base, cr.pressur
 
 --------PSURF is never used, in mpas it only exists for purposes of logging. excluding because of this
 --  for i=0,10 do
---    psurf = (cf1*(pressure_base(1,i)+pp(1,i)) + cf2*(pressure_base(2,i)+pp(2,i)) + cf3*(pressure_base(3,i)+pp(3,i)))/100.
+--    psurf = (vertr[0].cf1*(pressure_base(1,i)+pp(1,i)) + vertr[0].cf2*(pressure_base(2,i)+pp(2,i)) + vertr[0].cf3*(pressure_base(3,i)+pp(3,i)))/100.
 --
 --        psurf = (pressure_base(1,i)+pp(1,i)) + .5*dzw[1]*gravity        &
 --                      *(1.25*(rr(1,i)+rb(1,i))*(1.+scalars(index_qv,1,i))   &

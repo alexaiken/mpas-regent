@@ -114,14 +114,22 @@ task radiation_lw_from_MPAS(cr : region(ispace(int2d), cell_fs),
                             config_o3climatology : bool,
                             xtime_s : double,
                             degrad : double)
-where reads (cr.cldfrac, cr.lat, cr.lon, cr.m_ps, cr.pres_hyd_p, cr.re_cloud, cr.re_ice, cr.re_snow, cr.sfc_albedo, cr.sfc_emiss, cr.skintemp, cr.snow, cr.xice, cr.xland,
-aer_r.aerosols, aer_r.m_hybi,
-ozn_r.o3clim, ozn_r.ozmixm, ozn_r.pin),
-writes (cr.absnxt_p, cr.abstot_p, cr.cemiss_p, cr.cldfrac_p, cr.coszr_p, cr.emstot_p, cr.f_ice, cr.f_rain, cr.glw_p, cr.gsw_p, cr.lwcf_p, cr.lwdnb_p, cr.lwdnbc_p, cr.lwdnt_p, cr.lwdntc_p, cr.lwupb_p, cr.lwupbc_p, cr.lwupt_p, cr.lwuptc_p, cr.m_psn_p, cr.m_psp_p, cr.o3vmr, cr.olrtoa_p, cr.p2d, cr.recloud_p, cr.reice_p, cr.resnow_p, cr.rrecloud_p, cr.rreice_p, cr.rresnow_p, cr.rthratenlw_p, cr.rthratensw_p, cr.sfc_albedo_p, cr.sfc_emiss_p, cr.snow_p, cr.swcf_p, cr.swdnb_p, cr.swdnbc_p, cr.swdnt_p, cr.swdntc_p, cr.swupb_p, cr.swupbc_p, cr.swupt_p, cr.swuptc_p, cr.taucldc_p, cr.taucldi_p, cr.tsk_p, cr.xice_p, cr.xland_p, cr.xlat_p, cr.xlon_p,
-aer_r.aerosolcn_p, aer_r.aerosolcp_p, aer_r.m_hybi_p,
-ozn_r.o3clim_p, ozn_r.ozmixm_p, ozn_r.pin_p),
-reads writes (cr.o32d)
+where
+  reads (cr.{cldfrac, lat, lon, m_ps, pres_hyd_p, re_cloud, re_ice, re_snow, sfc_albedo, sfc_emiss,
+             skintemp, snow, xice, xland},
+         aer_r.{aerosols, m_hybi},
+         ozn_r.{o3clim, ozmixm, pin}),
+  writes (cr.{absnxt_p, abstot_p, cemiss_p, cldfrac_p, coszr_p, emstot_p, f_ice, f_rain, glw_p, gsw_p,
+              lwcf_p, lwdnb_p, lwdnbc_p, lwdnt_p, lwdntc_p, lwupb_p, lwupbc_p, lwupt_p, lwuptc_p, m_psn_p, 
+              m_psp_p, o3vmr, olrtoa_p, p2d, recloud_p, reice_p, resnow_p, rrecloud_p, rreice_p, rresnow_p, 
+              rthratenlw_p, rthratensw_p, sfc_albedo_p, sfc_emiss_p, snow_p, swcf_p, swdnb_p, swdnbc_p, 
+              swdnt_p, swdntc_p, swupb_p, swupbc_p, swupt_p, swuptc_p, taucldc_p, taucldi_p, tsk_p, xice_p, 
+              xland_p, xlat_p, xlon_p},
+          aer_r.{aerosolcn_p, aerosolcp_p, m_hybi_p},
+          ozn_r.{o3clim_p, ozmixm_p, pin_p}),
+  reads writes (cr.o32d)
 do
+
   for j = jts, jte do
     for i = 0, nCellsSolve do
       cr[{i, 0}].sfc_emiss_p = cr[{i, 0}].sfc_emiss
@@ -369,6 +377,7 @@ where
   reads (phys_tbls),
   reads writes (cr)
 do
+
   var radt : double
   --radiation_lw_from_MPAS()
 
