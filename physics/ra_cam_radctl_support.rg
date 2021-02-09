@@ -362,7 +362,7 @@ do
   -----------------------------Local variables-----------------------------
 
   var m : int                           -- index to aerosol species
-  var kupper : int[pcols]               -- last upper bound for interpolation
+  var kupper : region(ispace(int1d, pcols), int)   -- last upper bound for interpolation
   var i : int                           -- loop vars for interpolation
   var k : int 
   var kk : int
@@ -375,7 +375,7 @@ do
   var bad : bool                        -- indicates a bad point found
   var lev_interp_comp : bool            -- interpolation completed for a level
 
-  var AEROSOL : region(ispace(int3d, {pcols,pverp,naer}), double)  
+  var AEROSOL : region(ispace(int3d, {pcols,pverp,constants.naer}), double)  
                                         -- cumulative mass of aerosol in column beneath upper
                                         -- interface of level in column at particular month
   var dpl : double                      -- lower and upper intepolation factors
@@ -393,7 +393,7 @@ do
 
   -- assign total mass to topmost level   
   for i = 0, ncol do
-    for m = 0, constants.nAerLevels do
+    for m = 0, constants.naer do
       AEROSOL[{i,0,m}] = aerosolc[{i,0,m}]
     end
   end
@@ -406,22 +406,22 @@ do
 
     kkstart = paerlev
     for i = 0, ncol do
-      kkstart = min0(kkstart, kupper[i])
+      kkstart = min(kkstart, kupper[i])
     end
     kount = 0
 
     -- Store level indices for interpolation
 
     -- for the pressure interpolation should be comparing
-    -- pint(column,lev) with M_hybi(lev)*M_ps_cam_col(month,column,chunk)
+    -- pint(column,lev) with m_hybi(lev)*M_ps_cam_col(month,column,chunk)
 
     lev_interp_comp = false
     for kk = kkstart, paerlev - 1 do
       if (not lev_interp_comp) then
         for i = 0, ncol do
           v_coord = cr[{i,k}].pint
-          if (M_hybi[kk] * Match_ps[i] < v_coord and 
-              v_coord <= M_hybi[kk + 1] * Match_ps[i]) then
+          if (m_hybi[kk] * Match_ps[i] < v_coord and 
+              v_coord <= m_hybi[kk + 1] * Match_ps[i]) then
             kupper[i] = kk
             kount = kount + 1
           end
@@ -433,9 +433,9 @@ do
         -- Interpolate in pressure.
         if (kount == ncol) then
           for i = 0, ncol do
-            for m = 0, naer do
-              dpu = cr[{i,k}].pint - M_hybi[kupper[i]] * Match_ps[i]
-              dpl = M_hybi[kupper[i]+1] * Match_ps[i] - cr[{i,k}].pint
+            for m = 0, constants.naer do
+              dpu = cr[{i,k}].pint - m_hybi[kupper[i]] * Match_ps[i]
+              dpl = m_hybi[kupper[i]+1] * Match_ps[i] - cr[{i,k}].pint
               AEROSOL[{i,k,m}] =
                 (aerosolc[{i, kupper[i], m}] * dpl +
                 aerosolc[{i, kupper[i] + 1, m}] * dpu) / (dpl + dpu)
@@ -452,14 +452,14 @@ do
 
     if(not lev_interp_comp) then
       for i = 0, ncol do
-        for m = 1, naer do
-          if (cr[{i,k}].pint < M_hybi[0] * Match_ps[i]) then
+        for m = 1, constants.naer do
+          if (cr[{i,k}].pint < m_hybi[0] * Match_ps[i]) then
             AEROSOL[{i,k,m}] =  aerosolc[{i,0,m}]
-          elseif (cr[{i,k}].pint > M_hybi[paerlev] * Match_ps[i]) then
+          elseif (cr[{i,k}].pint > m_hybi[paerlev] * Match_ps[i]) then
             AEROSOL[{i,k,m}] = 0.0
           else
-            dpu = cr[{i,k}].pint - M_hybi[kupper[i]] * Match_ps[i]
-            dpl = M_hybi[kupper[i] + 1] * Match_ps[i] - cr[{i,k}].pint
+            dpu = cr[{i,k}].pint - m_hybi[kupper[i]] * Match_ps[i]
+            dpl = m_hybi[kupper[i] + 1] * Match_ps[i] - cr[{i,k}].pint
             AEROSOL[{i,k,m}] =
               (aerosolc[{i, kupper[i], m}] * dpl +
               aerosolc[{i, kupper[i] + 1, m}] * dpu) / (dpl + dpu)
@@ -470,7 +470,7 @@ do
   end
 
   -- aerosol mass beneath lowest interface (pverp) must be 0
-  for m = 0, naer do
+  for m = 0, constants.naer do
     for i = 0, ncol do
       AEROSOL[{i, pverp, m}] = 0.
     end
@@ -488,14 +488,14 @@ do
   --   10^-15 relative to column total mass
   -- convert back to mass mixing ratios.
   -- exit if mmr is negative
-  for m = 0, naer do
+  for m = 0, constants.naer do
     for k = 0, pver do
       for i = 0, ncol do
         AER_diff = AEROSOL[{i,k,m}] - AEROSOL[{i,k+1,m}]
-        if (abs(AER_diff) < 1e-15 * AEROSOL[{i,0,m}]) then
+        if (fabs(AER_diff) < 1e-15 * AEROSOL[{i,0,m}]) then
           AER_diff = 0.
         end
-        m_to_mmr = gravmks / (cr[{i,k+1}].pint - cr[{i,k}].pint)
+        m_to_mmr = constants.gravity / (cr[{i,k+1}].pint - cr[{i,k}].pint)
         AEROSOL_mmr[{i,k,m}] = AER_diff * m_to_mmr
       end
     end
@@ -576,16 +576,16 @@ do
   var IJUL : int
   var intJULIAN : double
 
-  var speciesmin : double[naer]     -- minimal value for each species
+  var speciesmin : double[constants.naer]     -- minimal value for each species
   
   -- values before current time step "the minus month"
   -- aerosolm(pcols,pver) is value of preceeding month's aerosol mmr
   -- aerosolp(pcols,pver) is value of next month's aerosol mmr
   --  (think minus and plus or values to left and right of point to be interpolated)
-  var AEROSOLm = region(ispace(int3d, {pcols,pver,naer}), double)  -- aerosol mmr from MATCH in column at previous (minus) month
+  var AEROSOLm = region(ispace(int3d, {pcols,pver,constants.naer}), double)  -- aerosol mmr from MATCH in column at previous (minus) month
 
   -- values beyond (or at) current time step "the plus month"
-  var AEROSOLp = region(ispace(int3d, {pcols,pver,naer}), double)  -- aerosol mmr from MATCH in column at next (plus) month
+  var AEROSOLp = region(ispace(int3d, {pcols,pver,constants.naer}), double)  -- aerosol mmr from MATCH in column at next (plus) month
 
   -------------------------------------------------------------------------
   
@@ -650,7 +650,7 @@ do
 
   -- exit if mmr is negative (we have previously set
   --  cumulative mass to be a decreasing function.)
-  for i = 0, naer do
+  for i = 0, constants.naer do
     speciesmin[i] = 0.0        -- speciesmin(m) = 0 is minimum mmr for each species
   end
 
