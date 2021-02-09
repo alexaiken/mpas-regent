@@ -85,8 +85,10 @@ constants.amd = 28.9644                                         -- Molecular wei
 constants.amo = terralib.constant(double, 48.0000)              -- Molecular weight of ozone (g/mol)
 
 constants.nAerLevels = 29
+constants.naer = 29
 constants.nOznLevels = 59
 constants.nAerosols = 12
+constants.naer_all = 12
 
 -- Physics - Radiation (parameters)
 constants.min_tp_h2o = terralib.constant(double, 160.0)        -- min T_p for pre-calculated abs/emis
