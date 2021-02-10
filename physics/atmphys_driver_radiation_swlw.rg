@@ -16,6 +16,7 @@ local jte = 0
 
 --Math function imports
 --TODO: These cause an error "macros must be called from inside terra code".
+--Note: do we still need these?
 --min = regentlib.fmin(double, double)
 --sin = regentlib.sin(double)
 --asin = regentlib.asin(double)
@@ -37,10 +38,10 @@ task radconst(julian : double,
   var solcon : double
 
   -- obecl : obliquity = 23.5 degree.
-      
+
   obecl = 23.5 * degrad
-  --sinob = sin(obecl)
-      
+  sinob = sin(obecl)
+
   -- calculate longitude of the sun from vernal equinox:
 
   if (julian > 80.0) then
@@ -49,17 +50,17 @@ task radconst(julian : double,
     sxlong = dpd * (julian + 285.0)
   end
   sxlong *= degrad
-  --arg = sinob * sin(sxlong)
-  --declin = asin(arg)
-  --decdeg = declin / degrad
+  arg = sinob * sin(sxlong)
+  declin = asin(arg)
+  decdeg = declin / degrad
 
   -- solar constant eccentricity factor (paltridge and platt 1976)
 
-  --djul = julian * 360.0 / 365.0
-  --rjul = djul * degrad
-  --eccfac = 1.000110 + 0.034221 * cos(rjul) + 0.001280 * sin(rjul) + 0.000719 * 
-  --      cos(2 * rjul) + 0.000077 * sin(2 * rjul)
-  --solcon = constants.solcon_0 * eccfac
+  djul = julian * 360.0 / 365.0
+  rjul = djul * degrad
+  eccfac = 1.000110 + 0.034221 * cos(rjul) + 0.001280 * sin(rjul) + 0.000719 * 
+           cos(2 * rjul) + 0.000077 * sin(2 * rjul)
+  solcon = constants.solcon_0 * eccfac
 end
 
 ----------------
