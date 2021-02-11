@@ -4,6 +4,8 @@ require "physics/ra_cam_cld_support"
 require "physics/ra_cam_radctl_support"
 
 local constants = require("constants")
+local c = regentlib.c
+local format = require("std/format")
 
 task param_cldoptics_calc()
   cldefr()
@@ -65,7 +67,8 @@ task camrad(cr : region(ispace(int2d), cell_fs),
             julian : double,
             ozncyc : bool)
 where 
-  reads (cr.{pmid, pint, t}, phys_tbls)
+  reads (cr.{pmid, pint, t}, phys_tbls),
+  writes (cr.pmid) -- TEMP needed for fill
 do
   -----------------------------Local variables-----------------------------
 
@@ -109,10 +112,19 @@ do
   var oldxt24 : double
 
   var ozmixmj = region(ispace(int3d, {constants.nCells, levsiz, constants.nMonths}), double)
+  fill(ozmixmj, 0.0); -- TODO: TEMP
+  
   var ozmix = region(ispace(int2d, {constants.nCells, levsiz}), double)
+  fill(ozmix, 0.0); -- TODO: TEMP
+
   var pin = region(ispace(int1d, levsiz), double)
+  fill(pin, 0.0); -- TODO: TEMP
+
+  fill(cr.pmid, 0.0); -- TODO: TEMP
 
   -----------------------------
+
+  format.println("Calling camrad...")
 
   param_cldoptics_calc()
 

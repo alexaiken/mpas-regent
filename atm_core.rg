@@ -52,6 +52,8 @@ where
   reads writes (cr, er, vr, vert_r) 
 do
 
+  format.println("Calling atm_do_timestep...")
+
   --if(moist_physics) then
   physics_timetracker()
   physics_driver(cr, phys_tbls)
