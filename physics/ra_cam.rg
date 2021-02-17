@@ -81,13 +81,13 @@ where
 do
   -----------------------------Local variables-----------------------------
 
-  var lchnk : int
-  var ncol : int
-  var pcols : int
-  var pver : int
-  var pverp : int
-  var pverr : int
-  var pverrp : int
+  var lchnk : int = 10     -- TODO: TEMP
+  var ncol : int = 10      -- TODO: TEMP
+  var pcols : int = 10     -- TODO: TEMP
+  var pver : int = 10      -- TODO: TEMP
+  var pverp : int = 10     -- TODO: TEMP
+  var pverr : int = 10     -- TODO: TEMP
+  var pverrp : int = 10    -- TODO: TEMP
 
   var pcnst : int
   var pnats : int
