@@ -4,6 +4,8 @@ require "physics/ra_cam_cld_support"
 require "physics/ra_cam_radctl_support"
 
 local constants = require("constants")
+local c = regentlib.c
+local format = require("std/format")
 
 task param_cldoptics_calc()
   cldefr()
@@ -22,8 +24,17 @@ task radctl(cr : region(ispace(int2d), cell_fs),
             levsiz : double,
             pin : region(ispace(int1d), double),
             ozncyc : bool)
-where reads (cr.{pmid, pint, t}, phys_tbls, ozmixmj, ozmix, pin),
-      writes (ozmix)
+where reads (
+        cr.{pmid, pint, t}, 
+        phys_tbls, 
+        ozmixmj, 
+        ozmix, 
+        pin
+      ),
+      writes (
+        cr.pmid,
+        ozmix
+      )
 do
 
   -----------------------------Local variables-----------------------------
@@ -65,17 +76,18 @@ task camrad(cr : region(ispace(int2d), cell_fs),
             julian : double,
             ozncyc : bool)
 where 
-  reads (cr.{pmid, pint, t}, phys_tbls)
+  reads (cr.{pmid, pint, t}, phys_tbls),
+  writes (cr.pmid) -- TEMP needed for fill
 do
   -----------------------------Local variables-----------------------------
 
-  var lchnk : int
-  var ncol : int
-  var pcols : int
-  var pver : int
-  var pverp : int
-  var pverr : int
-  var pverrp : int
+  var lchnk : int = 10     -- TODO: TEMP
+  var ncol : int = 10      -- TODO: TEMP
+  var pcols : int = 10     -- TODO: TEMP
+  var pver : int = 10      -- TODO: TEMP
+  var pverp : int = 10     -- TODO: TEMP
+  var pverr : int = 10     -- TODO: TEMP
+  var pverrp : int = 10    -- TODO: TEMP
 
   var pcnst : int
   var pnats : int
@@ -109,14 +121,39 @@ do
   var oldxt24 : double
 
   var ozmixmj = region(ispace(int3d, {constants.nCells, levsiz, constants.nMonths}), double)
+  fill(ozmixmj, 0.0); -- TODO: TEMP
+  
   var ozmix = region(ispace(int2d, {constants.nCells, levsiz}), double)
+  fill(ozmix, 0.0); -- TODO: TEMP
+
   var pin = region(ispace(int1d, levsiz), double)
+  fill(pin, 0.0); -- TODO: TEMP
+
+  fill(cr.pmid, 0.0); -- TODO: TEMP
 
   -----------------------------
 
+  format.println("Calling camrad...")
+
   param_cldoptics_calc()
 
-  radctl(cr, phys_tbls, ncol, pcols, pver, pverp, pverr, pverrp, julian,
-         ozmixmj, ozmix, levsiz, pin, ozncyc)
+  radctl(
+    cr, 
+    phys_tbls, 
+    ncol, 
+    pcols, 
+    pver, 
+    pverp, 
+    pverr, 
+    pverrp, 
+    julian,
+    ozmixmj, 
+    ozmix, 
+    levsiz, 
+    pin, 
+    ozncyc
+  )
+
+  format.println("Camrad done")
 
 end

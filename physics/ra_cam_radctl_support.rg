@@ -60,7 +60,7 @@ task getfactors(cycflag : bool,
   end
 
   if validfactors(tf.fact1, tf.fact2) ~= true then
-    c.printf("Bad fact1 and/or fact2=%.3f,%.3f", tf.fact1, tf.fact2)
+    c.printf("Bad fact1 and/or fact2=%.3f,%.3f\n", tf.fact1, tf.fact2)
   end
 
   return tf
@@ -228,8 +228,15 @@ task radinp(cr : region(ispace(int2d), cell_fs),
             pver : int,
             pverp : int)
 where
-  reads (cr.{pmid, pint}, radctl_2d_pverr_r.o3vmr),
-  writes (radctl_2d_pverr_r.{pbr, o3mmr}, radctl_2d_pverrp_r.pnm)
+  reads (
+    cr.{pmid, pint}, 
+    radctl_2d_pverr_r.o3vmr
+  ),
+  writes (
+    cr.pmid,
+    radctl_2d_pverr_r.{pbr, o3mmr}, 
+    radctl_2d_pverrp_r.pnm
+  )
 do
   ---------------------------Local variables-----------------------------
   var i : int           -- Longitude loop index
@@ -291,8 +298,11 @@ task aqsat(cr : region(ispace(int2d), cell_fs),
            ilen : int,           -- Length of vectors in I direction which
            klen : int)          -- Length of K direction
 where
-  reads (cr.{pmid, t}, phys_tbls),
-  reads writes (radctl_2d_pverr_r.{esat, qsat})
+  reads (cr.t, phys_tbls),
+  reads writes (
+    cr.pmid,
+    radctl_2d_pverr_r.{esat, qsat}
+  )
 do
   var omeps = 1.0 - constants.ep_2
   var k : int

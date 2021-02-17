@@ -3,6 +3,8 @@ require "data_structures"
 require "physics/ra_cam"
 
 local constants = require("constants")
+local c = regentlib.c
+local format = require("std/format")
 
 local nCellsSolve = constants.nCells --simplification
 local nAerLevels = constants.nAerLevels
@@ -379,6 +381,8 @@ where
   reads writes (cr)
 do
 
+  format.println("Calling driver_radiation_lw...")
+
   var radt : double
   --radiation_lw_from_MPAS()
 
@@ -390,7 +394,7 @@ do
   --  end
   --  rrtmg_lwrad() -- o3input will be an argument
   --else if
-  if ([rawstring](radt_lw_scheme) == "cam_lw") then
+  if (c.strcmp([rawstring](radt_lw_scheme), "cam_lw") == 0) then
     radconst(0, 0, 0) --TODO: Placeholder arguments! I don't know where actual arguments are from
     radt = constants.config_dt / 60.0
     var curr_julday : double = 0.0 --TODO: Placeholder
