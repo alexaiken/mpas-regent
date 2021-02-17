@@ -56,4 +56,7 @@ do
   deallocate_radiation_sw()
   deallocate_radiation_lw()
   deallocate_forall_physics()
+
+  format.println("Physics_driver done")
+
 end

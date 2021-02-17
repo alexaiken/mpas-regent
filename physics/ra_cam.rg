@@ -24,8 +24,17 @@ task radctl(cr : region(ispace(int2d), cell_fs),
             levsiz : double,
             pin : region(ispace(int1d), double),
             ozncyc : bool)
-where reads (cr.{pmid, pint, t}, phys_tbls, ozmixmj, ozmix, pin),
-      writes (ozmix)
+where reads (
+        cr.{pmid, pint, t}, 
+        phys_tbls, 
+        ozmixmj, 
+        ozmix, 
+        pin
+      ),
+      writes (
+        cr.pmid,
+        ozmix
+      )
 do
 
   -----------------------------Local variables-----------------------------
@@ -128,7 +137,23 @@ do
 
   param_cldoptics_calc()
 
-  radctl(cr, phys_tbls, ncol, pcols, pver, pverp, pverr, pverrp, julian,
-         ozmixmj, ozmix, levsiz, pin, ozncyc)
+  radctl(
+    cr, 
+    phys_tbls, 
+    ncol, 
+    pcols, 
+    pver, 
+    pverp, 
+    pverr, 
+    pverrp, 
+    julian,
+    ozmixmj, 
+    ozmix, 
+    levsiz, 
+    pin, 
+    ozncyc
+  )
+
+  format.println("Camrad done")
 
 end
