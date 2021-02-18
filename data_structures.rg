@@ -656,7 +656,9 @@ fspace phys_tbls_fs
   cp : double,
   tmelt : double,
 
-  lentbl : int
+  lentbl : int,
+
+  idxVOLC : int,
 }
 
 fspace ozn_fs {
