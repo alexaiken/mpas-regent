@@ -346,6 +346,7 @@ end
 --         convert back to mass mixing ratio
 --
 task vert_interpolate(cr : region(ispace(int2d), cell_fs),              -- surface pressure at a particular month
+                      phys_tbls : region(ispace(int1d), phys_tbls_fs),
                       Match_ps : region(ispace(int1d), double),
                       aerosolc : region(ispace(int3d), double),
                       m_hybi : region(ispace(int1d), double),
@@ -356,13 +357,22 @@ task vert_interpolate(cr : region(ispace(int2d), cell_fs),              -- surfa
                       pverp : int,
                       ncol : int)       -- chunk index and number of columns
 where
-  reads (cr.pint)                       -- interface pressure from CAM
+  reads (
+    cr.pint,                            -- interface pressure from CAM
+    phys_tbls.idxVOLC,
+    Match_ps,
+    aerosolc,
+    m_hybi
+  ),
+  writes (
+    AEROSOL_mmr
+  )
 do
 
   -----------------------------Local variables-----------------------------
 
   var m : int                           -- index to aerosol species
-  var kupper : region(ispace(int1d, pcols), int)   -- last upper bound for interpolation
+  var kupper = region(ispace(int1d, pcols), int)   -- last upper bound for interpolation
   var i : int                           -- loop vars for interpolation
   var k : int 
   var kk : int
@@ -375,7 +385,7 @@ do
   var bad : bool                        -- indicates a bad point found
   var lev_interp_comp : bool            -- interpolation completed for a level
 
-  var AEROSOL : region(ispace(int3d, {pcols,pverp,constants.naer}), double)  
+  var AEROSOL = region(ispace(int3d, {pcols,pverp,constants.naer}), double)  
                                         -- cumulative mass of aerosol in column beneath upper
                                         -- interface of level in column at particular month
   var dpl : double                      -- lower and upper intepolation factors
@@ -533,8 +543,11 @@ end
 -- Is allocation done correctly here?
 --
 task get_aerosol(cr : region(ispace(int2d), cell_fs),
+                 phys_tbls : region(ispace(int1d), phys_tbls_fs),
                  c : int,                 -- Chunk Id
                  julian : double,
+                 m_psp : region(ispace(int1d), double),
+                 m_psn : region(ispace(int1d), double),
                  aerosoljp : region(ispace(int3d), double),
                  aerosoljn : region(ispace(int3d), double),
                  m_hybi : region(ispace(int1d), double),
@@ -547,14 +560,19 @@ task get_aerosol(cr : region(ispace(int2d), cell_fs),
                  AEROSOLt : region(ispace(int3d), double),       -- aerosols
                  scale : region(ispace(int1d), double))          -- scale each aerosol by this amount
 where
-  reads (cr.{pint})
+  reads (
+    cr.pint, 
+    phys_tbls.idxVOLC,
+    m_psp, m_psn,
+    aerosoljp, aerosoljn,
+    m_hybi
+  ), 
+  writes (
+    AEROSOLt
+  )
 do
 
   -----------------------------Local variables-----------------------------
-
-  var caldayloc : double            -- calendar day of current timestep
-  var fact1 : double                -- time interpolation factors
-  var fact2 : double                  
 
   var nm : int = 1                  -- index to prv month in array. init to 1 and toggle between 1 and 2
   var np : int = 2                  -- index to nxt month in array. init to 2 and toggle between 1 and 2
@@ -563,20 +581,29 @@ do
 
   var cdaym : double = inf          -- calendar day of prv month
   var cdayp : double = inf          -- calendar day of next month
-  var Mid : double[12] = {16.5, 46.0, 75.5, 106.0, 136.5, 167.0, 197.5, 228.5, 259.0, 289.5, 320.0, 350.5}              
-                                    -- Days into year for mid month date
+  var Mid : double[12]              -- Days into year for mid month date
+  Mid[0] = 16.5
+  Mid[1] = 46.0
+  Mid[2] = 75.5
+  Mid[3] = 106.0
+  Mid[4] = 136.5
+  Mid[5] = 167.0
+  Mid[6] = 197.5
+  Mid[7] = 228.5
+  Mid[8] = 259.0
+  Mid[9] = 289.5
+  Mid[10] = 320.0
+  Mid[11] = 350.5
 
   var i : int                       -- spatial indices
   var k : int
   var j : int
   var m : int                       -- constituent index
-  var lats : int[pcols]             -- latitude and longitudes of column
-  var lons : int[pcols]
+  var lats : region(ispace(int1d, pcols), double)       -- latitude and longitudes of column
+  var lons : region(ispace(int1d, pcols), double)
   var ncol : int                    -- number of columns
-  var IJUL : int
-  var intJULIAN : double
 
-  var speciesmin : double[constants.naer]     -- minimal value for each species
+  var speciesmin = region(ispace(int1d, constants.naer), double)      -- minimal value for each species
   
   -- values before current time step "the minus month"
   -- aerosolm(pcols,pver) is value of preceeding month's aerosol mmr
@@ -590,9 +617,9 @@ do
   -------------------------------------------------------------------------
   
   -- JULIAN starts from 0.0 at 0Z on 1 Jan.
-  intJULIAN = JULIAN + 1.0    -- offset by one day
+  var intJULIAN : double = julian + 1.0                -- offset by one day
   -- jan 1st 00z is julian=1.0 here
-  IJUL = intJULIAN
+  var IJUL : int = intJULIAN
   -- Note that following will drift. 
   -- Need to use actual month/day info to compute julian.
   intJULIAN = intJULIAN - IJUL
@@ -600,7 +627,7 @@ do
   if (IJUL == 0) then
     IJUL = 365
   end
-  caldayloc = intJULIAN + IJUL
+  var caldayloc : double = intJULIAN + IJUL            -- calendar day of current timestep
 
   if (caldayloc < Mid[0]) then
     mo_prv = 12
@@ -609,11 +636,11 @@ do
     mo_prv = 12
     mo_nxt =  1
   else
-    do i = 1 , 11
+    for i = 0 , 11 do
       if (caldayloc < Mid[i]) then
         mo_prv = i-1
         mo_nxt = i
-        exit
+        break
       end
     end
   end
@@ -623,15 +650,17 @@ do
   cdayp = Mid[mo_nxt]
 
   -- Determine time interpolation factors.  1st arg says we are cycling 1 year of data
-  getfactors(true, mo_nxt, cdaym, cdayp, caldayloc, fact1, fact2) -- TODO check
+  var tf : two_factors = getfactors(true, mo_nxt, cdaym, cdayp, caldayloc)
+  var fact1 : double = tf.fact1     -- time interpolation factors
+  var fact2 : double = tf.fact2     -- time interpolation factors
 
   -- interpolate (prv and nxt month) bounding datasets onto cam vertical grid.
   -- compute mass mixing ratios on CAMS's pressure coordinate
   --  for both the "minus" and "plus" months
   ncol = pcols
 
-  vert_interpolate(cr, m_psp, aerosoljp, m_hybi, paerlev, AEROSOLm, pcols, pver, pverp, ncol)
-  vert_interpolate(cr, m_psn, aerosoljn, m_hybi, paerlev, AEROSOLp, pcols, pver, pverp, ncol)
+  vert_interpolate(cr, phys_tbls, m_psp, aerosoljp, m_hybi, paerlev, AEROSOLm, pcols, pver, pverp, ncol)
+  vert_interpolate(cr, phys_tbls, m_psn, aerosoljn, m_hybi, paerlev, AEROSOLp, pcols, pver, pverp, ncol)
 
   -- Time interpolate.
   for cell in AEROSOLt do
@@ -644,7 +673,7 @@ do
   -- find volcanic aerosol masses
   for i = 0, ncol do
     for k = 0, pver do
-      AEROSOLt[{i, k, idxVOLC}] = 0.0
+      AEROSOLt[{i, k, phys_tbls[0].idxVOLC}] = 0.0
     end
   end
 

@@ -85,9 +85,9 @@ constants.amd = 28.9644                                         -- Molecular wei
 constants.amo = terralib.constant(double, 48.0000)              -- Molecular weight of ozone (g/mol)
 
 constants.nAerLevels = 29
-constants.naer = 29
 constants.nOznLevels = 59
 constants.nAerosols = 12
+constants.naer = 10
 constants.naer_all = 12
 
 -- Physics - Radiation (parameters)
