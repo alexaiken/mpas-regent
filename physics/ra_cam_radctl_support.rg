@@ -4,6 +4,7 @@ require "data_structures"
 local constants = require("constants")
 local c = regentlib.c
 local inf = 1.0/0.0
+local format = require("std/format")
 
 fabs = regentlib.fabs(double)
 floor = regentlib.floor(double)
@@ -369,6 +370,8 @@ where
   )
 do
 
+  format.println("Calling vert_interpolate...")
+
   -----------------------------Local variables-----------------------------
 
   var m : int                           -- index to aerosol species
@@ -401,12 +404,17 @@ do
     kupper[i] = 1
   end
 
+  format.println("Calling vert_interpolate... 1")
+
   -- assign total mass to topmost level   
   for i = 0, ncol do
     for m = 0, constants.naer do
+      format.println("{} {} : {}", i, m, pcols)
       AEROSOL[{i,0,m}] = aerosolc[{i,0,m}]
     end
   end
+
+  format.println("Calling vert_interpolate... 2")
 
   -- At every pressure level, interpolate onto that pressure level
   for k = 1, pver do
@@ -479,12 +487,16 @@ do
     end
   end
 
+  format.println("Calling vert_interpolate... 3")
+  
   -- aerosol mass beneath lowest interface (pverp) must be 0
   for m = 0, constants.naer do
     for i = 0, ncol do
       AEROSOL[{i, pverp, m}] = 0.
     end
   end
+
+  format.println("Calling vert_interpolate... 4")
 
   -- Set mass in layer to zero whenever it is less than
   -- 1.e-40 kg/m^2 in the layer
@@ -510,6 +522,8 @@ do
       end
     end
   end
+  
+  format.println("Ending vert_interpolate...")
 end
 
 task background()
@@ -571,6 +585,8 @@ where
     AEROSOLt
   )
 do
+
+  format.println("Calling get_aerosol...")
 
   -----------------------------Local variables-----------------------------
 
@@ -662,10 +678,19 @@ do
   vert_interpolate(cr, phys_tbls, m_psp, aerosoljp, m_hybi, paerlev, AEROSOLm, pcols, pver, pverp, ncol)
   vert_interpolate(cr, phys_tbls, m_psn, aerosoljn, m_hybi, paerlev, AEROSOLp, pcols, pver, pverp, ncol)
 
+  format.println("get_aerosol 1")
+
   -- Time interpolate.
-  for cell in AEROSOLt do
-    AEROSOLt[cell] = AEROSOLm[cell] * fact1 + AEROSOLp[cell] * fact2
+  for m = 0, constants.naer do
+    for k = 0, pver do 
+      for i = 0, ncol do
+        format.println("{} {} {}", i, k, m)
+        AEROSOLt[{i, k, m}] = AEROSOLm[{i, k, m}] * fact1 + AEROSOLp[{i, k, m}] * fact2
+      end
+    end
   end
+
+  format.println("get_aerosol 2")
 
   -- get background aerosol (tuning) field
   background() -- TODO
@@ -677,6 +702,8 @@ do
     end
   end
 
+  format.println("get_aerosol 3")
+
   -- exit if mmr is negative (we have previously set
   --  cumulative mass to be a decreasing function.)
   for i = 0, constants.naer do
@@ -685,6 +712,8 @@ do
 
   -- scale any AEROSOLS as required
   scale_aerosols() -- TODO
+
+  format.println("End get_aerosol...")
 
 end
 
