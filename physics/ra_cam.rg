@@ -307,29 +307,374 @@ do
 
   format.println("Calling camrad...")
 
-  param_cldoptics_calc()
+#if !defined(MAC_KLUDGE)
+  lchnk    = 1
+  begchunk = ims
+  endchunk = ime
+  ncol     = ite - its + 1
+  pcols    = ite - its + 1
+  pver     = kte - kts + 1
+  pverp    = pver + 1
+  pverr    = kte - kts + 1
+  pverrp   = pverr + 1
+  -- number of advected constituents and non-advected constituents (including water vapor)
+  ppcnst   = n_cldadv
+  -- number of non-advected constituents
+  pnats    = 0
+  pcnst    = ppcnst-pnats
 
-  radctl(
-    cr, 
-    phys_tbls, 
-    camrad_1d_r, camrad_2d_r,
-    lchnk,
-    ncol, 
-    pcols, 
-    pver, 
-    pverp, 
-    pverr, 
-    pverrp, 
-    julian,
-    ozmixmj, 
-    ozmix, 
-    levsiz, 
-    pin, 
-    ozncyc,
-    aerosoljp, aerosoljn, 
-    m_hybi, 
-    paerlev
-  )
+  -- check the # species defined for the input climatology and naer
+
+#if defined(mpas)
+  if(naer_c != naer_all) then
+    format.println("Physics Fatal Error: naer_c-1 != naer_all, {}, {}", naer_c, naer_all)
+  end
+#else
+  if(naer_c.ne.naer_all) then
+    format.println("WRF Fatal Error: naer_c-1 != naer_all, {}, {}", naer_c, naer_all)
+  end
+#endif
+
+  -- update CO2 volume mixing ratio (co2vmr)
+  
+  -- determine time interpolation factors, check sanity
+  -- of interpolation factors to within 32-bit roundoff
+  -- assume that day of year is 1 for all input data
+  --
+  nyrm     = yr - yrdata(1) + 1
+  nyrp     = nyrm + 1
+  doymodel = yr * 365.0 + julian
+  doydatam = yrdata(nyrm) * 365. + 1.
+  doydatap = yrdata(nyrp) * 365. + 1.
+  deltat   = doydatap - doydatam
+  fact1    = (doydatap - doymodel) / deltat
+  fact2    = (doymodel - doydatam) / deltat
+  co2vmr   = (co2(nyrm) * fact1 + co2(nyrp) * fact2) * 1.e-06
+
+  co2mmr   = co2vmr * mwco2 / mwdry
+
+  --===================================================
+  -- Radiation computations
+  --===================================================
+
+  for k=0, levsiz do
+    pin(k) = pin0(k)
+  end
+
+  for k=0, paerlev do
+    m_hybi(k) = m_hybi0(k)
+  end
+
+  -- check for uninitialized arrays
+#if defined(mpas)
+  if(abstot_3d(its, kts, kts, jts) == 0.0 && !doabsems && dolw) then
+    format.println("Physics Message: camrad lw: CAUTION: re-calculating abstot,absnxt, on restart")
+    doabsems = true
+  endif
+#else
+  if(abstot_3d(its,kts,kts,jts) == 0.0 && !doabsems && dolw) then
+    format.println("WRF Debug: camrad lw: CAUTION: re-calculating abstot,absnxt, on restart")
+    doabsems = true
+  endif
+#endif
+
+  for j = jts, jte do
+
+    --
+    -- Cosine solar zenith angle for current time step
+    --
+
+    for i = its, ite do
+      ii = i - its + 1
+      -- XT24 is the fractional part of simulation days plus half of RADT expressed in 
+      -- units of minutes
+      -- JULIAN is in days
+      -- RADT is in minutes
+      XT24 = MOD(XTIME + RADT * 0.5, 1440.0)
+      TLOCTM = GMT + XT24 / 60.0 + XLONG(I, J) / 15.
+      HRANG = 15.0 * (TLOCTM - 12.0) * DEGRAD
+      XXLAT = XLAT(I, J) * DEGRAD
+      clat(ii) = xxlat
+      coszrs(II) = SIN(XXLAT) * SIN(DECLIN) + COS(XXLAT) * COS(DECLIN) * COS(HRANG)
+    end
+
+    -- moist variables
+
+    for k = kts, kte do
+      kk = kte - k + kts
+
+      for i = its, ite do
+        ii = i - its + 1
+
+        -- convert to specific humidity
+        q(ii, kk, 1) = max(1.e-10, 
+                           qv3d(i, k, j) / (1.0 + qv3d(i, k, j)))
+        
+        if F_QI && F_QC && F_QS then
+          q(ii, kk, ixcldliq) = max(0.0, 
+                                    qc3d(i, k, j) / (1.0 + qv3d(i, k, j)))
+          q(ii, kk, ixcldice) = max(0.0, 
+                                    (qi3d(i, k, j) + qs3d(i, k, j)) / (1.0 + qv3d(i, k, j)))
+        else if F_QC && F_QR  then
+          -- Warm rain or simple ice
+          q(ii, kk, ixcldliq) = 0.
+          q(ii, kk, ixcldice) = 0.
+          if t_phy(i,k,j) > 273.15 then
+            q(ii,kk,ixcldliq) = max(0.0,
+                                    qc3d(i, k, j) / (1.0 + qv3d(i, k, j)))
+          else
+            q(ii,kk,ixcldice) = max(0.0,
+                                    qc3d(i, k, j) / (1.0 + qv3d(i, k, j)))
+          end
+        else if F_QC && F_QS then
+          -- For Ferrier (note that currently Ferrier has QI, so this section will not be used)
+          q(ii,kk,ixcldice) = max(0.0,
+                                  qc3d(i, k, j) / (1.0 + qv3d(i, k, j)) * f_ice_phy(i, k, j))
+          q(ii,kk,ixcldliq) = max(0.0,
+                                  qc3d(i, k, j) / (1.0 + qv3d(i, k, j)) 
+                                  * (1.0 - f_ice_phy(i, k, j)) * (1.0 - f_rain_phy(i, k, j)))
+        else
+          q(ii, kk, ixcldliq) = 0.0
+          q(ii, kk, ixcldice) = 0.0
+        end
+
+        cld(ii, kk) = CLDFRA(I, K, J)
+      end
+    end
+
+    for i = its, ite do
+      ii = i - its + 1
+      landfrac(ii) = 2.0 - XLAND(I, J)
+      landm(ii) = landfrac(ii)
+      snowh(ii) = 0.001 * SNOW(I, J)
+      icefrac(ii) = XICE(I, J)
+    end
+
+    -- ldf (05-15-2011): In MPAS num_months ranges from 1 to 12 (instead of 2 to 13 in WRF):
+    -- REGENT NOTE: num_months now ranges from 0 to 11
+#if defined(mpas)
+    for m = 0, num_months do
+      for k = 0, levsiz do
+        for i = its, ite do
+          ii = i - its + 1
+          ozmixmj(ii,k,m) = ozmixm(i,k,j,m)
+        end
+      end
+    end
+#else
+    for m = 1, num_months - 1 do
+      for k = 1, levsiz do
+        for i = its, ite do
+          ii = i - its + 1
+          ozmixmj(ii, k, m) = ozmixm(i, k, j, m+1)
+        end
+      end
+    end
+#endif
+
+    for i = its, ite do
+      ii = i - its + 1
+      m_psjp(ii) = m_psp(i,j)
+      m_psjn(ii) = m_psn(i,j)
+    end
+
+    for n = 1, naer_c do
+      for k = 1, paerlev do
+        for i = its, ite do
+          ii = i - its + 1
+          aerosoljp(ii, k, n) = aerosolcp(i, k, j, n)
+          aerosoljn(ii, k, n) = aerosolcn(i, k, j, n)
+        end
+      end
+    end
+
+    --
+    -- Complete radiation calculations
+    --
+    for i = its, ite do
+      ii = i - its + 1
+      lwups(ii) = stebol * EMISS(I, J) * TSK(I, J)**4
+    end
+
+    for k = kts, kte + 1 do
+      kk = kte - k + kts + 1
+      for i = its, ite do
+        ii = i - its + 1
+        pint(ii, kk) = p8w(i, k, j)
+        if k == kts then
+          ps(ii) = pint(ii, kk)
+        end
+        lnpint(ii, kk) = log(pint(ii, kk))
+      end
+    end
+
+    if !doabsems && dolw then
+      for kk = 0, cam_abs_dim2 do
+        for kk1 = kts, kte+1 do
+          for i = its, ite do
+            abstot(i, kk1, kk) = abstot_3d(i, kk1, kk, j)
+          end
+        end
+      end
+      for kk = 0, cam_abs_dim1 do
+        for kk1 = kts, kte do
+          for i = its, ite do
+            absnxt(i, kk1, kk) = absnxt_3d(i, kk1, kk, j)
+          end
+        end
+      end
+      for kk = kts, kte + 1 do
+        for i = its, ite do
+          emstot(i, kk) = emstot_3d(i, kk, j)
+        end
+      end
+    end
+
+    for k = kts, kte do
+      kk = kte - k + kts 
+      for i = its, ite do
+        ii = i - its + 1
+        pmid(ii, kk) = p_phy(i, k, j)
+        lnpmid(ii, kk) = log(pmid(ii, kk))
+        lnpint(ii, kk) = log(pint(ii, kk))
+        pdel(ii, kk) = pint(ii, kk + 1) - pint(ii, kk)
+        t(ii, kk) = t_phy(i, k, j)
+        zm(ii, kk) = z(i, k, j)
+      end
+    end
+
+    -- Compute cloud water/ice paths and optical properties for input to radiation
+    param_cldoptics_calc() -- TODO
+
+    for i = its, ite do
+      ii = i - its + 1
+      -- use same albedo for direct and diffuse
+      -- change this when separate values are provided
+      asdir(ii) = albedo(i,j)
+      asdif(ii) = albedo(i,j)
+      aldir(ii) = albedo(i,j)
+      aldif(ii) = albedo(i,j)
+    end
+
+    radctl(
+      cr, 
+      phys_tbls, 
+      camrad_1d_r, camrad_2d_r,
+      lchnk,
+      ncol, 
+      pcols, 
+      pver, pverp, pverr, pverrp, 
+      julian,
+      ozmixmj, ozmix, 
+      levsiz, 
+      pin, 
+      ozncyc,
+      aerosoljp, aerosoljn, 
+      m_hybi, 
+      paerlev
+    )
+
+    for k = kts, kte do
+      kk = kte - k + kts 
+      for i = its, ite do
+        ii = i - its + 1
+        if dolw then
+          RTHRATENLW(I,K,J) = 1.e4 * qrl(ii, kk) / (cpair * pi_phy(i, k, j))
+        end
+        if dosw then
+          RTHRATENSW(I,K,J) = 1.e4 * qrs(ii, kk) / (cpair * pi_phy(i, k, j))
+        end
+        cemiss(i,k,j)     = emis(ii,kk)
+        taucldc(i,k,j)    = tauxcl(ii,kk)
+        taucldi(i,k,j)    = tauxci(ii,kk)
+      end
+    end
+
+    if doabsems && dolw then
+      for kk = 0, cam_abs_dim2 do
+        for kk1 = kts, kte + 1 do
+          for i = its, ite do
+            abstot_3d(i, kk1, kk, j) = abstot(i, kk1, kk)
+          end
+        end
+      end
+      for kk = 0, cam_abs_dim1 do
+        for kk1 = kts, kte do
+          for i = its, ite do
+            absnxt_3d(i, kk1, kk, j) = absnxt(i, kk1, kk)
+          end
+        end
+      end
+      for kk = kts, kte + 1 do
+        for i = its, ite do
+          emstot_3d(i, kk, j) = emstot(i, kk)
+        end
+      end
+    end
+
+    if PRESENT(SWUPT) then
+      if dosw then
+        -- Added shortwave and longwave upward/downward total and clear sky fluxes
+        for k = kts, kte + 1 do
+          kk = kte + 1 - k + kts
+          for i = its, ite do
+            ii = i - its + 1
+            if k == kte + 1 then
+              swupt(i, j)     = fsup(ii, kk)
+              swuptc(i, j)    = fsupc(ii, kk)
+              swdnt(i, j)     = fsdn(ii, kk)
+              swdntc(i, j)    = fsdnc(ii, kk)
+            end
+            if k == kts then
+              swupb(i, j)     = fsup(ii, kk)
+              swupbc(i, j)    = fsupc(ii, kk)
+              swdnb(i, j)     = fsdn(ii, kk)
+              swdnbc(i, j)    = fsdnc(ii, kk)
+            end
+          end
+        end
+      end
+      if dolw then
+        -- Added shortwave and longwave upward/downward total and clear sky fluxes
+        for k = kts, kte + 1 do
+          kk = kte + 1 - k + kts
+          for i = its, ite do
+            ii = i - its + 1
+            if k == kte + 1 then
+              lwupt(i, j)     = flup(ii, kk)
+              lwuptc(i, j)    = flupc(ii, kk)
+              lwdnt(i, j)     = fldn(ii, kk)
+              lwdntc(i, j)    = fldnc(ii, kk)
+            end
+            if k == kts then
+              lwupb(i, j)     = flup(ii, kk)
+              lwupbc(i, j)    = flupc(ii, kk)
+              lwdnb(i, j)     = fldn(ii, kk)
+              lwdnbc(i, j)    = fldnc(ii, kk)
+            end
+          end
+        end
+      end
+    end
+
+    for i = its, ite do
+      ii = i - its + 1
+      -- Added shortwave and longwave cloud forcing at TOA and surface
+      if dolw then
+        glw(i, j) = flwds(ii)
+        lwcf(i, j) = lwcftoa(ii)
+        olr(i, j)  = olrtoa(ii)
+      end
+      if dosw then
+        gsw(i, j) = fsns(ii)
+        swcf(i, j) = swcftoa(ii)
+        coszr(i, j) = coszrs(ii)
+      end
+    end
+
+  end    -- j-loop
+
+#endif
 
   format.println("Camrad done")
 
