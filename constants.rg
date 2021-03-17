@@ -98,10 +98,57 @@ constants.plenest = 250             -- length of saturation vapor pressure table
 
 constants.config_dt = terralib.constant(double, 720.0)          -- Model time step, seconds
 
-
 -- Constants from atm_core_init
 constants.config_coef_3rd_order = 0.25
 constants.config_zd = 22000.0
 constants.config_xnutr = 0.2
+
+-- mpas_atmphys_constants.F -- 
+
+constants.c0 = terralib.constant(double, 0.0)
+constants.c1 = terralib.constant(double, 1.0)
+
+constants.P0 = terralib.constant(double, 100000.0)                  -- Reference pressure
+constants.t00 = 273.15                                              -- Reference temperature
+constants.R_v = 461.6                                               -- Gas constant for water vapor
+constants.ep_1 = terralib.constant(double, `(constants.R_v / constants.R_d - 1))
+constants.ep_2 = terralib.constant(double, `(constants.R_d / constants.R_v))
+constants.cpv = terralib.constant(double, `(4.0 * constants.R_v))
+constants.rdg = terralib.constant(double, `(constants.R_d / constants.gravity))
+constants.rcp = terralib.constant(double, `(constants.R_d / constants.cp))
+constants.rcv = terralib.constant(double, `(constants.R_d / (constants.cp - constants.R_d)))
+
+constants.rho_a = 1.28
+constants.rho_r = terralib.constant(double, 1000.0)
+constants.rho_s = terralib.constant(double, 100.0)
+constants.rho_w = terralib.constant(double, 1000.0)
+
+constants.svp1 = 0.6112
+constants.svp2 = 17.67
+constants.svp3 = 29.65
+constants.svpt0 = 273.15
+
+constants.xlv = 2.50e6                              -- latent heat of vaporization
+constants.xlf = 3.50e5                              -- latent heat of fusion
+constants.xls = terralib.constant(double, `(constants.xlv + constants.xlf))       -- latent heat of sublimation
+
+constants.xlv0 = 3.15e6        
+constants.xlv1 = 2370.
+constants.xls0 = 2.905e6
+constants.xls1 = 259.532
+
+constants.karman = 0.4                              -- Von Karman constant
+constants.eomeg = 7.29210e-5
+constants.stbolt = 5.67051e-8
+
+constants.cliq    = terralib.constant(double, 4190.0)
+constants.cice    = terralib.constant(double, 2106.0)
+constants.epsilon = 1.e-15
+constants.psat    = 610.78
+
+-- constants specific to long- and short-wave radiation codes:
+constants.solcon_0 = terralib.constant(double, 1370.0)              -- solar constant                                     [W/m2]
+constants.degrad   = terralib.constant(double, 3.1415926 / 180.)    -- conversion from degree to radiant                     [-]
+constants.dpd      = terralib.constant(double, 360.0 / 365.0)
 
 return constants
