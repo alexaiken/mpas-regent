@@ -1,5 +1,6 @@
 import "regent"
 require "data_structures"
+require "physics_data_structures"
 require "physics/ra_cam_cld_support"
 require "physics/ra_cam_radctl_support"
 
@@ -31,22 +32,25 @@ task radctl(cr : region(ispace(int2d), cell_fs),
             phys_tbls : region(ispace(int1d), phys_tbls_fs),
             camrad_1d_r : region(ispace(int1d), camrad_1d_fs),
             camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
-            lchnk : int,
-            ncol : int,
-            pcols : int,
-            pver : int, pverp : int, pverr : int, pverrp : int,
+            lchnk : int, ncol : int, pcols : int, pver : int, pverp : int, pverr : int, pverrp : int, ppcnst : int, pcnst : int,
+            qm1 : region(ispace(int3d), double),
             julian : double,
-            ozmixmj : region(ispace(int3d), double),
-            ozmix : region(ispace(int2d), double),
+            ozmixmj : region(ispace(int3d), double), ozmix : region(ispace(int2d), double),
             levsiz : double,
             pin : region(ispace(int1d), double),
             ozncyc : bool,
+            m_psp : region(ispace(int1d), double),
+            m_psn : region(ispace(int1d), double),
             aerosoljp : region(ispace(int3d), double),
             aerosoljn : region(ispace(int3d), double),
             m_hybi : region(ispace(int1d), double),
-            paerlev : int)
+            paerlev : int,
+            dolw : bool, dosw : bool,
+            swcf : region(ispace(int1d), double),
+            lwcf : region(ispace(int1d), double),
+            flut : region(ispace(int1d), double))
 where reads (
-        cr.{pmid, pint, t}, 
+        camrad_2d_fs.{pmid, pint, t}, 
         phys_tbls, 
         ozmixmj, 
         ozmix, 
@@ -56,10 +60,17 @@ where reads (
         m_hybi
       ),
       writes (
-        cr.pmid,
-        ozmix
+        camrad_2d_fs.pmid,
+        ozmix,
+        swcf
       )
 do
+
+  -----------------------------Input variables-----------------------------
+
+   var nspint : int = 19           -- Num of spctrl intervals across solar spectrum
+   var naer_groups : int = 7       -- Num of aerosol groups for optical diagnostics
+          -- current groupings are sul, sslt, all carbons, all dust, background, and all aerosols
 
   -----------------------------Local variables-----------------------------
 
@@ -93,12 +104,12 @@ do
   -- WRF: added pin, levsiz, ozmix here
   oznint(julian, ozmixmj, ozmix, levsiz, pcols, ozncyc)
 
-  radozn(cr, radctl_2d_pverr_r, ncol, pcols, pver, pin, levsiz, ozmix)
+  radozn(cr, camrad_2d_fs, radctl_2d_pverr_r, ncol, pcols, pver, pin, levsiz, ozmix)
 
   --
   -- Set chunk dependent radiation input
   --
-  radinp(cr, radctl_2d_pverr_r, radctl_2d_pverrp_r, ncol, pver, pverp)
+  radinp(cr, radctl_2d_pverr_r, ncol, pver, pverp, pnm)
 
   --
   -- Solar radiation computation
@@ -111,9 +122,9 @@ do
 
     for i = 0, ncol do
       for j = 0, pver do
-        radctl_2d_pverr_r[{i, j}].rh = qm1(i, j, 0) / qsat(i, j) *
-            ((1.0 - epsilo) * qsat(i, j) + epsilo) /
-            ((1.0 - epsilo) * qm1(i, j, 0) + epsilo)
+        radctl_2d_pverr_r[{i, j}].rh = qm1[{i, j, 0}] / radctl_2d_pverr_r[{i, j}].qsat[{i, j}] *
+            ((1.0 - phys_tbls[0].epsilo) * radctl_2d_pverr_r[{i, j}].qsat + phys_tbls[0].epsilo) /
+            ((1.0 - phys_tbls[0].epsilo) * qm1[{i, j, 0}] + phys_tbls[0].epsilo)
       end
     end
 
@@ -121,7 +132,7 @@ do
 
     get_int_scales() -- TODO
 
-    get_aerosol(cr, phys_tbls, lchnk, julian, m_psp, m_psn, aerosoljp, aerosoljn, m_hybi, paerlev, 
+    get_aerosol(cr, phys_tbls, camrad_1d_r, lchnk, julian, aerosoljp, aerosoljn, m_hybi, paerlev, 
                 pcols, pver, pverp, pverr, pverrp, aerosol, scales)
 
     aerosol_indirect() -- TODO
@@ -134,7 +145,7 @@ do
     --
     for i = 0, ncol do
       radctl_1d_r[i].solin = radctl_1d_r[i].solin * 1.e-3
-      camrad_1d_r[i].fsds = camrad_1d_r[i]fsds * 1.e-3
+      camrad_1d_r[i].fsds = camrad_1d_r[i].fsds * 1.e-3
       radctl_1d_r[i].fsnirt = radctl_1d_r[i].fsnirt * 1.e-3
       radctl_1d_r[i].fsnrtc = radctl_1d_r[i].fsnrtc * 1.e-3
       radctl_1d_r[i].fsnirtsq = radctl_1d_r[i].fsnirtsq * 1.e-3
@@ -149,13 +160,13 @@ do
     end
     for i = 0, ncol do
       for j = 0, pver do
-        radctl_2d_pver_r[{i, j}].ftem = camrad_2d_r[{i, j}].qrs / cpair
+        radctl_2d_pver_r[{i, j}].ftem = camrad_2d_r[{i, j}].qrs / phys_tbls[0].cpair
       end
     end
 
     -- Added upward/downward total and clear sky fluxes
-    for k = 0, pverp
-      for i = 0, ncol
+    for k = 0, pverp do
+      for i = 0, ncol do
         camrad_2d_r[{i, k}].fsup  = camrad_2d_r[{i, k}].fsup * 1.e-3
         camrad_2d_r[{i, k}].fsupc = camrad_2d_r[{i, k}].fsupc * 1.e-3
         camrad_2d_r[{i, k}].fsdn  = camrad_2d_r[{i, k}].fsdn * 1.e-3
@@ -177,7 +188,7 @@ do
     -- Convert upward longwave flux units to CGS
     --
     for i = 0, ncol do
-      lwupcgs(i) = lwups(i)
+      radctl_1d_r[i].lwupcgs = camrad_1d_r[i].lwups
     end
 
     --
@@ -188,35 +199,31 @@ do
     --  o ixtrcg+2 => indx of advected cfc11 tracer
     --  o ixtrcg+3 => indx of advected cfc12 tracer
     --
-    if (trace_gas) then
-      radclwmx() -- TODO
-    else
-      trcmix() -- TODO
+    trcmix() -- TODO
 
-      radclwmx() -- TODO
-    end
+    radclwmx() -- TODO
 
     --
     -- Convert units of longwave fields needed by rest of model from CGS to MKS
     --
     for i = 0, ncol do
-      flnt(i)  = flnt(i) * 1.e-3
-      flut(i)  = flut(i) * 1.e-3
-      flutc(i) = flutc(i) * 1.e-3
-      flns(i)  = flns(i) * 1.e-3
-      flntc(i) = flntc(i) * 1.e-3
-      flnsc(i) = flnsc(i) * 1.e-3
-      flwds(i) = flwds(i) * 1.e-3
-      lwcf(i)  = flutc(i) - flut(i)
+      camrad_1d_r[i].flnt  = camrad_1d_r[i].flnt * 1.e-3
+      flut[i]  = flut[i] * 1.e-3
+      radctl_1d_r[i].flutc = radctl_1d_r[i].flutc * 1.e-3
+      camrad_1d_r[i].flns = camrad_1d_r[i].flns * 1.e-3
+      radctl_1d_r[i].flntc = radctl_1d_r[i].flntc * 1.e-3
+      radctl_1d_r[i].flnsc = radctl_1d_r[i].flnsc * 1.e-3
+      camrad_1d_r[i].flwds = camrad_1d_r[i].flwds * 1.e-3
+      lwcf[i]  = radctl_1d_r[i].flutc - flut[i]
     end
 
     -- Added upward/downward total and clear sky fluxes
     for k = 0, pverp do
       for i = 0, ncol do
-        flup(i,k)  = flup(i,k) * 1.e-3
-        flupc(i,k) = flupc(i,k) * 1.e-3
-        fldn(i,k)  = fldn(i,k) * 1.e-3
-        fldnc(i,k) = fldnc(i,k) * 1.e-3
+        camrad_2d_r[i].flup  = camrad_2d_r[i].flup * 1.e-3
+        camrad_2d_r[i].flupc = camrad_2d_r[i].flupc * 1.e-3
+        camrad_2d_r[i].fldn  = camrad_2d_r[i].fldn * 1.e-3
+        camrad_2d_r[i].fldnc = camrad_2d_r[i].fldnc * 1.e-3
       end
     end
   end
@@ -225,23 +232,26 @@ end
 task camrad(cr : region(ispace(int2d), cell_fs),
             phys_tbls : region(ispace(int1d), phys_tbls_fs),
             levsiz : int,
+            m_psp : region(ispace(int2d), double),
+            m_psn : region(ispace(int2d), double),
             julian : double,
             ozncyc : bool,
             paerlev : int,
-            naer_c : int)
+            naer_c : int
+            --abstot_3d : region(isapce(int3d), double)
+          )
 where 
-  reads (cr.{pmid, pint, t}, phys_tbls),
-  writes (cr.pmid) -- TEMP needed for fill
+  reads (phys_tbls)
 do
   -----------------------------Local variables-----------------------------
 
-  var lchnk : int = 10     -- TODO: TEMP
-  var ncol : int = 10      -- TODO: TEMP
-  var pcols : int = 10     -- TODO: TEMP
-  var pver : int = 10      -- TODO: TEMP
-  var pverp : int = 10     -- TODO: TEMP
-  var pverr : int = 10     -- TODO: TEMP
-  var pverrp : int = 10    -- TODO: TEMP
+  var lchnk : int
+  var ncol : int
+  var pcols : int
+  var pver : int
+  var pverp : int = 10
+  var pverr : int = 10
+  var pverrp : int = 10
 
   var pcnst : int
   var pnats : int
@@ -275,39 +285,34 @@ do
   var oldxt24 : double
 
   var camrad_1d_r = region(ispace(int1d, constants.nCells), camrad_1d_fs)
-  fill(camrad_1d_r.m_psjp, 0.0); -- TODO: TEMP
-  fill(camrad_1d_r.m_psjn, 0.0); -- TODO: TEMP
+  var m_psjp = region(ispace(int1d, constants.nCells), double) -- MATCH surface pressure
+  var m_psjn = region(ispace(int1d, constants.nCells), double) -- MATCH surface pressure
+  var swcftoa = region(ispace(int1d, constants.nCells), double)
+  var lwcftoa = region(ispace(int1d, constants.nCells), double)
+  var olrtoa = region(ispace(int1d, constants.nCells), double)
 
-  var camrad_2d_r = region(ispace(int2d, {constants.nCells, constants.nVertLevels}, camrad_2d_fs))
+  var m_hybi = region(ispace(int1d, paerlev), double)
+  var pin = region(ispace(int1d, levsiz), double)
+
+  var camrad_2d_r = region(ispace(int2d, {constants.nCells, constants.nVertLevels}), camrad_2d_fs)
+
+  var ozmix = region(ispace(int2d, {constants.nCells, levsiz}), double)
+
+  var q = region(isapce(int3d, {constants.nCells, constants.nVertLevels, n_cldadv}), double)
 
   var ozmixmj = region(ispace(int3d, {constants.nCells, levsiz, constants.nMonths}), double)
-  fill(ozmixmj, 0.0); -- TODO: TEMP
-  
-  var ozmix = region(ispace(int2d, {constants.nCells, levsiz}), double)
-  fill(ozmix, 0.0); -- TODO: TEMP
-
-  var pin = region(ispace(int1d, levsiz), double)
-  fill(pin, 0.0); -- TODO: TEMP
 
   var aerosoljp = region(ispace(int3d, {constants.nCells, paerlev, naer_c}), double)
   var aerosoljn = region(ispace(int3d, {constants.nCells, paerlev, naer_c}), double)
-  fill(aerosoljp, 0.0); -- TODO: TEMP
-  fill(aerosoljn, 0.0); -- TODO: TEMP
-
-  var m_hybi = region(ispace(int1d, paerlev), double)
-  fill(m_hybi, 0.0); -- TODO: TEMP
 
   var abstot = region(isapce(int3d, {constants.nCells, constants.nVertLevels, constants.nVertLevels}), double) -- Total absorptivity
   var absnxt = region(isapce(int3d, {constants.nCells, constants.nVertLevels, 4}), double) -- Total nearest layer absorptivity
   var emstot = region(isapce(int3d, {constants.nCells, constants.nVertLevels + 1}), double) -- Total emissivity
 
-  fill(cr.pmid, 0.0); -- TODO: TEMP
-
   -----------------------------
 
   format.println("Calling camrad...")
 
-#if !defined(MAC_KLUDGE)
   lchnk    = 1
   begchunk = ims
   endchunk = ime
@@ -321,19 +326,13 @@ do
   ppcnst   = n_cldadv
   -- number of non-advected constituents
   pnats    = 0
-  pcnst    = ppcnst-pnats
+  pcnst    = ppcnst - pnats
 
   -- check the # species defined for the input climatology and naer
 
-#if defined(mpas)
-  if(naer_c != naer_all) then
-    format.println("Physics Fatal Error: naer_c-1 != naer_all, {}, {}", naer_c, naer_all)
+  if (naer_c ~= naer_all) then
+    format.println("Physics Fatal Error: naer_c-1 ~= naer_all, {}, {}", naer_c, naer_all)
   end
-#else
-  if(naer_c.ne.naer_all) then
-    format.println("WRF Fatal Error: naer_c-1 != naer_all, {}, {}", naer_c, naer_all)
-  end
-#endif
 
   -- update CO2 volume mixing ratio (co2vmr)
   
@@ -366,17 +365,10 @@ do
   end
 
   -- check for uninitialized arrays
-#if defined(mpas)
-  if(abstot_3d(its, kts, kts, jts) == 0.0 && !doabsems && dolw) then
+  if (abstot_3d(its, kts, kts, jts) == 0.0 and doabsems == false and dolw) then
     format.println("Physics Message: camrad lw: CAUTION: re-calculating abstot,absnxt, on restart")
     doabsems = true
-  endif
-#else
-  if(abstot_3d(its,kts,kts,jts) == 0.0 && !doabsems && dolw) then
-    format.println("WRF Debug: camrad lw: CAUTION: re-calculating abstot,absnxt, on restart")
-    doabsems = true
-  endif
-#endif
+  end
 
   for j = jts, jte do
 
@@ -410,12 +402,12 @@ do
         q(ii, kk, 1) = max(1.e-10, 
                            qv3d(i, k, j) / (1.0 + qv3d(i, k, j)))
         
-        if F_QI && F_QC && F_QS then
+        if F_QI and F_QC and F_QS then
           q(ii, kk, ixcldliq) = max(0.0, 
                                     qc3d(i, k, j) / (1.0 + qv3d(i, k, j)))
           q(ii, kk, ixcldice) = max(0.0, 
                                     (qi3d(i, k, j) + qs3d(i, k, j)) / (1.0 + qv3d(i, k, j)))
-        else if F_QC && F_QR  then
+        elseif F_QC and F_QR  then
           -- Warm rain or simple ice
           q(ii, kk, ixcldliq) = 0.
           q(ii, kk, ixcldice) = 0.
@@ -426,7 +418,7 @@ do
             q(ii,kk,ixcldice) = max(0.0,
                                     qc3d(i, k, j) / (1.0 + qv3d(i, k, j)))
           end
-        else if F_QC && F_QS then
+        elseif F_QC and F_QS then
           -- For Ferrier (note that currently Ferrier has QI, so this section will not be used)
           q(ii,kk,ixcldice) = max(0.0,
                                   qc3d(i, k, j) / (1.0 + qv3d(i, k, j)) * f_ice_phy(i, k, j))
@@ -452,7 +444,6 @@ do
 
     -- ldf (05-15-2011): In MPAS num_months ranges from 1 to 12 (instead of 2 to 13 in WRF):
     -- REGENT NOTE: num_months now ranges from 0 to 11
-#if defined(mpas)
     for m = 0, num_months do
       for k = 0, levsiz do
         for i = its, ite do
@@ -461,21 +452,11 @@ do
         end
       end
     end
-#else
-    for m = 1, num_months - 1 do
-      for k = 1, levsiz do
-        for i = its, ite do
-          ii = i - its + 1
-          ozmixmj(ii, k, m) = ozmixm(i, k, j, m+1)
-        end
-      end
-    end
-#endif
 
     for i = its, ite do
       ii = i - its + 1
-      m_psjp(ii) = m_psp(i,j)
-      m_psjn(ii) = m_psn(i,j)
+      camrad_1d_r[ii].m_psjp = m_psp[{i,j}]
+      camrad_1d_r[ii].m_psjn = m_psn[{i,j}]
     end
 
     for n = 1, naer_c do
@@ -493,7 +474,7 @@ do
     --
     for i = its, ite do
       ii = i - its + 1
-      lwups(ii) = stebol * EMISS(I, J) * TSK(I, J)**4
+      lwups(ii) = stebol * EMISS(I, J) * pow(TSK(I, J), 4)
     end
 
     for k = kts, kte + 1 do
@@ -508,7 +489,7 @@ do
       end
     end
 
-    if !doabsems && dolw then
+    if doabsems == false and dolw then
       for kk = 0, cam_abs_dim2 do
         for kk1 = kts, kte+1 do
           for i = its, ite do
@@ -557,21 +538,20 @@ do
     end
 
     radctl(
-      cr, 
-      phys_tbls, 
-      camrad_1d_r, camrad_2d_r,
-      lchnk,
-      ncol, 
-      pcols, 
-      pver, pverp, pverr, pverrp, 
+      cr, phys_tbls, camrad_1d_r, camrad_2d_r,
+      lchnk, ncol, pcols, pver, pverp, pverr, pverrp, ppcnst, pcnst,
+      q,
       julian,
       ozmixmj, ozmix, 
       levsiz, 
       pin, 
       ozncyc,
+      m_psjp, m_psjn,
       aerosoljp, aerosoljn, 
       m_hybi, 
-      paerlev
+      paerlev,
+      dolw, dosw,
+      swcftoa, lwcftoa, olrtoa
     )
 
     for k = kts, kte do
@@ -579,10 +559,10 @@ do
       for i = its, ite do
         ii = i - its + 1
         if dolw then
-          RTHRATENLW(I,K,J) = 1.e4 * qrl(ii, kk) / (cpair * pi_phy(i, k, j))
+          RTHRATENLW(I,K,J) = 1.e4 * qrl(ii, kk) / (phys_tbls[0].cpair * pi_phy(i, k, j))
         end
         if dosw then
-          RTHRATENSW(I,K,J) = 1.e4 * qrs(ii, kk) / (cpair * pi_phy(i, k, j))
+          RTHRATENSW(I,K,J) = 1.e4 * qrs(ii, kk) / (phys_tbls[0].cpair * pi_phy(i, k, j))
         end
         cemiss(i,k,j)     = emis(ii,kk)
         taucldc(i,k,j)    = tauxcl(ii,kk)
@@ -590,7 +570,7 @@ do
       end
     end
 
-    if doabsems && dolw then
+    if doabsems and dolw then
       for kk = 0, cam_abs_dim2 do
         for kk1 = kts, kte + 1 do
           for i = its, ite do
@@ -671,11 +651,6 @@ do
         coszr(i, j) = coszrs(ii)
       end
     end
-
   end    -- j-loop
-
-#endif
-
   format.println("Camrad done")
-
 end
