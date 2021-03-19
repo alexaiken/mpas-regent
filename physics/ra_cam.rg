@@ -50,19 +50,26 @@ task radctl(cr : region(ispace(int2d), cell_fs),
             lwcf : region(ispace(int1d), double),
             flut : region(ispace(int1d), double))
 where reads (
-        camrad_2d_fs.{pmid, pint, t}, 
-        phys_tbls, 
-        ozmixmj, 
-        ozmix, 
+        camrad_1d_r.lwups,
+        camrad_2d_r.{pmid, pint, t, qrs}, 
+        phys_tbls,
+        qm1,
+        ozmixmj, ozmix,
         pin,
         m_psp, m_psn,
         aerosoljp, aerosoljn,
         m_hybi
       ),
       writes (
-        camrad_2d_fs.pmid,
+        camrad_2d_r.pmid,
         ozmix,
-        swcf
+        swcf,
+        lwcf
+      ),
+      reads writes (
+        camrad_1d_r.{fsds, fsnt, fsns, flnt, flns, flwds},
+        camrad_2d_r.{fsup, fsupc, fsdn, fsdnc, flup, flupc, fldn, fldnc},
+        flut
       )
 do
 
@@ -104,12 +111,12 @@ do
   -- WRF: added pin, levsiz, ozmix here
   oznint(julian, ozmixmj, ozmix, levsiz, pcols, ozncyc)
 
-  radozn(cr, camrad_2d_fs, radctl_2d_pverr_r, ncol, pcols, pver, pin, levsiz, ozmix)
+  radozn(cr, camrad_2d_r, radctl_2d_pverr_r, ncol, pcols, pver, pin, levsiz, ozmix)
 
   --
   -- Set chunk dependent radiation input
   --
-  radinp(cr, radctl_2d_pverr_r, ncol, pver, pverp, pnm)
+  radinp(cr, camrad_2d_r, radctl_2d_pverr_r, ncol, pver, pverp, pnm)
 
   --
   -- Solar radiation computation
@@ -118,11 +125,11 @@ do
     --
     -- calculate heating with aerosols
     --
-    aqsat(cr, phys_tbls, radctl_2d_pverr_r, ncol, pver)
+    aqsat(cr, phys_tbls, camrad_2d_r, radctl_2d_pverr_r, ncol, pver)
 
     for i = 0, ncol do
       for j = 0, pver do
-        radctl_2d_pverr_r[{i, j}].rh = qm1[{i, j, 0}] / radctl_2d_pverr_r[{i, j}].qsat[{i, j}] *
+        radctl_2d_pverr_r[{i, j}].rh = qm1[{i, j, 0}] / radctl_2d_pverr_r[{i, j}].qsat *
             ((1.0 - phys_tbls[0].epsilo) * radctl_2d_pverr_r[{i, j}].qsat + phys_tbls[0].epsilo) /
             ((1.0 - phys_tbls[0].epsilo) * qm1[{i, j, 0}] + phys_tbls[0].epsilo)
       end
@@ -132,7 +139,8 @@ do
 
     get_int_scales() -- TODO
 
-    get_aerosol(cr, phys_tbls, camrad_1d_r, lchnk, julian, aerosoljp, aerosoljn, m_hybi, paerlev, 
+    get_aerosol(cr, phys_tbls, camrad_1d_r, camrad_2d_r, lchnk, julian, m_psp, m_psn, 
+                aerosoljp, aerosoljn, m_hybi, paerlev, 
                 pcols, pver, pverp, pverr, pverrp, aerosol, scales)
 
     aerosol_indirect() -- TODO
@@ -181,8 +189,9 @@ do
   if (dolw) then
     get_int_scales() -- TODO
 
-    get_aerosol(cr, phys_tbls, lchnk, julian, m_psp, m_psn, aerosoljp, aerosoljn, m_hybi, paerlev, 
-                pcols, pver, pverp, pverr, pverrp, aerosol, scales)
+    get_aerosol(cr, phys_tbls, camrad_1d_r, camrad_2d_r, lchnk, julian, m_psp, m_psn, 
+                    aerosoljp, aerosoljn, m_hybi, paerlev, 
+                    pcols, pver, pverp, pverr, pverrp, aerosol, scales)
 
     --
     -- Convert upward longwave flux units to CGS
@@ -220,10 +229,10 @@ do
     -- Added upward/downward total and clear sky fluxes
     for k = 0, pverp do
       for i = 0, ncol do
-        camrad_2d_r[i].flup  = camrad_2d_r[i].flup * 1.e-3
-        camrad_2d_r[i].flupc = camrad_2d_r[i].flupc * 1.e-3
-        camrad_2d_r[i].fldn  = camrad_2d_r[i].fldn * 1.e-3
-        camrad_2d_r[i].fldnc = camrad_2d_r[i].fldnc * 1.e-3
+        camrad_2d_r[{i, k}].flup  = camrad_2d_r[{i, k}].flup * 1.e-3
+        camrad_2d_r[{i, k}].flupc = camrad_2d_r[{i, k}].flupc * 1.e-3
+        camrad_2d_r[{i, k}].fldn  = camrad_2d_r[{i, k}].fldn * 1.e-3
+        camrad_2d_r[{i, k}].fldnc = camrad_2d_r[{i, k}].fldnc * 1.e-3
       end
     end
   end
@@ -249,9 +258,9 @@ do
   var ncol : int
   var pcols : int
   var pver : int
-  var pverp : int = 10
-  var pverr : int = 10
-  var pverrp : int = 10
+  var pverp : int
+  var pverr : int
+  var pverrp : int
 
   var pcnst : int
   var pnats : int
@@ -270,6 +279,8 @@ do
 
   var nyrm : int
   var nyrp : int
+
+  var n_cldadv : int = 3
 
   var doymodel : double
   var doydatam : double
@@ -298,29 +309,29 @@ do
 
   var ozmix = region(ispace(int2d, {constants.nCells, levsiz}), double)
 
-  var q = region(isapce(int3d, {constants.nCells, constants.nVertLevels, n_cldadv}), double)
+  var q = region(ispace(int3d, {constants.nCells, constants.nVertLevels, n_cldadv}), double)
 
   var ozmixmj = region(ispace(int3d, {constants.nCells, levsiz, constants.nMonths}), double)
 
   var aerosoljp = region(ispace(int3d, {constants.nCells, paerlev, naer_c}), double)
   var aerosoljn = region(ispace(int3d, {constants.nCells, paerlev, naer_c}), double)
 
-  var abstot = region(isapce(int3d, {constants.nCells, constants.nVertLevels, constants.nVertLevels}), double) -- Total absorptivity
-  var absnxt = region(isapce(int3d, {constants.nCells, constants.nVertLevels, 4}), double) -- Total nearest layer absorptivity
-  var emstot = region(isapce(int3d, {constants.nCells, constants.nVertLevels + 1}), double) -- Total emissivity
+  var abstot = region(ispace(int3d, {constants.nCells, constants.nVertLevels, constants.nVertLevels}), double) -- Total absorptivity
+  var absnxt = region(ispace(int3d, {constants.nCells, constants.nVertLevels, 4}), double) -- Total nearest layer absorptivity
+  var emstot = region(ispace(int3d, {constants.nCells, constants.nVertLevels + 1}), double) -- Total emissivity
 
   -----------------------------
 
   format.println("Calling camrad...")
 
   lchnk    = 1
-  begchunk = ims
-  endchunk = ime
-  ncol     = ite - its + 1
-  pcols    = ite - its + 1
-  pver     = kte - kts + 1
+  begchunk = 0
+  endchunk = constants.nCells
+  ncol     = constants.nCells + 1
+  pcols    = constants.nCells + 1
+  pver     = constants.nVertLevels + 1
   pverp    = pver + 1
-  pverr    = kte - kts + 1
+  pverr    = constants.nVertLevels
   pverrp   = pverr + 1
   -- number of advected constituents and non-advected constituents (including water vapor)
   ppcnst   = n_cldadv
@@ -330,8 +341,8 @@ do
 
   -- check the # species defined for the input climatology and naer
 
-  if (naer_c ~= naer_all) then
-    format.println("Physics Fatal Error: naer_c-1 ~= naer_all, {}, {}", naer_c, naer_all)
+  if (naer_c ~= constants.naer_all) then
+    format.println("Physics Fatal Error: naer_c-1 ~= naer_all, {}, {}", naer_c, constants.naer_all)
   end
 
   -- update CO2 volume mixing ratio (co2vmr)
