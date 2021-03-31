@@ -2,7 +2,8 @@ import "regent"
 
 local constants = require("constants")
 
-terralib.linklibrary("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-h7i6kmblkfnyttdnctplncjm4fpzaxqz/lib/libnetcdf.so")
+terralib.linklibrary("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-zgdvh4hxthdhb3mlsviwhgatvbfnslog/lib/libnetcdf.so")
+
 
 -----------------------------------------------
 ----- TERRA WRAPPERS FOR NETCDF FUNCTIONS -----

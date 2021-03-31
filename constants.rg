@@ -7,7 +7,7 @@ constants.c = regentlib.c
 constants.cio = terralib.includec("stdio.h")
 constants.clib = terralib.includec("stdlib.h")
 
-constants.netcdf = terralib.includec("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-h7i6kmblkfnyttdnctplncjm4fpzaxqz/include/netcdf.h")
+constants.netcdf = terralib.includec("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-zgdvh4hxthdhb3mlsviwhgatvbfnslog/include/netcdf.h")
 
 constants.FILE_NAME = "mesh_loading/x1.2562.grid.nc"
 constants.GRAPH_FILE_NAME = "mesh_loading/x1.2562.graph.info.part.16"

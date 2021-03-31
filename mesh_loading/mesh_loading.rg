@@ -4,7 +4,7 @@ require "data_structures"
 require "netcdf_tasks"
 local constants = require("constants")
 
-terralib.linklibrary("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-h7i6kmblkfnyttdnctplncjm4fpzaxqz/lib/libnetcdf.so")
+terralib.linklibrary("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-zgdvh4hxthdhb3mlsviwhgatvbfnslog/lib/libnetcdf.so")
 
 --Terra function to read the cell partitions from graph.info file. Returns an array where each element is the partition number of that cell index.
 terra read_file(file_name: &int8) : int[constants.nCells]
