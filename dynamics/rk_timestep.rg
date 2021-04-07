@@ -396,16 +396,22 @@ do
 
 
   -- atm_rk_integration_setup: saves state pre-loop
+  format.println("Inside atm_srk3: calling atm_rk_integration_setup...")
   atm_rk_integration_setup(cr, er)
+  format.println("Inside atm_srk3: done calling atm_rk_integration_setup...\n")
 
+  format.println("Inside atm_srk3: calling atm_compute_moist_coefficients...")
   atm_compute_moist_coefficients(cr, er)
+  format.println("Inside atm_srk3: done calling atm_compute_moist_coefficients...\n")
 
   ------------DYNAMICS SUB STEP LOOP ------------------------
   -- we ignore because assume no transport split (ie dynamics_split = 1, so we only loop once)
 
 
   --compute original vertical coefficients (for initial step)
+  format.println("Inside atm_srk3:  calling atm_compute_vert_imp_coefs...")
   atm_compute_vert_imp_coefs(cr, vert_r, rk_sub_timestep[0])
+  format.println("Inside atm_srk3: done calling atm_compute_vert_imp_coefs...\n")
 
 
 
@@ -414,15 +420,22 @@ do
   -----------------------------------------------------------
 
   for rk_step = 0, 3 do
-    cio.printf("\nRK STEP: %d\n", rk_step)
+    format.println("RK Step number: {} \n", rk_step)
+
     if rk_step == 1 then
       --recompute vertical coefficients, same ones for step 3
+      format.println("Inside atm_srk3: calling atm_compute_vert_imp_coefs...")
       atm_compute_vert_imp_coefs(cr, vert_r, rk_sub_timestep[rk_step])
+      format.println("Inside atm_srk3: done calling atm_compute_vert_imp_coefs...\n")
     end
 
+    format.println("Inside atm_srk3: calling atm_compute_dyn_tend...")
     atm_compute_dyn_tend(cr, er, vr, vert_r, rk_sub_timestep[rk_step], dt, constants.config_horiz_mixing, constants.config_mpas_cam_coef, constants.config_mix_full, constants.config_rayleigh_damp_u)
+    format.println("Inside atm_srk3: done calling atm_compute_dyn_tend...\n")
 
+    format.println("Inside atm_srk3: calling atm_set_smlstep_pert_variables...")
     atm_set_smlstep_pert_variables(cr, er, vert_r)
+    format.println("Inside atm_srk3: done calling atm_compute_dyn_tend...\n")
 
 
     -- SKIPPING if(config_apply_lbcs @ line 683)
@@ -432,13 +445,14 @@ do
     -------------------------------------
     for small_step = 0, number_sub_steps[rk_step] + 1 do
 
-      cio.printf("performing acoustic substeps within a rk step\n")
+      format.println("Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: {} \n", small_step)
 
       atm_advance_acoustic_step(cr, er, vert_r, rk_sub_timestep[rk_step], small_step)
 
       atm_divergence_damping_3d(cr, er, rk_sub_timestep[rk_step])
     end
 
+    --we need to fix this and comment in
     --atm_recover_large_step_variables(cr, er, vert_r, number_sub_steps[rk_step], rk_step, dt)
 
     -- SKIPPING if(config_apply_lbcs @ line 934)
@@ -453,7 +467,7 @@ do
     -- SKIPPING if(config_apply_lbcs @ line 1253)
 
     --for iEdge = 0, nEdges do
-    cio.printf("Horizontal normal velocity at Edge %d is %f\n", 0, er[{0, 0}].u)
+    format.println("Horizontal normal velocity at Edge {} is {} \n", 0, er[{0, 0}].u)
     --end
 
   end
@@ -466,7 +480,7 @@ do
 
   -- SKIPPING if (config_scalar_advection .and. config_split_dynamics_transport) @ 1355
 
-  mpas_reconstruct_2d(cr, er, false, true) --bools are includeHalos and on_a_sphere
+  --mpas_reconstruct_2d(cr, er, false, true) --bools are includeHalos and on_a_sphere
 
   -- SKIPPING physics @ line 1610
   -- SKIPPING if(config_apply_lbcs @ line 1672 & 1714)
@@ -491,6 +505,8 @@ where
   reads writes (cr, er, vr, vert_r)
 do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
+
+  format.println("Inside atm_timestep: about to call atm_srk3... \n")
 
   atm_srk3(cr, er, vr, vert_r, dt)
 

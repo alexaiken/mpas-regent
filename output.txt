@@ -1,0 +1,1081 @@
+Calling load mesh...
+Done calling load mesh...
+
+Calling init_atm_case_jw...
+Done calling init_atm_case_jw...
+
+Calling atm_core_init...
+Done calling atm_core_init...
+
+Calling atm_do_timestep...iteration 0 
+
+Calling atm_do_timestep...iteration 1 
+
+Calling atm_do_timestep...iteration 2 
+
+Calling atm_do_timestep...iteration 3 
+
+Calling atm_do_timestep...iteration 4 
+
+Calling atm_do_timestep...iteration 5 
+
+Calling atm_do_timestep...iteration 6 
+
+Calling atm_do_timestep...iteration 7 
+
+Calling atm_do_timestep...iteration 8 
+
+Calling atm_do_timestep...iteration 9 
+
+[0 - 7fe5aeb50780]    0.044327 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 0 of operation load_mesh (UID 3) in parent task main (UID 1) is using uninitialized data for field(s) 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,256,257,258,259,260,261,262,263,264,265,266,267,268,269,270,271,272,273,274,275,276,277,278,279,280,281,282,283,284,285,286,287,288,289,290,291,292,293,294,295,296,297,298,299,300,301,302,303,304,305,306,307,308,309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,324,325,326,327,328,329,330,331,332,333,334,335,336,337,338,339,340,341,342,343,344,345,346,347,348,349,350,351,352,353,354,355,356,357,358,359,360,361,362,363,364,365,366,367,368,369,370,371,372,373,374,375,376,377,378,379,380,381,382,383,384,385,386,387,388,389,390,391,392,393,394,395,396,397,398,399,400,401,402,403,404,405,406,407,408,409,410,411,412,413,414,415,416,417,418,419,420,421,422,423,424,425,426,427,428,429,430,431,432,433,434,435,436,437,438,439,440,441,442,443,444,445,446,447,448,449,450,451,452,453,454,455,456,457,458,459,460,461,462,463,464,465,466,467,468,469,470,471,472,473,474,475,476,477,478,479,480,481,482 of logical region (1,1,1) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.044410 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation load_mesh (UID 3) in parent task main (UID 1) is using uninitialized data for field(s) 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154 of logical region (2,2,2) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.044455 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 2 of operation load_mesh (UID 3) in parent task main (UID 1) is using uninitialized data for field(s) 101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118 of logical region (3,3,3) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Starting to read file... (in task load_mesh) 
+Successfully read file! (in task load_mesh) 
+[0 - 7fe5aeb50780]    0.194316 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 6 of operation init_atm_case_jw (UID 5) in parent task main (UID 1) is using uninitialized data for field(s) 101,102,103,104,105,109,110,111 of logical region (4,4,4) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.295363 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 0 of operation gffgch (UID 278) in parent task radaeini (UID 274) is using uninitialized data for field(s) 101,102 of logical region (7,5,5) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.307995 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 0 of operation gestbl (UID 471) in parent task esinti (UID 271) is using uninitialized data for field(s) 103,104,105,106,107,108,109,110,111,112,113,114,115 of logical region (7,5,5) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    0.366039 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 932) in parent task radctl (UID 916) is using uninitialized data for field(s) 102 of logical region (3566,13,13) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.368020 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 933) in parent task radctl (UID 916) is using uninitialized data for field(s) 101,103 of logical region (3566,13,13) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.368043 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 933) in parent task radctl (UID 916) is using uninitialized data for field(s) 101 of logical region (3567,14,14) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.368354 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 934) in parent task radctl (UID 916) is using uninitialized data for field(s) 105,106 of logical region (3566,13,13) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    0.401317 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 1074) in parent task radctl (UID 1058) is using uninitialized data for field(s) 102 of logical region (3574,21,21) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.402658 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 1075) in parent task radctl (UID 1058) is using uninitialized data for field(s) 101,103 of logical region (3574,21,21) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.402679 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 1075) in parent task radctl (UID 1058) is using uninitialized data for field(s) 101 of logical region (3575,22,22) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.402945 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 1076) in parent task radctl (UID 1058) is using uninitialized data for field(s) 105,106 of logical region (3574,21,21) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+[0 - 7fe5aeb50780]    0.421246 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation atm_srk3 (UID 1192) in parent task atm_timestep (UID 883) is using uninitialized data for field(s) 106,107,108 of logical region (4,4,4) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    0.536952 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 1338) in parent task radctl (UID 1322) is using uninitialized data for field(s) 102 of logical region (3582,29,29) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.538338 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 1339) in parent task radctl (UID 1322) is using uninitialized data for field(s) 101,103 of logical region (3582,29,29) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.538360 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 1339) in parent task radctl (UID 1322) is using uninitialized data for field(s) 101 of logical region (3583,30,30) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.538636 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 1340) in parent task radctl (UID 1322) is using uninitialized data for field(s) 105,106 of logical region (3582,29,29) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    0.570824 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 1480) in parent task radctl (UID 1464) is using uninitialized data for field(s) 102 of logical region (3590,37,37) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.572178 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 1481) in parent task radctl (UID 1464) is using uninitialized data for field(s) 101,103 of logical region (3590,37,37) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.572200 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 1481) in parent task radctl (UID 1464) is using uninitialized data for field(s) 101 of logical region (3591,38,38) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.572461 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 1482) in parent task radctl (UID 1464) is using uninitialized data for field(s) 105,106 of logical region (3590,37,37) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    0.700721 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 1744) in parent task radctl (UID 1728) is using uninitialized data for field(s) 102 of logical region (3598,45,45) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.702058 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 1745) in parent task radctl (UID 1728) is using uninitialized data for field(s) 101,103 of logical region (3598,45,45) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.702079 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 1745) in parent task radctl (UID 1728) is using uninitialized data for field(s) 101 of logical region (3599,46,46) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.702335 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 1746) in parent task radctl (UID 1728) is using uninitialized data for field(s) 105,106 of logical region (3598,45,45) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    0.729460 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 1886) in parent task radctl (UID 1870) is using uninitialized data for field(s) 102 of logical region (3606,53,53) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.730547 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 1887) in parent task radctl (UID 1870) is using uninitialized data for field(s) 101,103 of logical region (3606,53,53) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.730563 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 1887) in parent task radctl (UID 1870) is using uninitialized data for field(s) 101 of logical region (3607,54,54) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.730791 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 1888) in parent task radctl (UID 1870) is using uninitialized data for field(s) 105,106 of logical region (3606,53,53) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    0.853813 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 2150) in parent task radctl (UID 2134) is using uninitialized data for field(s) 102 of logical region (3614,61,61) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.855122 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 2151) in parent task radctl (UID 2134) is using uninitialized data for field(s) 101,103 of logical region (3614,61,61) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.855142 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 2151) in parent task radctl (UID 2134) is using uninitialized data for field(s) 101 of logical region (3615,62,62) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.855399 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 2152) in parent task radctl (UID 2134) is using uninitialized data for field(s) 105,106 of logical region (3614,61,61) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    0.882011 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 2292) in parent task radctl (UID 2276) is using uninitialized data for field(s) 102 of logical region (3622,69,69) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.883222 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 2293) in parent task radctl (UID 2276) is using uninitialized data for field(s) 101,103 of logical region (3622,69,69) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.883240 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 2293) in parent task radctl (UID 2276) is using uninitialized data for field(s) 101 of logical region (3623,70,70) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    0.883508 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 2294) in parent task radctl (UID 2276) is using uninitialized data for field(s) 105,106 of logical region (3622,69,69) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.006156 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 2556) in parent task radctl (UID 2540) is using uninitialized data for field(s) 102 of logical region (3630,77,77) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.007398 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 2557) in parent task radctl (UID 2540) is using uninitialized data for field(s) 101,103 of logical region (3630,77,77) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.007418 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 2557) in parent task radctl (UID 2540) is using uninitialized data for field(s) 101 of logical region (3631,78,78) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.007670 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 2558) in parent task radctl (UID 2540) is using uninitialized data for field(s) 105,106 of logical region (3630,77,77) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.034906 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 2698) in parent task radctl (UID 2682) is using uninitialized data for field(s) 102 of logical region (3638,85,85) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.036124 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 2699) in parent task radctl (UID 2682) is using uninitialized data for field(s) 101,103 of logical region (3638,85,85) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.036143 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 2699) in parent task radctl (UID 2682) is using uninitialized data for field(s) 101 of logical region (3639,86,86) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.036385 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 2700) in parent task radctl (UID 2682) is using uninitialized data for field(s) 105,106 of logical region (3638,85,85) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.167732 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 2962) in parent task radctl (UID 2946) is using uninitialized data for field(s) 102 of logical region (3646,93,93) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.169034 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 2963) in parent task radctl (UID 2946) is using uninitialized data for field(s) 101,103 of logical region (3646,93,93) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.169056 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 2963) in parent task radctl (UID 2946) is using uninitialized data for field(s) 101 of logical region (3647,94,94) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.169314 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 2964) in parent task radctl (UID 2946) is using uninitialized data for field(s) 105,106 of logical region (3646,93,93) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.193588 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 3104) in parent task radctl (UID 3088) is using uninitialized data for field(s) 102 of logical region (3654,101,101) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.194532 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 3105) in parent task radctl (UID 3088) is using uninitialized data for field(s) 101,103 of logical region (3654,101,101) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.194547 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 3105) in parent task radctl (UID 3088) is using uninitialized data for field(s) 101 of logical region (3655,102,102) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.194739 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 3106) in parent task radctl (UID 3088) is using uninitialized data for field(s) 105,106 of logical region (3654,101,101) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.314943 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 3368) in parent task radctl (UID 3352) is using uninitialized data for field(s) 102 of logical region (3662,109,109) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.316222 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 3369) in parent task radctl (UID 3352) is using uninitialized data for field(s) 101,103 of logical region (3662,109,109) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.316242 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 3369) in parent task radctl (UID 3352) is using uninitialized data for field(s) 101 of logical region (3663,110,110) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.316493 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 3370) in parent task radctl (UID 3352) is using uninitialized data for field(s) 105,106 of logical region (3662,109,109) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.340847 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 3510) in parent task radctl (UID 3494) is using uninitialized data for field(s) 102 of logical region (3670,117,117) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.342009 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 3511) in parent task radctl (UID 3494) is using uninitialized data for field(s) 101,103 of logical region (3670,117,117) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.342026 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 3511) in parent task radctl (UID 3494) is using uninitialized data for field(s) 101 of logical region (3671,118,118) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.342285 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 3512) in parent task radctl (UID 3494) is using uninitialized data for field(s) 105,106 of logical region (3670,117,117) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.457912 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 3774) in parent task radctl (UID 3758) is using uninitialized data for field(s) 102 of logical region (3678,125,125) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.459218 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 3775) in parent task radctl (UID 3758) is using uninitialized data for field(s) 101,103 of logical region (3678,125,125) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.459239 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 3775) in parent task radctl (UID 3758) is using uninitialized data for field(s) 101 of logical region (3679,126,126) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.459502 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 3776) in parent task radctl (UID 3758) is using uninitialized data for field(s) 105,106 of logical region (3678,125,125) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.484008 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 3916) in parent task radctl (UID 3900) is using uninitialized data for field(s) 102 of logical region (3686,133,133) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.485140 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 3917) in parent task radctl (UID 3900) is using uninitialized data for field(s) 101,103 of logical region (3686,133,133) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.485157 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 3917) in parent task radctl (UID 3900) is using uninitialized data for field(s) 101 of logical region (3687,134,134) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.485369 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 3918) in parent task radctl (UID 3900) is using uninitialized data for field(s) 105,106 of logical region (3686,133,133) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.598266 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 4180) in parent task radctl (UID 4164) is using uninitialized data for field(s) 102 of logical region (3694,141,141) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.599577 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 4181) in parent task radctl (UID 4164) is using uninitialized data for field(s) 101,103 of logical region (3694,141,141) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.599598 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 4181) in parent task radctl (UID 4164) is using uninitialized data for field(s) 101 of logical region (3695,142,142) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.599844 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 4182) in parent task radctl (UID 4164) is using uninitialized data for field(s) 105,106 of logical region (3694,141,141) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.623812 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 4322) in parent task radctl (UID 4306) is using uninitialized data for field(s) 102 of logical region (3702,149,149) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.624975 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 4323) in parent task radctl (UID 4306) is using uninitialized data for field(s) 101,103 of logical region (3702,149,149) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.624992 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 4323) in parent task radctl (UID 4306) is using uninitialized data for field(s) 101 of logical region (3703,150,150) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.625216 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 4324) in parent task radctl (UID 4306) is using uninitialized data for field(s) 105,106 of logical region (3702,149,149) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Inside atm_do_timestep...
+
+Calling physics_driver...
+Physics_driver done
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.746836 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 4586) in parent task radctl (UID 4570) is using uninitialized data for field(s) 102 of logical region (3710,157,157) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.748100 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 4587) in parent task radctl (UID 4570) is using uninitialized data for field(s) 101,103 of logical region (3710,157,157) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.748119 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 4587) in parent task radctl (UID 4570) is using uninitialized data for field(s) 101 of logical region (3711,158,158) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.748365 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 4588) in parent task radctl (UID 4570) is using uninitialized data for field(s) 105,106 of logical region (3710,157,157) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Calling driver_radiation_lw...
+Calling camrad...
+Camrad done
+Bad fact1 and/or fact2=-0.045,1.045
+[0 - 7fe5aeb50780]    1.772374 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 1 of operation radozn (UID 4728) in parent task radctl (UID 4712) is using uninitialized data for field(s) 102 of logical region (3718,165,165) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.773512 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation radinp (UID 4729) in parent task radctl (UID 4712) is using uninitialized data for field(s) 101,103 of logical region (3718,165,165) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.773530 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 4 of operation radinp (UID 4729) in parent task radctl (UID 4712) is using uninitialized data for field(s) 101 of logical region (3719,166,166) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+[0 - 7fe5aeb50780]    1.773786 {4}{runtime}: [warning 1071] LEGION WARNING: Region requirement 3 of operation aqsat (UID 4730) in parent task radctl (UID 4712) is using uninitialized data for field(s) 105,106 of logical region (3718,165,165) (from file /home/zengcs/legion/runtime/legion/legion_ops.cc:637)
+For more information see:
+http://legion.stanford.edu/messages/warning_code.html#warning_code_1071
+
+Inside atm_timestep: about to call atm_srk3... 
+
+Inside atm_srk3: calling atm_rk_integration_setup...
+Inside atm_srk3: done calling atm_rk_integration_setup...
+
+Inside atm_srk3: calling atm_compute_moist_coefficients...
+Inside atm_srk3: done calling atm_compute_moist_coefficients...
+
+Inside atm_srk3:  calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+RK Step number: 0 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 1 
+
+Inside atm_srk3: calling atm_compute_vert_imp_coefs...
+Inside atm_srk3: done calling atm_compute_vert_imp_coefs...
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+RK Step number: 2 
+
+Inside atm_srk3: calling atm_compute_dyn_tend...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: calling atm_set_smlstep_pert_variables...
+Inside atm_srk3: done calling atm_compute_dyn_tend...
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 0 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 1 
+
+Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: 2 
+
+Horizontal normal velocity at Edge 0 is 0.000000 
+
+summarizing timestep
+Starting to write netcdf file..
+Successfully written netcdf file!

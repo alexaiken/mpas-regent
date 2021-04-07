@@ -96,4 +96,10 @@ constants.plenest = 250             -- length of saturation vapor pressure table
 
 constants.config_dt = terralib.constant(double, 720.0)          -- Model time step, seconds
 
+
+-- Constants from atm_core_init
+constants.config_coef_3rd_order = 0.25
+constants.config_zd = 22000.0
+constants.config_xnutr = 0.2
+
 return constants

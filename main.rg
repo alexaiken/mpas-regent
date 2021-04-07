@@ -8,6 +8,7 @@ require "dynamics_tasks"
 require "rk_timestep"
 require "atm_core"
 local constants = require("constants")
+local format = require("std/format")
 
 terralib.linklibrary("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-zgdvh4hxthdhb3mlsviwhgatvbfnslog/lib/libnetcdf.so")
 
@@ -33,18 +34,24 @@ task main()
   var ozn_region = region(ozn_id_space, ozn_fs)
   var aerosol_region = region(aerosol_id_space, aerosol_fs)
 
-
+  format.println("Calling load mesh...")
   load_mesh(cell_region, edge_region, vertex_region, constants.FILE_NAME, constants.GRAPH_FILE_NAME)
+  format.println("Done calling load mesh...\n")
 
   --TODO: This doesn't actually return the halos yet (It creates them in the task but I haven't been able to return them). Need to return the halos.
   partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
 
+  format.println("Calling init_atm_case_jw...")
   init_atm_case_jw(cell_region, edge_region, vertex_region, vertical_region)
+  format.println("Done calling init_atm_case_jw...\n")
 
+  format.println("Calling atm_core_init...")
   atm_core_init(cell_region, edge_region, vertex_region, vertical_region, phys_tbls)
+  format.println("Done calling atm_core_init...\n")
 
   for i = 0, constants.NUM_TIMESTEPS do
-    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, phys_tbls, i)
+    format.println("Calling atm_do_timestep...iteration {} \n", i)
+    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, phys_tbls, constants.config_dt)
   end
 
   atm_compute_output_diagnostics(cell_region)

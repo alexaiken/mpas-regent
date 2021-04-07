@@ -31,7 +31,7 @@ do
     -------------------------------------------
     ----- READ VARIABLES FROM NETCDF FILE -----
     -------------------------------------------
-    constants.cio.printf("Starting to read file... \n")
+    constants.cio.printf("Starting to read file... (in task load_mesh) \n")
     var ncid : int
 
     -- Open the file and store the NCID
@@ -370,7 +370,7 @@ do
     constants.c.free(cellsOnVertex_in)
     constants.c.free(kiteAreasOnVertex_in)
 
-    constants.cio.printf("Successfully read file! \n")
+    constants.cio.printf("Successfully read file! (in task load_mesh) \n")
 end
 
 

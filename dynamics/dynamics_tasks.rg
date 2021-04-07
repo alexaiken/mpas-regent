@@ -51,7 +51,7 @@ where
   writes (cr.{edgesOnCellSign, kiteForCell, zb_cell, zb3_cell}, vr.edgesOnVertexSign)
 do
 
-  format.println("Calling atm_compute_signs...")
+  --format.println("Calling atm_compute_signs...")
 
   var vertex_range = rect2d { int2d {0, 0}, int2d {nVertices - 1, 0} }
   var cell_range_2d = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels} } -- Loop goes to nVertLevels + 1
@@ -138,7 +138,7 @@ where
   reads writes (er.{adv_coefs, adv_coefs_3rd, nAdvCellsForEdge})
 do
 
-  format.println("Calling atm_adv_coef_compression...")
+  --format.println("Calling atm_adv_coef_compression...")
 
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, 0} }
   var cell_list : int[maxEdges]
@@ -279,7 +279,7 @@ where
   reads writes (cr.dss)
 do
 
-  format.println("Calling atm_compute_damping_coefs...")
+  --format.println("Calling atm_compute_damping_coefs...")
 
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
 
@@ -307,7 +307,7 @@ where
   reads writes (cr.zb3_cell, er.adv_coefs_3rd)
 do
 
-  format.println("Calling atm_couple_coef_3rd_order...")
+  --format.println("Calling atm_couple_coef_3rd_order...")
 
   var edge_range = rect1d { 0, nEdges - 1 }
   for iEdge in edge_range do
@@ -336,7 +336,7 @@ where
   reads writes (cr.{divergence, ke}, er.{ke_edge, v}, vr.{ke_vertex, pv_vertex, vorticity})
 do
 
-  format.println("Calling atm_compute_solve_diagnostics...")
+  --format.println("Calling atm_compute_solve_diagnostics...")
 
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
@@ -465,7 +465,7 @@ where
   reads writes (cr.qtot)
 do
 
-  format.println("Calling atm_compute_moist_coefficients...")
+  --format.println("Calling atm_compute_moist_coefficients...")
 
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
@@ -519,7 +519,7 @@ where
   reads writes (cr.{a_tri, alpha_tri, b_tri, c_tri, coftz, cofwr, cofwt, cofwz, gamma_tri}, vert_r.cofrz)
 do
 
-  format.println("Calling atm_compute_vert_imp_coefs...")
+  --format.println("Calling atm_compute_vert_imp_coefs...")
 
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
   var cell_range_1d = rect2d { int2d {0, 0}, int2d {nCells - 1, 0} }
@@ -600,7 +600,7 @@ where
   writes (cr.meshScalingRegionalCell, er.{meshScalingDel2, meshScalingDel4, meshScalingRegionalEdge})
 do
 
-  format.println("Calling atm_compute_mesh_scaling...")
+  --format.println("Calling atm_compute_mesh_scaling...")
 
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, 0} }
   -- Compute the scaling factors to be used in the del2 and del4 dissipation
@@ -658,7 +658,7 @@ where
                 er.ru)
 do
 
-  format.println("Calling atm_init_coupled_diagnostics...")
+  --format.println("Calling atm_init_coupled_diagnostics...")
   var rgas = constants.rgas
   var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
@@ -728,7 +728,7 @@ where
   reads (cr.{pressure_base, pressure_p, rho_zz, theta_m, zz}),
   writes (cr.{pressure, rho, theta})
 do
-  format.println("Calling atm_compute_output_diagnostics...")
+  --format.println("Calling atm_compute_output_diagnostics...")
 
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
   for iCell in cell_range do
@@ -748,7 +748,7 @@ where
   writes (cr.{rho_p_save, rho_zz_2, rho_zz_old_split, rtheta_p_save, rw_save, theta_m_2, w_2}, er.{ru_save, u_2})
 do
 
-  format.println("Calling atm_rk_integration_setup...")
+  --format.println("Calling atm_rk_integration_setup...")
   var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
 
@@ -835,7 +835,7 @@ where
                 vr.delsq_vorticity)
 do
 
-  format.println("Calling atm_compute_dyn_tend_work...")
+  --format.println("Calling atm_compute_dyn_tend_work...")
 
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
@@ -1492,7 +1492,7 @@ where
   reads writes (cr, er, vr, vert_r)
 do
 
-  format.println("Calling atm_compute_dyn_tend_work...")
+  --format.println("Calling atm_compute_dyn_tend_work...")
   atm_compute_dyn_tend_work(cr, er, vr, vert_r, rk_step, dt, config_horiz_mixing, config_mpas_cam_coef, config_mix_full, config_rayleigh_damp_u)
 end
 
@@ -1506,7 +1506,7 @@ where
   reads writes (cr.w)
 do
 
-  format.println("Calling atm_set_smlstep_pert_variables_work...")
+  --format.println("Calling atm_set_smlstep_pert_variables_work...")
 
   var cell_range = rect2d { int2d {0, 1}, int2d {nCells - 1, nVertLevels - 1} } --All vertical loops in the original code go from 2 to nVertLevels
 
@@ -1531,7 +1531,6 @@ where
   reads writes (cr, er, vert_r)
 do
 
-  cio.printf("set small step vars\n")
   atm_set_smlstep_pert_variables_work(cr, er, vert_r)
 end
 
@@ -1558,7 +1557,7 @@ where
                 er.{ruAvg, ru_p})
 do
 
-  format.println("Calling atm_advance_acoustic_step_work...")
+  --format.println("Calling atm_advance_acoustic_step_work...")
 
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
   var cell_range_P1 = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels} }
@@ -1574,7 +1573,7 @@ do
   var rs : double[nVertLevels]
   var ts : double[nVertLevels]
 
-  format.println("Calling atm_advance_acoustic_step_work...")
+  --format.println("Calling atm_advance_acoustic_step_work...")
 
   if (small_step ~= 0) then -- not needed on first small step
     -- forward-backward acoustic step integration.
@@ -1712,7 +1711,7 @@ where
   reads writes (er, cr, vert_r)
 do
 
-  cio.printf("advancing acoustic step\n")
+  --cio.printf("advancing acoustic step\n")
   atm_advance_acoustic_step_work(cr, er, vert_r, dts, small_step)
 end
 
@@ -1729,7 +1728,7 @@ where
   reads writes (er.ru_p)
 do
 
-  format.println("Calling atm_divergence_damping_3d...")
+  --format.println("Calling atm_divergence_damping_3d...")
 
   var smdiv = constants.config_smdiv
   var rdts = 1.0 / dts
@@ -1825,6 +1824,9 @@ do
   -- we solved for these in the acoustic-step loop.
   -- we will compute ru and u here also, given we are here, even though we only need them on nEdgesSolve
 
+  --format.println("er[{0, 0}].ru: {}, cr[{0, 0}].rho_zz: {}, cr[{0, 0}].rho_zz: {}, \n", er[{0, 0}].ru, cr[{0, 0}].rho_zz, cr[{0, 0}].rho_zz)
+  format.println("er[{0, 0}].ru: {}, cr[{0, 0}].rho_zz: {}, cr[{0, 0}].rho_zz: {}, \n", 1, 2, 3)
+
   for iEdge in edge_range do
     var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]
     var cell2 = er[{iEdge.x, 0}].cellsOnEdge[1]
@@ -1894,7 +1896,7 @@ where
   reads writes (cr.{uReconstructX, uReconstructY, uReconstructZ})
 do
 
-  format.println("Calling mpas_reconstruct_2d...")
+  --format.println("Calling mpas_reconstruct_2d...")
 
   -- The Fortran code has includeHalos as an optional argument. For now, we will make it mandatory,
   -- and pass in false whenever it is not passed in in the Fortran code.
@@ -1951,7 +1953,7 @@ where
   reads writes (cr.{wwAvg, wwAvg_split}, er.{ruAvg, ruAvg_split})
 do
 
-  format.println("Calling atm_rk_dynamics_substep_finish...")
+  --format.println("Calling atm_rk_dynamics_substep_finish...")
   var inv_dynamics_split = 1.0 / [double](dynamics_split)
   var edge_range = rect2d { int2d{0, 0}, int2d{nEdges - 1, nVertLevels - 1} }
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
