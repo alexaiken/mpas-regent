@@ -17,7 +17,7 @@ First, get Elliott / Prof Aiken to invite you to Sapling. Follow the instruction
 
 
 ## Running regent-mpas in Sapling
-First, clone the github repo: 
+After logging on to Sapling, clone the github repo: 
 ```
 https://github.com/alexaiken/mpas-regent.git
 ```
