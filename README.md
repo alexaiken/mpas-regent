@@ -8,7 +8,7 @@ The link is [here](https://drive.google.com/drive/folders/1d3mViA53ELeKhiph5kzJn
 
 The [user guide](http://www2.mmm.ucar.edu/projects/mpas/mpas_atmosphere_users_guide_7.0.pdf) is also very helpful. It is also in the google drive. Pages 65-69 are particularly useful for understanding the Voronoi mesh, as well as making sense of the variables in the mesh files. It might also provide some motivation for why we designed the data structures the way we did.
 
-When you get to the stage where you want to understand the MPAS codebase, we have a [tracker] (https://docs.google.com/spreadsheets/d/1rf_1s_YfJ-4ThYmug9zu-Pdwg-W61qAWo3WoAsnKXho/edit#gid=79033180) and a [google doc](https://docs.google.com/document/d/1yF4sEZyL1xUkHHfx-uYcRANpZyboRIZo3iiaydksnlw/edit). The google doc is slightly outdated as of April 2021.
+When you get to the stage where you want to understand the MPAS codebase, we have a [tracker](https://docs.google.com/spreadsheets/d/1rf_1s_YfJ-4ThYmug9zu-Pdwg-W61qAWo3WoAsnKXho/edit#gid=79033180) and a [google doc](https://docs.google.com/document/d/1yF4sEZyL1xUkHHfx-uYcRANpZyboRIZo3iiaydksnlw/edit). The google doc is slightly outdated as of April 2021.
 
 
 ## Getting set up on Sapling
