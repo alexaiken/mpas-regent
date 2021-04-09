@@ -300,15 +300,16 @@ task aqsat(cr : region(ispace(int2d), cell_fs),
            phys_tbls : region(ispace(int1d), phys_tbls_fs),
            camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
            radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
-           ilen : int,           -- Length of vectors in I direction which
+           ilen : int,          -- Length of vectors in I direction which
            klen : int)          -- Length of K direction
 where
-  reads (camrad_2d_r.t, phys_tbls),
+  reads (camrad_2d_r.t, phys_tbls.{tmin, tmax, estbl}),
   reads writes (
     camrad_2d_r.pmid,
     radctl_2d_pverr_r.{esat, qsat}
   )
 do
+  format.println("{}, {}", klen, ilen)
   var omeps = 1.0 - constants.ep_2
   var k : int
   var i : int

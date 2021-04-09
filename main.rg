@@ -31,6 +31,11 @@ task main()
   var vertex_region = region(vertex_id_space, vertex_fs)
   var vertical_region = region(vertical_id_space, vertical_fs)
   var phys_tbls = region(ispace(int1d, 1), phys_tbls_fs)
+  fill(phys_tbls.tmin, 0.0)
+  fill(phys_tbls.tmax, 0.0)
+  for i = 0, constants.plenest do
+    phys_tbls[0].estbl[i] = 0.0
+  end
   var ozn_region = region(ozn_id_space, ozn_fs)
   var aerosol_region = region(aerosol_id_space, aerosol_fs)
 
