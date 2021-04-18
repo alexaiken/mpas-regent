@@ -1,9 +1,9 @@
 ## Resources to learn about MPAS
-I would start by going [to the MPAS website](https://mpas-dev.github.io/) and poking around, especially the links about the atmospheric model.
+Start by going [to the MPAS website](https://mpas-dev.github.io/) and poking around, especially the links about the atmospheric model.
 
 Then, you can skim through the [tutorial](http://www2.mmm.ucar.edu/projects/mpas/tutorial/Boulder2019/index.html). File 4 in particular is very helpful for understanding the mesh structure.
 
-I have uploaded a Google Drive folder with a bunch of PDFs I found helpful to understand things. The tutorial PDFs are also located there.
+There is a Google Drive folder with a bunch of PDFs you may find helpful to understand things. The tutorial PDFs are also located there.
 The link is [here](https://drive.google.com/drive/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W?usp=sharing).
 
 The [user guide](http://www2.mmm.ucar.edu/projects/mpas/mpas_atmosphere_users_guide_7.0.pdf) is also very helpful. It is also in the google drive. Pages 65-69 are particularly useful for understanding the Voronoi mesh, as well as making sense of the variables in the mesh files. It might also provide some motivation for why we designed the data structures the way we did.
@@ -13,7 +13,7 @@ When you get to the stage where you want to understand the MPAS codebase, we hav
 
 ## Getting set up on Sapling
 
-First, get Elliott / Prof Aiken to invite you to Sapling. Follow the instructions [here](https://github.com/StanfordLegion/sapling-guide) to understand how to set up your Sapling account.
+First, get Elliott / Prof. Aiken to invite you to Sapling. Follow the instructions [here](https://github.com/StanfordLegion/sapling-guide) to understand how to set up your Sapling account.
 
 
 ## Running regent-mpas in Sapling
@@ -35,7 +35,7 @@ cd mpas-regent
 
 You have to run this in your `mpas-regent` folder, because we use relative paths to access some of the helper files.
  
-Please also add the following to your `~/.bash_profile` so that terra knows where to look for the files we "require". You will need to edit some of the filepaths depending on how you saves mpas-regent - I have it in a file called regent_project_2020, for e.g. - you should remove that otherwise. 
+Please also add the following to your `~/.bash_profile` so that terra knows where to look for the files we "require". You will need to edit some of the filepaths depending on how you saves mpas-regent.
 
 ```
 export TERRA_PATH="$HOME/mpas-regent/mesh_loading/?.rg;$HOME/mpas-regent/dynamics/?.rg;$HOME/mpas-regent/?.rg;$HOME/mpas-regent/vertical_init/?.rg"
@@ -125,7 +125,7 @@ If you'd like to partition the cells into N partitions, you run `gpmetis graph.i
 
 This file has `nCells` rows, and each row has a number from `0-(N-1)`, which I assume to mean the partition that each cell is split into. 
 
-I have a task called `read_file` in `mesh_loading.rg` that parses this graph.info file and returns an array where each element is the partition number of that cell index. We then assign this partition number to the cell and partition in regent based on this.
+There is a task called `read_file` in `mesh_loading.rg` that parses this graph.info file and returns an array where each element is the partition number of that cell index. We then assign this partition number to the cell and partition in regent based on this.
 
 We also create halo regions around each partition.
 `partition_s_1` is the immediate ring around each partition, i.e. 10 neighbour cells
@@ -134,7 +134,7 @@ We also create halo regions around each partition.
 `partition_halo_1` is just the inner halo, so it is `partition_s_1 - cell_partition_initial`
 and `partition_halo_2` is the outer halo, so it is `partition_s2  - partition_halo_1 - cell_partition_initial`.
 
-To understand the halo code, I would recommend reading the sections about images and preimages at the [Regent reference] (http://regent-lang.org/reference/).  (And ask any questions that may come up, it's a little confusing).
+To understand the halo code, you can read the sections about images and preimages at the [Regent reference] (http://regent-lang.org/reference/).  (And ask any questions that may come up, it's a little confusing).
 
 You can also read about dependent partitioning [here](https://drive.google.com/drive/u/1/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W).
 
