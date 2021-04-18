@@ -33,7 +33,7 @@ cd mpas-regent
 /home/zengcs/regent ~/mpas-regent/main.rg
 ```
 
-You have to run this in your `regent-mpas` folder, because we use relative paths to access some of the helper files.
+You have to run this in your `mpas-regent` folder, because we use relative paths to access some of the helper files.
  
 Please also add the following to your `~/.bash_profile` so that terra knows where to look for the files we "require". You will need to edit some of the filepaths depending on how you saves mpas-regent - I have it in a file called regent_project_2020, for e.g. - you should remove that otherwise. 
 
