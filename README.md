@@ -1,7 +1,7 @@
 ## Resources to learn about MPAS
-Start by going [to the MPAS website](https://mpas-dev.github.io/) and poking around, especially the links about the atmospheric model.
+First, start by going [to the MPAS website](https://mpas-dev.github.io/) and poking around, especially the links about the atmospheric model.
 
-Then, you can skim through the [tutorial](http://www2.mmm.ucar.edu/projects/mpas/tutorial/Boulder2019/index.html). File 4 in particular is very helpful for understanding the mesh structure.
+Then, skim through the [tutorial](http://www2.mmm.ucar.edu/projects/mpas/tutorial/Boulder2019/index.html). File 4 in particular is very helpful for understanding the mesh structure.
 
 There is a Google Drive folder with a bunch of PDFs you may find helpful to understand things. The tutorial PDFs are also located there.
 The link is [here](https://drive.google.com/drive/folders/1d3mViA53ELeKhiph5kzJndGQwXw7zL_W?usp=sharing).
@@ -123,7 +123,7 @@ In the grid folder that you download, there is a `.graph.info` file. The graph.i
 
 If you'd like to partition the cells into N partitions, you run `gpmetis graph.info N`, which creates a file `graph.info.part.N`. 
 
-This file has `nCells` rows, and each row has a number from `0-(N-1)`, which I assume to mean the partition that each cell is split into. 
+This file has `nCells` rows, and each row has a number from `0-(N-1)`, which presumably is the partition that each cell is split into. 
 
 There is a task called `read_file` in `mesh_loading.rg` that parses this graph.info file and returns an array where each element is the partition number of that cell index. We then assign this partition number to the cell and partition in regent based on this.
 
