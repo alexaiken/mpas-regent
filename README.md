@@ -89,7 +89,7 @@ ln -s ${HOME}/MPAS-Model/atmosphere_model .
 ./atmosphere_model
 ```
 
-This might take a while, I think I went away for dinner for an hour and came back. Eventually, I had this output:
+This might take a while, perhaps up to an hour. Eventually, you should expect this output:
 ![Output from atmosphere core](images/atmosphere_output.png)
 
 Step 6: Install ncl following the instructions [here](https://www.ncl.ucar.edu/Download/conda.shtml):
