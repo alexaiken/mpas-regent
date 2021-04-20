@@ -50,29 +50,24 @@ task radctl(cr : region(ispace(int2d), cell_fs),
             lwcf : region(ispace(int1d), double),
             flut : region(ispace(int1d), double))
 where reads writes (
-        camrad_1d_r.lwups,
-        camrad_2d_r.{pmid, pint, t, qrs}, 
-        --phys_tbls.{tmin, tmax, estbl},
+        camrad_1d_r.{fsds, fsnt, fsns, flnt, flns, flwds, lwups},
+        camrad_2d_r.{pmid, pint, t, qrs, fsup, fsupc, fsdn, fsdnc, flup, flupc, fldn, fldnc},
         qm1,
         ozmixmj, ozmix,
         pin,
         m_psp, m_psn,
         aerosoljp, aerosoljn,
-        m_hybi
+        m_hybi,
+        flut
       ),
       reads (
-        phys_tbls.{tmin, tmax, estbl}
+        phys_tbls.{tmin, tmax, estbl, idxVOLC}
       ),
       writes (
         camrad_2d_r.pmid,
         ozmix,
         swcf,
         lwcf
-      ),
-      reads writes (
-        camrad_1d_r.{fsds, fsnt, fsns, flnt, flns, flwds},
-        camrad_2d_r.{fsup, fsupc, fsdn, fsdnc, flup, flupc, fldn, fldnc},
-        flut
       )
 do
 
@@ -122,9 +117,9 @@ do
   get_int_scales() -- TODO
 
   -- TODO
-  --get_aerosol(cr, phys_tbls, camrad_1d_r, camrad_2d_r, lchnk, julian, m_psp, m_psn, 
-  --            aerosoljp, aerosoljn, m_hybi, paerlev, 
-  --            pcols, pver, pverp, pverr, pverrp, aerosol, scales)
+  get_aerosol(cr, phys_tbls, camrad_1d_r, camrad_2d_r, lchnk, julian, m_psp, m_psn, 
+              aerosoljp, aerosoljn, m_hybi, paerlev, 
+              pcols, pver, pverp, pverr, pverrp, aerosol, scales)
 
   aerosol_indirect() -- TODO
 
@@ -226,6 +221,7 @@ do
 
   fill(camrad_2d_r.pint, 0.0)
   fill(camrad_2d_r.pmid, 0.0)
+  fill(camrad_2d_r.t, 0.0)
 
   -----------------------------
 
