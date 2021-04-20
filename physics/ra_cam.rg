@@ -116,10 +116,7 @@ do
 
   get_int_scales() -- TODO
 
-  -- TODO
-  get_aerosol(cr, phys_tbls, camrad_1d_r, camrad_2d_r, lchnk, julian, m_psp, m_psn, 
-              aerosoljp, aerosoljn, m_hybi, paerlev, 
-              pcols, pver, pverp, pverr, pverrp, aerosol, scales)
+  get_aerosol() -- TODO
 
   aerosol_indirect() -- TODO
 
