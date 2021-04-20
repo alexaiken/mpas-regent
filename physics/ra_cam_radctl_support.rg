@@ -3,6 +3,8 @@ require "data_structures"
 
 local constants = require("constants")
 local c = regentlib.c
+local inf = 1.0/0.0
+local format = require("std/format")
 
 fabs = regentlib.fabs(double)
 floor = regentlib.floor(double)
@@ -132,6 +134,7 @@ end
 --
 -- Method: Use pressure values to determine interpolation levels
 task radozn(cr : region(ispace(int2d), cell_fs),
+            camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
             radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
             ncol : int,     -- number of atmospheric columns
             pcols : int,
@@ -140,7 +143,7 @@ task radozn(cr : region(ispace(int2d), cell_fs),
             levsiz : int,                            -- number of ozone layers
             ozmix : region(ispace(int2d), double))   -- ozone mixing ratio
 where
-  reads (cr.pmid, pin, ozmix),
+  reads (camrad_2d_r.pmid, pin, ozmix),
   writes (radctl_2d_pverr_r.o3vmr)
 do
   --
@@ -168,7 +171,7 @@ do
     var iter_done : bool = false
     for kk=kkstart, levsiz - 1 do
       for i=0, ncol do
-        if ((pin[kk] < cr[{i, k}].pmid) and (cr[{i, k}].pmid < pin[kk + 1])) then
+        if ((pin[kk] < camrad_2d_r[{i, k}].pmid) and (camrad_2d_r[{i, k}].pmid < pin[kk + 1])) then
           kupper[i] = kk
           kount = kount + 1
         end
@@ -181,8 +184,8 @@ do
       if (kount == ncol) then
         iter_done = true
         for i=0, ncol do
-          var dpu : double = cr[{i, k}].pmid - pin[kupper[i]]
-          var dpl : double = pin[kupper[i] + 1] - cr[{i, k}].pmid
+          var dpu : double = camrad_2d_r[{i, k}].pmid - pin[kupper[i]]
+          var dpl : double = pin[kupper[i] + 1] - camrad_2d_r[{i, k}].pmid
           radctl_2d_pverr_r[{i, k}].o3vmr = (ozmix[{i, kupper[i]}] * dpl + ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
         end
         break
@@ -196,13 +199,13 @@ do
       -- of the longitude points.
       --
       for i=0, ncol do
-        if (cr[{i, k}].pmid < pin[0]) then
-          radctl_2d_pverr_r[{i, k}].o3vmr = ozmix[{i, 0}] * cr[{i, k}].pmid / pin[0]
-        elseif (cr[{i, k}].pmid > pin[levsiz]) then
+        if (camrad_2d_r[{i, k}].pmid < pin[0]) then
+          radctl_2d_pverr_r[{i, k}].o3vmr = ozmix[{i, 0}] * camrad_2d_r[{i, k}].pmid / pin[0]
+        elseif (camrad_2d_r[{i, k}].pmid > pin[levsiz]) then
           radctl_2d_pverr_r[{i, k}].o3vmr = ozmix[{i, levsiz}]
         else
-          var dpu : double = cr[{i, k}].pmid - pin[kupper[i]]
-          var dpl : double = pin[kupper[i] + 1] - cr[{i, k}].pmid
+          var dpu : double = camrad_2d_r[{i, k}].pmid - pin[kupper[i]]
+          var dpl : double = pin[kupper[i] + 1] - camrad_2d_r[{i, k}].pmid
           radctl_2d_pverr_r[{i, k}].o3vmr = (ozmix[{i, kupper[i]}] * dpl + ozmix[{i, kupper[i] + 1}] * dpu) / (dpl + dpu)
         end
       end
@@ -222,20 +225,21 @@ end
 --
 -- NOTE: variable eccf is unused everywhere, so not included in regent version
 task radinp(cr : region(ispace(int2d), cell_fs),
+            camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
             radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
-            radctl_2d_pverrp_r : region(ispace(int2d), radctl_2d_pverrp_fs),
             ncol : int,         -- number of atmospheric columns
             pver : int,
-            pverp : int)
+            pverp : int,
+            pnm : region(ispace(int2d), double))
 where
   reads (
-    cr.{pmid, pint}, 
+    camrad_2d_r.{pmid, pint}, 
     radctl_2d_pverr_r.o3vmr
   ),
   writes (
-    cr.pmid,
+    camrad_2d_r.pmid,
     radctl_2d_pverr_r.{pbr, o3mmr}, 
-    radctl_2d_pverrp_r.pnm
+    pnm
   )
 do
   ---------------------------Local variables-----------------------------
@@ -250,12 +254,12 @@ do
   -- Convert pressure from pascals to dynes/cm2
   for k=0, pver do
     for i=0, ncol do
-        radctl_2d_pverr_r[{i, k}].pbr = cr[{i, k}].pmid * 10.0
-        radctl_2d_pverrp_r[{i, k}].pnm = cr[{i, k}].pint * 10.0
+        radctl_2d_pverr_r[{i, k}].pbr = camrad_2d_r[{i, k}].pmid * 10.0
+        pnm[{i, k}] = camrad_2d_r[{i, k}].pint * 10.0
       end
   end
   for i=0, ncol do
-    radctl_2d_pverrp_r[{i, pverp}].pnm = cr[{i, pverp}].pint * 10.0
+    pnm[{i, pverp}] = camrad_2d_r[{i, pverp}].pint * 10.0
   end
 
   -- Convert ozone volume mixing ratio to mass mixing ratio:
@@ -294,29 +298,31 @@ end
 -- vertical.
 task aqsat(cr : region(ispace(int2d), cell_fs),
            phys_tbls : region(ispace(int1d), phys_tbls_fs),
+           camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
            radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
-           ilen : int,           -- Length of vectors in I direction which
+           ilen : int,          -- Length of vectors in I direction which
            klen : int)          -- Length of K direction
 where
-  reads (cr.t, phys_tbls),
+  reads (camrad_2d_r.t, phys_tbls.{tmin, tmax, estbl}),
   reads writes (
-    cr.pmid,
+    camrad_2d_r.pmid,
     radctl_2d_pverr_r.{esat, qsat}
   )
 do
+  format.println("{}, {}", klen, ilen)
   var omeps = 1.0 - constants.ep_2
   var k : int
   var i : int
   for k = 0, klen do
     for i = 0, ilen do
-      radctl_2d_pverr_r[{i, k}].esat = estblf(cr[{i, k}].t, phys_tbls)
+      radctl_2d_pverr_r[{i, k}].esat = estblf(camrad_2d_r[{i, k}].t, phys_tbls)
 
       --
       -- Saturation specific humidity
       --
       radctl_2d_pverr_r[{i, k}].qsat = 
         constants.ep_2 * radctl_2d_pverr_r[{i, k}].esat 
-        / (cr[{i, k}].pmid - omeps * radctl_2d_pverr_r[{i, k}].esat)
+        / (camrad_2d_r[{i, k}].pmid - omeps * radctl_2d_pverr_r[{i, k}].esat)
 
       --
       -- The following check is to avoid the generation of negative values
@@ -326,13 +332,209 @@ do
 
       if (radctl_2d_pverr_r[{i, k}].qsat < 0.0) then
         radctl_2d_pverr_r[{i, k}].qsat = 1.0
-        radctl_2d_pverr_r[{i, k}].esat = cr[{i, k}].pmid
+        radctl_2d_pverr_r[{i, k}].esat = camrad_2d_r[{i, k}].pmid
       end
     end
   end
 end
 
-task get_rf_scales()
+-- From MPAS-Model/src/core_atmosphere/physics/physics_wrf/module_ra_cam_support.F
+--
+-- Input: match surface pressure, cam interface pressure,
+--        month index, number of columns, chunk index
+--
+-- Output: Aerosol mass mixing ratio (AEROSOL_mmr)
+--
+-- Method:
+--         interpolate column mass (cumulative) from match onto
+--           cam's vertical grid (pressure coordinate)
+--         convert back to mass mixing ratio
+--
+task vert_interpolate(cr : region(ispace(int2d), cell_fs),              -- surface pressure at a particular month
+                      phys_tbls : region(ispace(int1d), phys_tbls_fs),
+                      camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
+                      Match_ps : region(ispace(int1d), double),
+                      aerosolc : region(ispace(int3d), double),
+                      m_hybi : region(ispace(int1d), double),
+                      paerlev : int,
+                      AEROSOL_mmr : region(ispace(int3d), double),      -- aerosol mmr from MATCH
+                      pcols : int,
+                      pver : int,
+                      pverp : int,
+                      ncol : int)       -- chunk index and number of columns
+where
+  reads (
+    camrad_2d_r.pint,                            -- interface pressure from CAM
+    phys_tbls.idxVOLC,
+    Match_ps,
+    aerosolc,
+    m_hybi
+  ),
+  writes (
+    AEROSOL_mmr
+  )
+do
+
+  format.println("Calling vert_interpolate...")
+
+  -----------------------------Local variables-----------------------------
+
+  var m : int                           -- index to aerosol species
+  var kupper = region(ispace(int1d, pcols), int)   -- last upper bound for interpolation
+  var i : int                           -- loop vars for interpolation
+  var k : int 
+  var kk : int
+  var kkstart : int 
+  var kount : int
+  var isv : int                         -- loop indices to save
+  var ksv : int 
+  var msv : int            
+
+  var bad : bool                        -- indicates a bad point found
+  var lev_interp_comp : bool            -- interpolation completed for a level
+
+  var AEROSOL = region(ispace(int3d, {pcols,pverp,constants.naer}), double)  
+                                        -- cumulative mass of aerosol in column beneath upper
+                                        -- interface of level in column at particular month
+  var dpl : double                      -- lower and upper intepolation factors
+  var dpu : double
+  var v_coord : double                  -- vertical coordinate
+  var m_to_mmr : double                 -- mass to mass mixing ratio conversion factor
+  var AER_diff : double                 -- temp var for difference between aerosol masses
+
+  -------------------------------------------------------------------------
+
+  -- Initialize index array
+  for i = 0, ncol do
+    kupper[i] = 1
+  end
+
+  format.println("Calling vert_interpolate... 1")
+
+  -- assign total mass to topmost level   
+  for i = 0, ncol do
+    for m = 0, constants.naer do
+      format.println("{} {} : {}", i, m, pcols)
+      AEROSOL[{i,0,m}] = aerosolc[{i,0,m}]
+    end
+  end
+
+  format.println("Calling vert_interpolate... 2")
+
+  -- At every pressure level, interpolate onto that pressure level
+  for k = 1, pver do
+
+    -- Top level we need to start looking is the top level for the previous k
+    -- for all longitude points
+
+    kkstart = paerlev
+    for i = 0, ncol do
+      kkstart = min(kkstart, kupper[i])
+    end
+    kount = 0
+
+    -- Store level indices for interpolation
+
+    -- for the pressure interpolation should be comparing
+    -- pint(column,lev) with m_hybi(lev)*M_ps_cam_col(month,column,chunk)
+
+    lev_interp_comp = false
+    for kk = kkstart, paerlev - 1 do
+      if (not lev_interp_comp) then
+        for i = 0, ncol do
+          v_coord = camrad_2d_r[{i,k}].pint
+          if (m_hybi[kk] * Match_ps[i] < v_coord and 
+              v_coord <= m_hybi[kk + 1] * Match_ps[i]) then
+            kupper[i] = kk
+            kount = kount + 1
+          end
+        end
+
+        -- If all indices for this level have been found, do the interpolation and
+        -- go to the next level
+
+        -- Interpolate in pressure.
+        if (kount == ncol) then
+          for i = 0, ncol do
+            for m = 0, constants.naer do
+              dpu = camrad_2d_r[{i,k}].pint - m_hybi[kupper[i]] * Match_ps[i]
+              dpl = m_hybi[kupper[i]+1] * Match_ps[i] - camrad_2d_r[{i,k}].pint
+              AEROSOL[{i,k,m}] =
+                (aerosolc[{i, kupper[i], m}] * dpl +
+                aerosolc[{i, kupper[i] + 1, m}] * dpu) / (dpl + dpu)
+            end
+          end
+          lev_interp_comp = true
+        end
+      end
+    end
+
+    -- If we've fallen through the kk=1,levsiz-1 loop, we cannot interpolate and
+    -- must extrapolate from the bottom or top pressure level for at least some
+    -- of the longitude points.
+
+    if(not lev_interp_comp) then
+      for i = 0, ncol do
+        for m = 1, constants.naer do
+          if (camrad_2d_r[{i,k}].pint < m_hybi[0] * Match_ps[i]) then
+            AEROSOL[{i,k,m}] =  aerosolc[{i,0,m}]
+          elseif (camrad_2d_r[{i,k}].pint > m_hybi[paerlev] * Match_ps[i]) then
+            AEROSOL[{i,k,m}] = 0.0
+          else
+            dpu = camrad_2d_r[{i,k}].pint - m_hybi[kupper[i]] * Match_ps[i]
+            dpl = m_hybi[kupper[i] + 1] * Match_ps[i] - camrad_2d_r[{i,k}].pint
+            AEROSOL[{i,k,m}] =
+              (aerosolc[{i, kupper[i], m}] * dpl +
+              aerosolc[{i, kupper[i] + 1, m}] * dpu) / (dpl + dpu)
+          end
+        end
+      end
+    end
+  end
+
+  format.println("Calling vert_interpolate... 3")
+  
+  -- aerosol mass beneath lowest interface (pverp) must be 0
+  for m = 0, constants.naer do
+    for i = 0, ncol do
+      AEROSOL[{i, pverp, m}] = 0.
+    end
+  end
+
+  format.println("Calling vert_interpolate... 4")
+
+  -- Set mass in layer to zero whenever it is less than
+  -- 1.e-40 kg/m^2 in the layer
+  for cell in AEROSOL do
+    if (AEROSOL[{i,k,m}] < 1.e-40) then
+      AEROSOL[{i,k,m}] = 0.
+    end
+  end
+
+  -- Set mass in layer to zero whenever it is less than
+  --   10^-15 relative to column total mass
+  -- convert back to mass mixing ratios.
+  -- exit if mmr is negative
+  for m = 0, constants.naer do
+    for k = 0, pver do
+      for i = 0, ncol do
+        AER_diff = AEROSOL[{i,k,m}] - AEROSOL[{i,k+1,m}]
+        if (fabs(AER_diff) < 1e-15 * AEROSOL[{i,0,m}]) then
+          AER_diff = 0.
+        end
+        m_to_mmr = constants.gravity / (camrad_2d_r[{i,k+1}].pint - camrad_2d_r[{i,k}].pint)
+        AEROSOL_mmr[{i,k,m}] = AER_diff * m_to_mmr
+      end
+    end
+  end
+  
+  format.println("Ending vert_interpolate...")
+end
+
+task background()
+end
+
+task scale_aerosols()
 end
 
 task get_aerosol()
