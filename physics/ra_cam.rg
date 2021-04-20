@@ -143,13 +143,13 @@ where
 do
   -----------------------------Local variables-----------------------------
 
-  var lchnk : int = 10
-  var ncol : int = 10
-  var pcols : int = 10
-  var pver : int = 10
-  var pverp : int = 10
-  var pverr : int = 10
-  var pverrp : int = 10
+  var lchnk : int = 10     -- TODO: TEMP
+  var ncol : int = 10      -- TODO: TEMP
+  var pcols : int = 10     -- TODO: TEMP
+  var pver : int = 10      -- TODO: TEMP
+  var pverp : int = 10     -- TODO: TEMP
+  var pverr : int = 10     -- TODO: TEMP
+  var pverrp : int = 10    -- TODO: TEMP
 
   var pcnst : int
   var pnats : int
@@ -216,6 +216,7 @@ do
   var absnxt = region(ispace(int3d, {constants.nCells, constants.nVertLevels, 4}), double) -- Total nearest layer absorptivity
   var emstot = region(ispace(int2d, {constants.nCells, constants.nVertLevels + 1}), double) -- Total emissivity
 
+  -- TODO: temp
   fill(camrad_2d_r.pint, 0.0)
   fill(camrad_2d_r.pmid, 0.0)
   fill(camrad_2d_r.t, 0.0)
