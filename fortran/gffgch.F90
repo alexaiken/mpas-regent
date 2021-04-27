@@ -4,9 +4,9 @@ PROGRAM Program
    integer, parameter :: r8 = 8
    real, parameter :: tmelt = 273.16
 
-   real(r8) :: a
-   real(r8) :: b
-   integer  :: c
+   real(r8) :: a = 1.0
+   real(r8) :: b = 2.0
+   integer  :: c = 3
    CALL gffgch(a, b, c)
 
 CONTAINS

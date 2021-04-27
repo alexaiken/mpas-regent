@@ -21,7 +21,7 @@ local blas = terralib.includecstring [[
                      int *itype,
                      float *es);
 ]]
-regentlib.linklibrary("/home/zengcs/mpas/mpas-regent/fortran/libgffgch.a")
+regentlib.linklibrary("/home/zengcs/mpas/mpas-regent/fortran/libgffgch.so")
 
 terra gffgch_terra(t : double,
                    es_i : int,
