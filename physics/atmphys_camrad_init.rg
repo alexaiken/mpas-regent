@@ -15,6 +15,32 @@ fspace doublefield {
   x         : double;
 }
 
+
+local blas = terralib.includecstring [[
+  extern void gffgch(float *t,
+                     int *itype,
+                     float *es);
+]]
+regentlib.linklibrary("/home/zengcs/mpas/mpas-regent/fortran/libgffgch.a")
+
+terra gffgch_terra(t : double,
+                   es_i : int,
+                   itype : double)
+  var t_ : double[1], es_i_ : int[1], itype_ : double[1]
+  t_[0], es_i_[0], itype_[0] = t, es_i, itype
+
+  blas.gffgch_(t_, es_i_, itype_)
+end
+
+task gffgch(phys_tbls : region(ispace(int1d), phys_tbls_fs),
+            t : double,
+            es_i : int,
+            itype : double,
+            set_estblh2o : bool)
+  gffgch_terra(t, es_i, itype)
+end
+
+
 -- Purpose: 
 -- Computes saturation vapor pressure over water and/or over ice using
 -- Goff & Gratch (1946) relationships. 
@@ -34,11 +60,11 @@ fspace doublefield {
 -- degrees c, the saturation vapor pressures are assumed to be a weighted
 -- average of the vapor pressure over supercooled water and ice (all
 -- water at 0 c; all ice at -itype c).  Maximum transition range => 40 c
-task gffgch(phys_tbls : region(ispace(int1d), phys_tbls_fs),
-            t : double,
-            es_i : int,
-            itype : double,
-            set_estblh2o : bool)
+task gffgch_ported(phys_tbls : region(ispace(int1d), phys_tbls_fs),
+                   t : double,
+                   es_i : int,
+                   itype : double,
+                   set_estblh2o : bool)
 where
   reads writes (phys_tbls.{estbl, estblh2o})
 do

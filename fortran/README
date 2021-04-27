@@ -1,0 +1,3 @@
+To compile: 
+
+gfortran -shared -fPIC -o libgffgch.so gffgch.F90
