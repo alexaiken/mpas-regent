@@ -229,6 +229,18 @@ do
             --constants.cio.printf("verticesOnCell : Cell %d, Vertex %d: Vertex index is %d\n", i, j, cell_region[{i, 0}].verticesOnCell[j])
             --constants.cio.printf("cellsOnCell : InnerCell %d, OuterCell %d: Cell index is %d\n", i, j, cell_region[{i, 0}].cellsOnCell[j])
         end
+
+        cell_region[{i, 0}].edgesOnCell0 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[0])
+        cell_region[{i, 0}].edgesOnCell1 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[1])
+        cell_region[{i, 0}].edgesOnCell2 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[2])
+        cell_region[{i, 0}].edgesOnCell3 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[3])
+        cell_region[{i, 0}].edgesOnCell4 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[4])
+        cell_region[{i, 0}].edgesOnCell5 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[5])
+        cell_region[{i, 0}].edgesOnCell6 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[6])
+        cell_region[{i, 0}].edgesOnCell7 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[7])
+        cell_region[{i, 0}].edgesOnCell8 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[8])
+        cell_region[{i, 0}].edgesOnCell9 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[9])
+
         --constants.cio.printf("Cell : Cell ID %d, nEdgesOnCell is %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].nEdgesOnCell)
     end
 
@@ -378,15 +390,82 @@ end
 ------- TASK: PARTITION REGIONS  --------
 -----------------------------------------------
 
---input: cell_region, edge_region, vertex_region,
---return: cell_partition_initial, partition_s_1, partition_halo_1, partition_halo_2
+--input: cell_region, edge_region, vertex_region
+--return: cell_partition_fs containing private, shared, and ghost partitions for one and two layers.
 task partition_regions(num_partitions : int, cell_region : region(ispace(int2d), cell_fs), edge_region : region(ispace(int2d), edge_fs), vertex_region : region(ispace(int2d), vertex_fs))
 where
     reads writes (cell_region, edge_region, vertex_region)
 do
 
+    var color_space = ispace(int1d, num_partitions)
+    var p = partition(cell_region.partitionNumber, color_space) -- Original partition based on Metis
+
+    var e0 = image(edge_region, p, cell_region.edgesOnCell0)
+    var e1 = image(edge_region, p, cell_region.edgesOnCell1)
+    var e2 = image(edge_region, p, cell_region.edgesOnCell2)
+    var e3 = image(edge_region, p, cell_region.edgesOnCell3)
+    var e4 = image(edge_region, p, cell_region.edgesOnCell4)
+    var e5 = image(edge_region, p, cell_region.edgesOnCell5)
+    var e6 = image(edge_region, p, cell_region.edgesOnCell6)
+    var e7 = image(edge_region, p, cell_region.edgesOnCell7)
+    var e8 = image(edge_region, p, cell_region.edgesOnCell8)
+    var e9 = image(edge_region, p, cell_region.edgesOnCell9)
+    var e = e0 | e1 | e2 | e3 | e4 | e5 | e6 | e7 | e8 | e9
+
+    var ep_out = preimage(edge_region, e, edge_region.cellOne) -- This should get all edges with cellOne in p, partitioned by cellOne (which cell "originated" it)
+    var ep_in = preimage(edge_region, e, edge_region.cellTwo) -- This should get all edges with cellTwo in p, partitioned by cellTwo (which cell it "points to")
+    var cp_out = image(cell_region, ep_out, edge_region.cellTwo) -- This gets the destination cells of all edges in ep_out
+    var cp_in = image(cell_region, ep_in, edge_region.cellOne) -- This gets the source cells of all edges in ep_in
+    -- At this point, cp_out | cp_in should contain the entire first halo layer.
+    var ghost_1 = (cp_in | cp_out) - p
+
+    -- Calculate second halo
+    var ghost_1_and_p = ghost_1 | p
+    var gep_out = preimage(edge_region, ghost_1_and_p, edge_region.cellOne)
+    var gep_in = preimage(edge_region, ghost_1_and_p, edge_region.cellTwo)
+    var gcp_out = image(cell_region, gep_out, edge_region.cellTwo)
+    var gcp_in = image(cell_region, gep_in, edge_region.cellOne)
+    var ghost_2 = (gcp_in | gcp_out) - p -- First and second halo layers
+
+    -- Compute all cells reachable from ghost_1. shared_1 is intersection of that set with p
+    var s1ep_out = preimage(edge_region, ghost_1, edge_region.cellOne)
+    var s1ep_in = preimage(edge_region, ghost_1, edge_region.cellTwo)
+    var s1cp_out = image(cell_region, s1ep_out, edge_region.cellTwo)
+    var s1cp_in = image(cell_region, s1ep_in, edge_region.cellOne)
+    var shared_1 = p & (s1cp_out | s1cp_in) -- Cells in p bordering ghost_1
+    var private_1 = p - shared_1 -- all cells in p that are not in shared_1
+
+    -- shared_2 contains shared_1 and all cells in p bordering shared_1
+    var s2ep_out = preimage(edge_region, shared_1, edge_region.cellOne)
+    var s2ep_in = preimage(edge_region, shared_1, edge_region.cellTwo)
+    var s2cp_out = image(cell_region, s2ep_out, edge_region.cellTwo)
+    var s2cp_in = image(cell_region, s2ep_in, edge_region.cellOne)
+    var shared_2 = dynamic_cast(partition(disjoint, cell_region, color_space), (shared_1 | (private_1 & (s2cp_out | s2cp_in)))) -- Cells in p bordering ghost_1
+    var private_2 = private_1 - shared_2 -- all cells in private_1 that are not in shared_2
+
+    for i = 0, constants.nEdges do
+        edge_region[{i, 0}].cellOne = dynamic_cast(ptr(cell_fs, private_1, shared_1, ghost_1), edge_region[{i, 0}].cellsOnEdge[0])
+        edge_region[{i, 0}].cellTwo = dynamic_cast(ptr(cell_fs, private_1, shared_1, ghost_1), edge_region[{i, 0}].cellsOnEdge[1])
+    end
+
+    --Print out first neighbour partition to check against the original partition
+    --i = 0
+    --for p in cell_partition_neighbor0.colors do
+    --    var sub_region = cell_partition_neighbor0[p]
+    --    format.println("Sub region {}", i)
+    --    for cell in sub_region do
+    --        format.println("{}", cell.cellID)
+    --    end
+    --    i=i+1
+    --end
 
 
+    return [cell_partition_fs(cell_region)] {
+        private_1, shared_1, ghost_1, private_2, shared_2, ghost_2
+    }
+
+    
+    -- Deprecated code below --
     -----------------------------------
     ----- Copy Neighbours -----
     -----------------------------------
@@ -520,7 +599,7 @@ do
     -----------------------------------------------
 
     --Create initial partition based on METIS graph partition
-    var color_space = ispace(int1d, num_partitions)
+    --var color_space = ispace(int1d, num_partitions)
     var cell_partition_initial = partition(complete, cell_region.partitionNumber, color_space)
 
     --Create dependent partitions based on neighbour fields
@@ -676,17 +755,7 @@ do
     --    i=i+1
     --end
 
-    --Print out first neighbour partition to check against the original partition
-    --i = 0
-    --for p in cell_partition_neighbor0.colors do
-    --    var sub_region = cell_partition_neighbor0[p]
-    --    constants.cio.printf("Sub region %d\n", i)
-    --    for cell in sub_region do
-    --        constants.cio.printf("%d\n", cell.cellID)
-    --    end
-    --    i=i+1
-    --end
-
+    
 end
 
 ----------------------------------------------------

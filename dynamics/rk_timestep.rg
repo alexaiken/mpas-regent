@@ -362,6 +362,7 @@ task atm_srk3(cr : region(ispace(int2d), cell_fs),
               er : region(ispace(int2d), edge_fs),
               vr : region(ispace(int2d), vertex_fs),
               vert_r : region(ispace(int1d), vertical_fs),
+              cp : cell_partition_fs(cr),
               dt : double)
 where
   reads writes (cr, er, vr, vert_r)
@@ -500,14 +501,13 @@ task atm_timestep(cr : region(ispace(int2d), cell_fs),
                   er : region(ispace(int2d), edge_fs),
                   vr : region(ispace(int2d), vertex_fs),
                   vert_r : region(ispace(int1d), vertical_fs),
+                  cp : cell_partition_fs(cr),
                   dt : double)
 where
   reads writes (cr, er, vr, vert_r)
 do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 
-  format.println("Inside atm_timestep: about to call atm_srk3... \n")
-
-  atm_srk3(cr, er, vr, vert_r, dt)
+  atm_srk3(cr, er, vr, vert_r, cp, dt)
 
 end

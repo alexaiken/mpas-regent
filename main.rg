@@ -43,8 +43,7 @@ task main()
   load_mesh(cell_region, edge_region, vertex_region, constants.FILE_NAME, constants.GRAPH_FILE_NAME)
   format.println("Done calling load mesh...\n")
 
-  --TODO: This doesn't actually return the halos yet (It creates them in the task but I haven't been able to return them). Need to return the halos.
-  partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
+  var cell_partition_fs = partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
 
   format.println("Calling init_atm_case_jw...")
   init_atm_case_jw(cell_region, edge_region, vertex_region, vertical_region)
@@ -55,8 +54,12 @@ task main()
   format.println("Done calling atm_core_init...\n")
 
   for i = 0, constants.NUM_TIMESTEPS do
+<<<<<<< HEAD
     format.println("Calling atm_do_timestep...iteration {} \n", i)
     atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, phys_tbls, constants.config_dt)
+=======
+    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, cell_partition_fs, phys_tbls, i)
+>>>>>>> Mesh loading compiles with partitions
   end
 
   atm_compute_output_diagnostics(cell_region)

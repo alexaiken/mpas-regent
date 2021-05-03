@@ -43,6 +43,7 @@ task atm_do_timestep(cr : region(ispace(int2d), cell_fs),
                      er : region(ispace(int2d), edge_fs),
                      vr : region(ispace(int2d), vertex_fs),
                      vert_r : region(ispace(int1d), vertical_fs),
+                     cp : cell_partition_fs(cr),
                      phys_tbls : region(ispace(int1d), phys_tbls_fs),
                      dt : double)
 where 
@@ -57,5 +58,5 @@ do
   physics_driver(cr, phys_tbls)
   --end
 
-  atm_timestep(cr, er, vr, vert_r, dt)
+  atm_timestep(cr, er, vr, vert_r, cp, dt)
 end
