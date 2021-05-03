@@ -54,12 +54,8 @@ task main()
   format.println("Done calling atm_core_init...\n")
 
   for i = 0, constants.NUM_TIMESTEPS do
-<<<<<<< HEAD
     format.println("Calling atm_do_timestep...iteration {} \n", i)
-    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, phys_tbls, constants.config_dt)
-=======
     atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, cell_partition_fs, phys_tbls, i)
->>>>>>> Mesh loading compiles with partitions
   end
 
   atm_compute_output_diagnostics(cell_region)

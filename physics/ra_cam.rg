@@ -1,6 +1,6 @@
 import "regent"
 require "data_structures"
-require "physics_data_structures"
+require "physics/physics_data_structures"
 require "physics/ra_cam_cld_support"
 require "physics/ra_cam_radctl_support"
 
