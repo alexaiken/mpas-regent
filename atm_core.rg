@@ -8,12 +8,15 @@ local format = require("std/format")
 
 --__demand(__cuda)
 task atm_core_init(cr : region(ispace(int2d), cell_fs),
+                   cpr : region(ispace(int2d), cell_fs),
+                   csr : region(ispace(int2d), cell_fs),
+                   cgr : region(ispace(int2d), cell_fs),
                    er : region(ispace(int2d), edge_fs),
                    vr : region(ispace(int2d), vertex_fs),
                    vert_r : region(ispace(int1d), vertical_fs),
                    phys_tbls : region(ispace(int1d), phys_tbls_fs))
 where 
-  reads writes (cr, er, vr, vert_r, phys_tbls) 
+  reads writes (cr, cpr, csr, cgr, er, vr, vert_r, phys_tbls) 
 do
   atm_compute_signs(cr, er, vr)
 
@@ -32,7 +35,7 @@ do
   physics_init(cr, er, phys_tbls)
   -- endif
 
-  atm_compute_mesh_scaling(cr, er, true)
+  atm_compute_mesh_scaling(cr, cpr, csr, cgr, er, true)
 
   --config_zd: default 22000.0, config_xnutr: default 0.2. From config
   atm_compute_damping_coefs(constants.config_zd, constants.config_xnutr, cr)
@@ -40,15 +43,17 @@ do
 end
 
 task atm_do_timestep(cr : region(ispace(int2d), cell_fs),
+                     cpr : region(ispace(int2d), cell_fs),
+                     csr : region(ispace(int2d), cell_fs),
+                     cgr : region(ispace(int2d), cell_fs),
                      er : region(ispace(int2d), edge_fs),
                      vr : region(ispace(int2d), vertex_fs),
                      vert_r : region(ispace(int1d), vertical_fs),
-                     cp : cell_partition_fs(cr),
                      phys_tbls : region(ispace(int1d), phys_tbls_fs),
                      dt : double)
 where 
   reads (phys_tbls),
-  reads writes (cr, er, vr, vert_r) 
+  reads writes (cr, cpr, csr, cgr, er, vr, vert_r) 
 do
 
   format.println("Inside atm_do_timestep...\n")
@@ -58,5 +63,5 @@ do
   physics_driver(cr, phys_tbls)
   --end
 
-  atm_timestep(cr, er, vr, vert_r, cp, dt)
+  atm_timestep(cr, cpr, csr, cgr, er, vr, vert_r, dt)
 end

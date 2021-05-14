@@ -593,6 +593,9 @@ end
 
 __demand(__cuda)
 task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs),
+                              cpr : region(ispace(int2d), cell_fs),
+                              csr : region(ispace(int2d), cell_fs),
+                              cgr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs),
                               config_h_ScaleWithMesh : bool)
 where
@@ -611,8 +614,9 @@ do
 
   if (config_h_ScaleWithMesh) then
     for iEdge in edge_range do
-      var cell1 = er[iEdge].cellsOnEdge[0]
-      var cell2 = er[iEdge].cellsOnEdge[1]
+      var cell1 = er[iEdge].cellOne
+      var cell2 = er[iEdge].cellTwo
+      -- Syntax: cell1.meshDensity
       er[iEdge].meshScalingDel2 = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
       er[iEdge].meshScalingDel4 = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
     end
@@ -631,8 +635,8 @@ do
 
   if (config_h_ScaleWithMesh) then
     for iEdge in edge_range do
-      var cell1 = er[iEdge].cellsOnEdge[0]
-      var cell2 = er[iEdge].cellsOnEdge[1]
+      var cell1 = er[iEdge].cellOne
+      var cell2 = er[iEdge].cellTwo
       er[iEdge].meshScalingRegionalEdge = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
     end
 

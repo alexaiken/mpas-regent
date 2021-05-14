@@ -359,13 +359,15 @@ do
 end
 
 task atm_srk3(cr : region(ispace(int2d), cell_fs),
+              cpr : region(ispace(int2d), cell_fs),
+              csr : region(ispace(int2d), cell_fs),
+              cgr : region(ispace(int2d), cell_fs),
               er : region(ispace(int2d), edge_fs),
               vr : region(ispace(int2d), vertex_fs),
               vert_r : region(ispace(int1d), vertical_fs),
-              cp : cell_partition_fs(cr),
               dt : double)
 where
-  reads writes (cr, er, vr, vert_r)
+  reads writes (cr, cpr, csr, cgr, er, vr, vert_r)
 do
 
   -- 2 is default value from Registry.xml
@@ -498,16 +500,18 @@ end
 
 --__demand(__cuda)
 task atm_timestep(cr : region(ispace(int2d), cell_fs),
+                  cpr : region(ispace(int2d), cell_fs),
+                  csr : region(ispace(int2d), cell_fs),
+                  cgr : region(ispace(int2d), cell_fs),
                   er : region(ispace(int2d), edge_fs),
                   vr : region(ispace(int2d), vertex_fs),
                   vert_r : region(ispace(int1d), vertical_fs),
-                  cp : cell_partition_fs(cr),
                   dt : double)
 where
-  reads writes (cr, er, vr, vert_r)
+  reads writes (cr, cpr, csr, cgr, er, vr, vert_r)
 do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 
-  atm_srk3(cr, er, vr, vert_r, cp, dt)
+  atm_srk3(cr, cpr, csr, cgr, er, vr, vert_r, dt)
 
 end

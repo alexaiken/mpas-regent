@@ -3,6 +3,7 @@ import "regent"
 require "data_structures"
 require "netcdf_tasks"
 local constants = require("constants")
+local format = require("std/format")
 
 terralib.linklibrary("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-zgdvh4hxthdhb3mlsviwhgatvbfnslog/lib/libnetcdf.so")
 
@@ -230,16 +231,7 @@ do
             --constants.cio.printf("cellsOnCell : InnerCell %d, OuterCell %d: Cell index is %d\n", i, j, cell_region[{i, 0}].cellsOnCell[j])
         end
 
-        cell_region[{i, 0}].edgesOnCell0 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[0])
-        cell_region[{i, 0}].edgesOnCell1 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[1])
-        cell_region[{i, 0}].edgesOnCell2 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[2])
-        cell_region[{i, 0}].edgesOnCell3 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[3])
-        cell_region[{i, 0}].edgesOnCell4 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[4])
-        cell_region[{i, 0}].edgesOnCell5 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[5])
-        cell_region[{i, 0}].edgesOnCell6 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[6])
-        cell_region[{i, 0}].edgesOnCell7 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[7])
-        cell_region[{i, 0}].edgesOnCell8 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[8])
-        cell_region[{i, 0}].edgesOnCell9 = dynamic_cast(ptr(edge_fs, edge_region), cell_region[{i, 0}].edgesOnCell[9])
+        
 
         --constants.cio.printf("Cell : Cell ID %d, nEdgesOnCell is %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].nEdgesOnCell)
     end
@@ -412,6 +404,11 @@ do
     var e9 = image(edge_region, p, cell_region.edgesOnCell9)
     var e = e0 | e1 | e2 | e3 | e4 | e5 | e6 | e7 | e8 | e9
 
+    for i = 0, constants.nEdges do
+        edge_region[{i, 0}].cellOne = dynamic_cast(ptr, dynamic_cast(ptr(cell_fs, cell_region), ptr(edge_region[{i, 0}].cellsOnEdge[0])))
+        edge_region[{i, 0}].cellTwo = dynamic_cast(ptr, dynamic_cast(ptr(cell_fs, cell_region), ptr(edge_region[{i, 0}].cellsOnEdge[1])))
+    end
+
     var ep_out = preimage(edge_region, e, edge_region.cellOne) -- This should get all edges with cellOne in p, partitioned by cellOne (which cell "originated" it)
     var ep_in = preimage(edge_region, e, edge_region.cellTwo) -- This should get all edges with cellTwo in p, partitioned by cellTwo (which cell it "points to")
     var cp_out = image(cell_region, ep_out, edge_region.cellTwo) -- This gets the destination cells of all edges in ep_out
@@ -443,21 +440,8 @@ do
     var shared_2 = dynamic_cast(partition(disjoint, cell_region, color_space), (shared_1 | (private_1 & (s2cp_out | s2cp_in)))) -- Cells in p bordering ghost_1
     var private_2 = private_1 - shared_2 -- all cells in private_1 that are not in shared_2
 
-    for i = 0, constants.nEdges do
-        edge_region[{i, 0}].cellOne = dynamic_cast(ptr(cell_fs, private_1, shared_1, ghost_1), edge_region[{i, 0}].cellsOnEdge[0])
-        edge_region[{i, 0}].cellTwo = dynamic_cast(ptr(cell_fs, private_1, shared_1, ghost_1), edge_region[{i, 0}].cellsOnEdge[1])
-    end
-
     --Print out first neighbour partition to check against the original partition
-    --i = 0
-    --for p in cell_partition_neighbor0.colors do
-    --    var sub_region = cell_partition_neighbor0[p]
-    --    format.println("Sub region {}", i)
-    --    for cell in sub_region do
-    --        format.println("{}", cell.cellID)
-    --    end
-    --    i=i+1
-    --end
+    --format.println({}, private_1[0])
 
 
     return [cell_partition_fs(cell_region)] {
