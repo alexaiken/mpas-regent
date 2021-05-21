@@ -367,7 +367,8 @@ task atm_srk3(cr : region(ispace(int2d), cell_fs),
               vert_r : region(ispace(int1d), vertical_fs),
               dt : double)
 where
-  reads writes (cr, cpr, csr, cgr, er, vr, vert_r)
+  reads writes (cr, er, vr, vert_r),
+  cpr <= cr, csr <= cr, cgr <= cr
 do
 
   -- 2 is default value from Registry.xml
@@ -508,7 +509,8 @@ task atm_timestep(cr : region(ispace(int2d), cell_fs),
                   vert_r : region(ispace(int1d), vertical_fs),
                   dt : double)
 where
-  reads writes (cr, cpr, csr, cgr, er, vr, vert_r)
+  reads writes (cr, er, vr, vert_r),
+  cpr <= cr, csr <= cr, cgr <= cr
 do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 

@@ -599,7 +599,7 @@ task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs),
                               config_h_ScaleWithMesh : bool)
 where
-  reads (cr.meshDensity, er.cellsOnEdge),
+  reads (cr.meshDensity, er.{cellsOnEdge, cellOne, cellTwo}),
   writes (cr.meshScalingRegionalCell, er.{meshScalingDel2, meshScalingDel4, meshScalingRegionalEdge})
 do
 

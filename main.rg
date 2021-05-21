@@ -54,9 +54,9 @@ task main()
     atm_core_init(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls)
     format.println("Done calling atm_core_init...\n")
 
-    for i = 0, constants.NUM_TIMESTEPS do
-      format.println("Calling atm_do_timestep...iteration {} \n", i)
-      atm_do_timestep(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls, i)
+    for j = 0, constants.NUM_TIMESTEPS do
+      format.println("Calling atm_do_timestep...iteration {} \n", j)
+      atm_do_timestep(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls, j)
     end
   end
 

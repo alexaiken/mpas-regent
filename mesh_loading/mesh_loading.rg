@@ -231,7 +231,16 @@ do
             --constants.cio.printf("cellsOnCell : InnerCell %d, OuterCell %d: Cell index is %d\n", i, j, cell_region[{i, 0}].cellsOnCell[j])
         end
 
-        
+        cell_region[{i, 0}].edgesOnCell0 = ptr(cell_region[{i, 0}].edgesOnCell[0])
+        cell_region[{i, 0}].edgesOnCell1 = ptr(cell_region[{i, 0}].edgesOnCell[1])
+        cell_region[{i, 0}].edgesOnCell2 = ptr(cell_region[{i, 0}].edgesOnCell[2])
+        cell_region[{i, 0}].edgesOnCell3 = ptr(cell_region[{i, 0}].edgesOnCell[3])
+        cell_region[{i, 0}].edgesOnCell4 = ptr(cell_region[{i, 0}].edgesOnCell[4])
+        cell_region[{i, 0}].edgesOnCell5 = ptr(cell_region[{i, 0}].edgesOnCell[5])
+        cell_region[{i, 0}].edgesOnCell6 = ptr(cell_region[{i, 0}].edgesOnCell[6])
+        cell_region[{i, 0}].edgesOnCell7 = ptr(cell_region[{i, 0}].edgesOnCell[7])
+        cell_region[{i, 0}].edgesOnCell8 = ptr(cell_region[{i, 0}].edgesOnCell[8])
+        cell_region[{i, 0}].edgesOnCell9 = ptr(cell_region[{i, 0}].edgesOnCell[9])
 
         --constants.cio.printf("Cell : Cell ID %d, nEdgesOnCell is %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].nEdgesOnCell)
     end
@@ -405,8 +414,10 @@ do
     var e = e0 | e1 | e2 | e3 | e4 | e5 | e6 | e7 | e8 | e9
 
     for i = 0, constants.nEdges do
-        edge_region[{i, 0}].cellOne = dynamic_cast(ptr, dynamic_cast(ptr(cell_fs, cell_region), ptr(edge_region[{i, 0}].cellsOnEdge[0])))
-        edge_region[{i, 0}].cellTwo = dynamic_cast(ptr, dynamic_cast(ptr(cell_fs, cell_region), ptr(edge_region[{i, 0}].cellsOnEdge[1])))
+        for j = 0, 1 do
+            edge_region[{i, j}].cellOne = ptr(edge_region[{i, 0}].cellsOnEdge[0])
+            edge_region[{i, j}].cellTwo = ptr(edge_region[{i, 0}].cellsOnEdge[1])
+        end
     end
 
     var ep_out = preimage(edge_region, e, edge_region.cellOne) -- This should get all edges with cellOne in p, partitioned by cellOne (which cell "originated" it)
@@ -441,8 +452,14 @@ do
     var private_2 = private_1 - shared_2 -- all cells in private_1 that are not in shared_2
 
     --Print out first neighbour partition to check against the original partition
-    --format.println({}, private_1[0])
+    format.println("printing private_1[0]")
+    for x in private_1[0] do
+        format.println("{}", x)
+    end
+    format.println("done")
 
+    format.println("Private 1[0] volume {}", private_1[0].volume)
+    format.println("Private2[0] volume {}", private_2[0].volume)
 
     return [cell_partition_fs(cell_region)] {
         private_1, shared_1, ghost_1, private_2, shared_2, ghost_2

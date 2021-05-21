@@ -16,7 +16,8 @@ task atm_core_init(cr : region(ispace(int2d), cell_fs),
                    vert_r : region(ispace(int1d), vertical_fs),
                    phys_tbls : region(ispace(int1d), phys_tbls_fs))
 where 
-  reads writes (cr, cpr, csr, cgr, er, vr, vert_r, phys_tbls) 
+  reads writes (cr, er, vr, vert_r, phys_tbls),
+  cpr <= cr, csr <= cr, cgr <= cr
 do
   atm_compute_signs(cr, er, vr)
 
@@ -53,7 +54,8 @@ task atm_do_timestep(cr : region(ispace(int2d), cell_fs),
                      dt : double)
 where 
   reads (phys_tbls),
-  reads writes (cr, cpr, csr, cgr, er, vr, vert_r) 
+  reads writes (cr, er, vr, vert_r),
+  cpr <= cr, csr <= cr, cgr <= cr
 do
 
   format.println("Inside atm_do_timestep...\n")
