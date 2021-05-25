@@ -1,6 +1,8 @@
 import "regent"
 require "data_structures"
 
+local c = regentlib.c
+local format = require("std/format")
 local constants = require("constants")
 
 -- Math library imports
@@ -15,29 +17,103 @@ fspace doublefield {
   x         : double;
 }
 
+function raw_ptr_factory(ty)
+  local struct raw_ptr
+  {
+    ptr : &ty,
+    offset : int,
+  }
+  return raw_ptr
+end
 
-local blas = terralib.includecstring [[
-  extern void gffgch(float *t,
-                     int *itype,
-                     float *es);
+local raw_ptr_int = raw_ptr_factory(int)
+local raw_ptr_float = raw_ptr_factory(float)
+
+terra get_raw_ptr_int(y : int, x : int, bn : int,
+                  pr : c.legion_physical_region_t,
+                  fld : c.legion_field_id_t)
+  var fa = c.legion_physical_region_get_field_accessor_array_1d(pr, fld)
+  var rect : c.legion_rect_1d_t
+  var subrect : c.legion_rect_1d_t
+  var offsets : c.legion_byte_offset_t[2]
+  rect.lo.x[0] = y * bn
+  rect.lo.x[1] = x * bn
+  rect.hi.x[0] = (y + 1) * bn - 1
+  rect.hi.x[1] = (x + 1) * bn - 1
+  var ptr = c.legion_accessor_array_1d_raw_rect_ptr(fa, rect, &subrect, offsets)
+  c.legion_accessor_array_1d_destroy(fa)
+  return raw_ptr_int { ptr = [&int](ptr), offset = offsets[1].offset / sizeof(int) }
+end
+
+terra get_raw_ptr_float(y : int, x : int, bn : int,
+                  pr : c.legion_physical_region_t,
+                  fld : c.legion_field_id_t)
+  var fa = c.legion_physical_region_get_field_accessor_array_1d(pr, fld)
+  var rect : c.legion_rect_1d_t
+  var subrect : c.legion_rect_1d_t
+  var offsets : c.legion_byte_offset_t[2]
+  rect.lo.x[0] = y * bn
+  rect.lo.x[1] = x * bn
+  rect.hi.x[0] = (y + 1) * bn - 1
+  rect.hi.x[1] = (x + 1) * bn - 1
+  var ptr = c.legion_accessor_array_1d_raw_rect_ptr(fa, rect, &subrect, offsets)
+  c.legion_accessor_array_1d_destroy(fa)
+  return raw_ptr_float { ptr = [&float](ptr), offset = offsets[1].offset / sizeof(float) }
+end
+
+local fortranmodule = terralib.includecstring [[
+  extern void gffgch_(float *t,
+                      float *es,
+                      int *itype);
 ]]
 regentlib.linklibrary("/home/zengcs/mpas/mpas-regent/fortran/libgffgch.so")
 
-terra gffgch_terra(t : double,
-                   es_i : int,
-                   itype : double)
-  var t_ : double[1], es_i_ : int[1], itype_ : double[1]
-  t_[0], es_i_[0], itype_[0] = t, es_i, itype
+terra gffgch_terra(t : float,
+                   pr_itype : c.legion_physical_region_t,
+                   fld_itype : c.legion_field_id_t,
+                   pr_es : c.legion_physical_region_t,
+                   fld_es : c.legion_field_id_t,
+                   es_i : int)
+  var t_ : float[1]
+  t_[0] = t
 
-  blas.gffgch_(t_, es_i_, itype_)
+  var rawItype = get_raw_ptr_int(0, 0, 0, pr_itype, fld_itype)
+  var rawEs = get_raw_ptr_float(0, 0, 0, pr_es, fld_es)
+
+  fortranmodule.gffgch_(t_, rawEs.ptr + 2 * es_i, rawItype.ptr)
 end
 
 task gffgch(phys_tbls : region(ispace(int1d), phys_tbls_fs),
-            t : double,
+            t : float,
             es_i : int,
-            itype : double,
-            set_estblh2o : bool)
-  gffgch_terra(t, es_i, itype)
+            use_estblh2o : bool,
+            use_estbl : bool)
+where
+  reads writes (phys_tbls.{itype, estbl, estblh2o})
+do
+  format.println("es_i: {}", es_i)
+
+  if use_estblh2o then 
+    gffgch_terra(t, 
+                 __physical(phys_tbls.itype)[0], __fields(phys_tbls.itype)[0],
+                 __physical(phys_tbls.estblh2o)[0], __fields(phys_tbls.estblh2o)[0], 
+                 es_i)
+
+    format.println("estblh2o: {} {} {} {} {}", phys_tbls[0].estblh2o[0], 
+                   phys_tbls[0].estblh2o[1], phys_tbls[0].estblh2o[2], 
+                   phys_tbls[0].estblh2o[3], phys_tbls[0].estblh2o[4])
+  else 
+    gffgch_terra(t, 
+                __physical(phys_tbls.itype)[0], __fields(phys_tbls.itype)[0],
+                __physical(phys_tbls.estbl)[0], __fields(phys_tbls.estbl)[0], 
+                es_i)
+
+    format.println("estbl: {} {} {} {} {}", phys_tbls[0].estbl[0], 
+                   phys_tbls[0].estbl[1], phys_tbls[0].estbl[2], 
+                   phys_tbls[0].estbl[3], phys_tbls[0].estbl[4])
+  end
+
+  -- format.println("itype: {}", phys_tbls[0].itype)
 end
 
 
@@ -165,11 +241,10 @@ do
 
   var tmin : int = round(constants.min_tp_h2o)
   var tmax : int = round(constants.max_tp_h2o) + 1
-  var itype : double = 0
   -- Fortran loop runs from tmin to tmax inclusive and is 1-indexed
   for t = tmin - 1, tmax, 1 do
     var tdbl = t
-    itype = gffgch(phys_tbls, tdbl, t-tmin, itype, true)
+    gffgch(phys_tbls, tdbl, t-tmin, true, false)
   end
 end
 
@@ -237,7 +312,7 @@ do
   var t = phys_tbls[0].tmin - 1.0
   for n = 0, phys_tbls[0].lentbl do
     t += 1.0
-    gffgch(phys_tbls, t, n, phys_tbls[0].itype, false)
+    gffgch(phys_tbls, t, n, false, true)
   end
   --
   for n = phys_tbls[0].lentbl, constants.plenest do

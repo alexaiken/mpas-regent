@@ -1,18 +1,31 @@
 
-PROGRAM Program
+MODULE module
 
    integer, parameter :: r8 = 8
    real, parameter :: tmelt = 273.16
 
-   real(r8) :: a = 1.0
-   real(r8) :: b = 2.0
-   integer  :: c = 3
-   CALL gffgch(a, b, c)
-
 CONTAINS
 
+subroutine gffgch(t, es, itype) bind(c, name="gffgch_")
+   implicit none
+   real(r8), intent(in) :: t          ! Temperature
+   integer, intent(inout) :: itype    ! Flag for ice phase and associated transition
+   real(r8), intent(out) :: es        ! Saturation vapor pressure
 
-subroutine gffgch(t       ,es      ,itype   )
+   if (itype < 0) then
+      itype = 1
+   else
+      itype = -1
+   end if
+
+   es = 5.1
+
+   ! 5 became 0.000000 2.312500
+   ! 5.1 became 36893488147419103232.000000 2.318750
+end subroutine gffgch
+
+
+subroutine gffgch2(t       ,es      ,itype   ) bind(c, name="gffgch2_")
 !----------------------------------------------------------------------- 
 ! 
 ! Purpose: 
@@ -137,6 +150,6 @@ subroutine gffgch(t       ,es      ,itype   )
            ' PRESSURE, TR, EXCEEDS MAXIMUM ALLOWABLE VALUE OF', &
            ' 40.0 DEGREES C',/, ' TR = ',f7.2)
 !
-end subroutine gffgch
+end subroutine gffgch2
 
-END PROGRAM Program
+END MODULE module

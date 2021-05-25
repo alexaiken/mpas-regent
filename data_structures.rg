@@ -563,14 +563,14 @@ fspace vertical_fs {
 
 fspace phys_tbls_fs
 {
-  estblh2o : double[constants.ntemp],   -- table of H2O saturation vapor pressures
+  estblh2o : float[constants.ntemp],   -- table of H2O saturation vapor pressures
 
   -- Table of saturation vapor pressure values es from tmin degrees
   -- to tmax+1 degrees k in one degree increments.  ttrice defines the
   -- transition region where es is a combination of ice & water values
-  estbl : double[constants.plenest],    -- table values of saturation vapor pressure
+  estbl : float[constants.plenest],    -- table values of saturation vapor pressure
 
-  itype : double,
+  itype : int,
   pcf : double[5],          -- polynomial coeffs -> es transition water to ice
 
   -- es table parameters
