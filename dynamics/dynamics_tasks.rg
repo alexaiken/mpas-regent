@@ -617,8 +617,8 @@ do
       var cell1 = er[iEdge].cellOne
       var cell2 = er[iEdge].cellTwo
       -- Syntax: cell1.meshDensity
-      er[iEdge].meshScalingDel2 = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
-      er[iEdge].meshScalingDel4 = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
+      er[iEdge].meshScalingDel2 = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell1.lo].meshDensity)/2.0, 0.25)
+      er[iEdge].meshScalingDel4 = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell1.lo].meshDensity)/2.0, 0.75)
     end
   end
 
@@ -637,7 +637,7 @@ do
     for iEdge in edge_range do
       var cell1 = er[iEdge].cellOne
       var cell2 = er[iEdge].cellTwo
-      er[iEdge].meshScalingRegionalEdge = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+      er[iEdge].meshScalingRegionalEdge = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell2.lo].meshDensity)/2.0, 0.25)
     end
 
     for iCell in cell_range do

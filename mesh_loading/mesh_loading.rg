@@ -218,7 +218,9 @@ do
         cell_region[{i, 0}].meshDensity = meshDensity_in[i]
         cell_region[{i, 0}].nEdgesOnCell = nEdgesOnCell_in[i]
         cell_region[{i, 0}].areaCell = areaCell_in[i]
-        cell_region[{i, 0}].partitionNumber = partition_array[i]
+        for k = 0, constants.nVertLevels do
+            cell_region[{i, k}].partitionNumber = partition_array[i]
+        end
 
         --constants.cio.printf("Cell : Cell ID %d, partitionNumber %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].partitionNumber)
 
@@ -231,16 +233,17 @@ do
             --constants.cio.printf("cellsOnCell : InnerCell %d, OuterCell %d: Cell index is %d\n", i, j, cell_region[{i, 0}].cellsOnCell[j])
         end
 
-        cell_region[{i, 0}].edgesOnCell0 = ptr(cell_region[{i, 0}].edgesOnCell[0])
-        cell_region[{i, 0}].edgesOnCell1 = ptr(cell_region[{i, 0}].edgesOnCell[1])
-        cell_region[{i, 0}].edgesOnCell2 = ptr(cell_region[{i, 0}].edgesOnCell[2])
-        cell_region[{i, 0}].edgesOnCell3 = ptr(cell_region[{i, 0}].edgesOnCell[3])
-        cell_region[{i, 0}].edgesOnCell4 = ptr(cell_region[{i, 0}].edgesOnCell[4])
-        cell_region[{i, 0}].edgesOnCell5 = ptr(cell_region[{i, 0}].edgesOnCell[5])
-        cell_region[{i, 0}].edgesOnCell6 = ptr(cell_region[{i, 0}].edgesOnCell[6])
-        cell_region[{i, 0}].edgesOnCell7 = ptr(cell_region[{i, 0}].edgesOnCell[7])
-        cell_region[{i, 0}].edgesOnCell8 = ptr(cell_region[{i, 0}].edgesOnCell[8])
-        cell_region[{i, 0}].edgesOnCell9 = ptr(cell_region[{i, 0}].edgesOnCell[9])
+        --cell_region[{i, 0}].edgesOnCell0 = ptr(cell_region[{i, 0}].edgesOnCell[0])
+        cell_region[{i, 0}].edgesOnCell0 = { int2d {cell_region[{i, 0}].edgesOnCell[0], 0}, int2d {cell_region[{i, 0}].edgesOnCell[0], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell1 = { int2d {cell_region[{i, 0}].edgesOnCell[1], 0}, int2d {cell_region[{i, 0}].edgesOnCell[1], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell2 = { int2d {cell_region[{i, 0}].edgesOnCell[2], 0}, int2d {cell_region[{i, 0}].edgesOnCell[2], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell3 = { int2d {cell_region[{i, 0}].edgesOnCell[3], 0}, int2d {cell_region[{i, 0}].edgesOnCell[3], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell4 = { int2d {cell_region[{i, 0}].edgesOnCell[4], 0}, int2d {cell_region[{i, 0}].edgesOnCell[4], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell5 = { int2d {cell_region[{i, 0}].edgesOnCell[5], 0}, int2d {cell_region[{i, 0}].edgesOnCell[5], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell6 = { int2d {cell_region[{i, 0}].edgesOnCell[6], 0}, int2d {cell_region[{i, 0}].edgesOnCell[6], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell7 = { int2d {cell_region[{i, 0}].edgesOnCell[7], 0}, int2d {cell_region[{i, 0}].edgesOnCell[7], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell8 = { int2d {cell_region[{i, 0}].edgesOnCell[8], 0}, int2d {cell_region[{i, 0}].edgesOnCell[8], constants.nVertLevels - 1} }
+        cell_region[{i, 0}].edgesOnCell9 = { int2d {cell_region[{i, 0}].edgesOnCell[9], 0}, int2d {cell_region[{i, 0}].edgesOnCell[9], constants.nVertLevels - 1} }
 
         --constants.cio.printf("Cell : Cell ID %d, nEdgesOnCell is %d\n", cell_region[{i, 0}].cellID, cell_region[{i, 0}].nEdgesOnCell)
     end
@@ -401,6 +404,8 @@ do
     var color_space = ispace(int1d, num_partitions)
     var p = partition(cell_region.partitionNumber, color_space) -- Original partition based on Metis
 
+    format.println("p[1] volume: {}", p[1].volume)
+
     var e0 = image(edge_region, p, cell_region.edgesOnCell0)
     var e1 = image(edge_region, p, cell_region.edgesOnCell1)
     var e2 = image(edge_region, p, cell_region.edgesOnCell2)
@@ -413,22 +418,36 @@ do
     var e9 = image(edge_region, p, cell_region.edgesOnCell9)
     var e = e0 | e1 | e2 | e3 | e4 | e5 | e6 | e7 | e8 | e9
 
+    format.println("e[1].volume={}", e[1].volume)
+
+    --for k = 0, constants.NUM_PARTITIONS do
+    --    format.println("Partition {}", k)
+    --    for i in e0[k] do
+    --        if i.y == 0 then
+    --            format.println("{}, {}", k, i)
+    --        end
+    --    end
+    --end
+
+    -- TODO: Not sure if we need multiple levels at once. If not, we can use the int2d type and declare with only the first half `int2d { edge_region[{i, 0}].cellsOnEdge[1], 0 }`
     for i = 0, constants.nEdges do
-        for j = 0, 1 do
-            edge_region[{i, j}].cellOne = ptr(edge_region[{i, 0}].cellsOnEdge[0])
-            edge_region[{i, j}].cellTwo = ptr(edge_region[{i, 0}].cellsOnEdge[1])
-        end
+        edge_region[{i, 0}].cellOne = rect2d { int2d { edge_region[{i, 0}].cellsOnEdge[0], 0 }, int2d { edge_region[{i, 0}].cellsOnEdge[0], constants.nVertLevels - 1 } }
+        edge_region[{i, 0}].cellTwo = rect2d { int2d { edge_region[{i, 0}].cellsOnEdge[1], 0 }, int2d { edge_region[{i, 0}].cellsOnEdge[1], constants.nVertLevels - 1 } }
     end
 
-    var ep_out = preimage(edge_region, e, edge_region.cellOne) -- This should get all edges with cellOne in p, partitioned by cellOne (which cell "originated" it)
-    var ep_in = preimage(edge_region, e, edge_region.cellTwo) -- This should get all edges with cellTwo in p, partitioned by cellTwo (which cell it "points to")
-    var cp_out = image(cell_region, ep_out, edge_region.cellTwo) -- This gets the destination cells of all edges in ep_out
-    var cp_in = image(cell_region, ep_in, edge_region.cellOne) -- This gets the source cells of all edges in ep_in
-    -- At this point, cp_out | cp_in should contain the entire first halo layer.
-    var ghost_1 = (cp_in | cp_out) - p
+    --Note: the following code should theoretically be able to replace the 10 images, but seems to give the wrong volume
+    --var ep_one = preimage(edge_region, p, edge_region.cellOne) -- This should get all edges with cellOne in p, partitioned by cellOne (which cell "originated" it)
+    --var ep_two = preimage(edge_region, p, edge_region.cellTwo) -- This should get all edges with cellTwo in p, partitioned by cellTwo (which cell it "points to")
+
+    var cp_one = image(cell_region, e, edge_region.cellOne) -- This gets the cellOne on all edges in e
+    var cp_two = image(cell_region, e, edge_region.cellTwo) -- This gets the cellTwo on all edges in e
+    -- Combined, they should contain all cells who have an edge in e, and therefore the halo.
+
+    var ghost_1_and_p = cp_one | cp_two
+    format.println("(cp_one | cp_two)[1] volume: {}", ghost_1_and_p[1].volume)
+    var ghost_1 = (cp_one | cp_two) - p
 
     -- Calculate second halo
-    var ghost_1_and_p = ghost_1 | p
     var gep_out = preimage(edge_region, ghost_1_and_p, edge_region.cellOne)
     var gep_in = preimage(edge_region, ghost_1_and_p, edge_region.cellTwo)
     var gcp_out = image(cell_region, gep_out, edge_region.cellTwo)
@@ -451,15 +470,12 @@ do
     var shared_2 = dynamic_cast(partition(disjoint, cell_region, color_space), (shared_1 | (private_1 & (s2cp_out | s2cp_in)))) -- Cells in p bordering ghost_1
     var private_2 = private_1 - shared_2 -- all cells in private_1 that are not in shared_2
 
-    --Print out first neighbour partition to check against the original partition
-    format.println("printing private_1[0]")
-    for x in private_1[0] do
-        format.println("{}", x)
-    end
-    format.println("done")
-
-    format.println("Private 1[0] volume {}", private_1[0].volume)
-    format.println("Private2[0] volume {}", private_2[0].volume)
+    format.println("Private1[1] volume: {}", private_1[1].volume)
+    format.println("Private2[1] volume: {}", private_2[1].volume)
+    format.println("Shared1[1] volume: {}", shared_1[1].volume)
+    format.println("Shared2[1] volume: {}", shared_2[1].volume)
+    format.println("Ghost1[1] volume: {}", ghost_1[1].volume)
+    format.println("Ghost2[1] volume: {}", ghost_2[1].volume)
 
     return [cell_partition_fs(cell_region)] {
         private_1, shared_1, ghost_1, private_2, shared_2, ghost_2

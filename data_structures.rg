@@ -20,16 +20,16 @@ fspace cell_fs {
     partitionNumber: int1d,
     isHalo: int,
     edgesOnCell : int[constants.maxEdges],
-    edgesOnCell0 : ptr, -- these pointers point to edge region
-    edgesOnCell1 : ptr,
-    edgesOnCell2 : ptr,
-    edgesOnCell3 : ptr,
-    edgesOnCell4 : ptr,
-    edgesOnCell5 : ptr,
-    edgesOnCell6 : ptr,
-    edgesOnCell7 : ptr,
-    edgesOnCell8 : ptr,
-    edgesOnCell9 : ptr,
+    edgesOnCell0 : rect2d, -- these pointers point to edge region
+    edgesOnCell1 : rect2d,
+    edgesOnCell2 : rect2d,
+    edgesOnCell3 : rect2d,
+    edgesOnCell4 : rect2d,
+    edgesOnCell5 : rect2d,
+    edgesOnCell6 : rect2d,
+    edgesOnCell7 : rect2d,
+    edgesOnCell8 : rect2d,
+    edgesOnCell9 : rect2d,
     cellsOnCell : int[constants.maxEdges],
     verticesOnCell : int[constants.maxEdges],
     evc : int[3*constants.maxEdges],   --edge pair associated with vertex v and mesh cell i. This is stored as (vertexID, edge1, edge2), and each cell has 10 of those triples arranged sequentially in the array
@@ -483,8 +483,8 @@ fspace edge_fs {
     dcEdge : double,
     angleEdge : double,
     cellsOnEdge : int[constants.TWO],
-    cellOne : ptr, --index 0 of cellsOnEdge. Points to cell_region
-    cellTwo : ptr, --index 1 of cellsOnEdge
+    cellOne : rect2d, --index 0 of cellsOnEdge. Points to cell_region
+    cellTwo : rect2d, --index 1 of cellsOnEdge
     verticesOnEdge : int[constants.TWO],
     edgesOnEdge_ECP : int[constants.maxEdges2],
     weightsOnEdge : double[constants.maxEdges2],
