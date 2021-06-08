@@ -33,13 +33,6 @@ Compile the object files, then compile the object files together to a dynamic li
 To use the fortran function within regent 
 -----------------------------------------
 
-Link the library in regent with
-
-    local fortranmodule = terralib.includecstring [[
-        extern void [subroutine-name]_([arguments]);
-    ]]
-    regentlib.linklibrary(".../mpas-regent/fortran/lib[subroutine-name].so")
-
 Add these constructs to your regent code for the types you need: 
 
     function raw_ptr_factory(ty)
@@ -69,27 +62,32 @@ Add these constructs to your regent code for the types you need:
         return raw_ptr_int { ptr = [&int](ptr), offset = offsets[1].offset / sizeof(int) }
     end
 
-Example: accessing a single value in a field in a region: 
+Link the library in regent with
 
-    fspace example_fs {
-        A : int,
-    }
+    regentlib.linklibrary(".../mpas-regent/fortran/lib[subroutine-name].so")
+    local fortranmodule = terralib.includecstring [[
+        extern void [subroutine-name]_([arguments]);
+    ]]
 
-    terra subroutineA_terra(pr_A : c.legion_physical_region_t,
-                            fld_A : c.legion_field_id_t)
-        var rawA = get_raw_ptr_int(0, 0, 0, pr_A, fld_A)
-        fortranmodule.subroutineA(rawA)
+Note: that all Fortran variables are passed by reference, so where a Fortran argument is an integer, th eargument in regent is an int *. 
+
+Create terra and regent functions to call the fortran function. 
+
+    terra [subroutine-name]_terra(pr_[field] : c.legion_physical_region_t,
+                                  fld_[field] : c.legion_field_id_t)
+        var raw[field] = get_raw_ptr_[type](0, 0, 0, pr_[field], fld_[field])
+        fortranmodule.[subroutine-name]_(raw[field].ptr)
     end
 
-    task subroutineA(example_r : region(ispace(int1d), example_fs))
+    task [subroutine-name]([region] : region(ispace(int1d), example_fs))
     where
-        reads writes (example_r.A)
+        reads writes ([region].[field])
     do
-        subroutineA_terra(__physical(phys_tbls.A)[0], 
-                          __fields(phys_tbls.A)[0])
+        [subroutine-name]_terra(__physical([routine].[field])[0], 
+                                __fields([routine].[field])[0])
     end
 
-Example: accessing an array value in a field in a region 
+The pointer that is passed to fortran behaves and can be manipulated similar to a pointer in c. Pointer arithmatic can be applied.
 
-
-Example of Regent calling Fortran code: https://gitlab.com/StanfordLegion/legion/-/blob/master/language/examples/cholesky.rg
+See full example in examples.f90 and examples.rg.
+Another example of Regent calling Fortran code: https://gitlab.com/StanfordLegion/legion/-/blob/master/language/examples/cholesky.rg
