@@ -30,8 +30,6 @@ Compile the object files, then compile the object files together to a dynamic li
     gfortran -c [subroutine-name].f90
     gfortran -shared -o lib[subroutine-name].so [subroutine-name].o
 
-(don't need -fPIC? reference here: https://stackoverflow.com/questions/19341593/how-to-use-fortran-module-subroutine-in-c)
-
 To use the fortran function within regent 
 -----------------------------------------
 
