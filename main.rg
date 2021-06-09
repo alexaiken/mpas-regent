@@ -45,6 +45,24 @@ task main()
 
   var cell_partition_fs = partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
 
+  for i = 0, constants.NUM_PARTITIONS do
+    format.println("Calling init_atm_case_jw...")
+    init_atm_case_jw(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region)
+    format.println("Done calling init_atm_case_jw...\n")
+
+    format.println("Calling atm_core_init...")
+    atm_core_init(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls)
+    format.println("Done calling atm_core_init...\n")
+
+    for j = 0, constants.NUM_TIMESTEPS do
+      format.println("Calling atm_do_timestep...iteration {} \n", j)
+      atm_do_timestep(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls, j)
+    end
+  end
+
+  atm_compute_output_diagnostics(cell_region)
+
+  write_output_plotting(cell_region, edge_region, vertex_region)
 
 end
 regentlib.start(main)
