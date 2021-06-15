@@ -30,7 +30,7 @@
 
 ## To use the fortran function within regent 
 
-1. Add these constructs to your regent code for the types you need: 
+1. Add this function: 
 
        function raw_ptr_factory(ty)
             local struct raw_ptr
@@ -41,22 +41,18 @@
             return raw_ptr
         end
 
-        local raw_ptr_int = raw_ptr_factory(int)
+2. Add these constructs for the types you need: 
 
-        terra get_raw_ptr_int(y : int, x : int, bn : int,
-                              pr : c.legion_physical_region_t,
-                              fld : c.legion_field_id_t)
+        local raw_ptr_[type] = raw_ptr_factory([type])
+        terra get_raw_ptr_[type](pr : c.legion_physical_region_t,
+                                 fld : c.legion_field_id_t)
             var fa = c.legion_physical_region_get_field_accessor_array_1d(pr, fld)
             var rect : c.legion_rect_1d_t
             var subrect : c.legion_rect_1d_t
             var offsets : c.legion_byte_offset_t[2]
-            rect.lo.x[0] = y * bn
-            rect.lo.x[1] = x * bn
-            rect.hi.x[0] = (y + 1) * bn - 1
-            rect.hi.x[1] = (x + 1) * bn - 1
             var ptr = c.legion_accessor_array_1d_raw_rect_ptr(fa, rect, &subrect, offsets)
             c.legion_accessor_array_1d_destroy(fa)
-            return raw_ptr_int { ptr = [&int](ptr), offset = offsets[1].offset / sizeof(int) }
+            return raw_ptr_[type] { ptr = [&[type]](ptr), offset = offsets[1].offset / sizeof([type]) }
         end
 
 2. Link the library in regent with
