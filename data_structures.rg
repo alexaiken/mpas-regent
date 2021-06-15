@@ -570,7 +570,7 @@ fspace phys_tbls_fs
   -- transition region where es is a combination of ice & water values
   estbl : double[constants.plenest],    -- table values of saturation vapor pressure
 
-  itype : double,
+  itype : int,
   pcf : double[5],          -- polynomial coeffs -> es transition water to ice
 
   -- es table parameters
