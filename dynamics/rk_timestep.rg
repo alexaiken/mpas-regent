@@ -438,7 +438,7 @@ do
     format.println("Inside atm_srk3: done calling atm_compute_dyn_tend...\n")
 
     format.println("Inside atm_srk3: calling atm_set_smlstep_pert_variables...")
-    atm_set_smlstep_pert_variables(cr, er, vert_r)
+    atm_set_smlstep_pert_variables(cpr, er, vert_r)
     format.println("Inside atm_srk3: done calling atm_compute_dyn_tend...\n")
 
 

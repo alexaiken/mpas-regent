@@ -1500,41 +1500,42 @@ do
 end
 
 __demand(__cuda)
-task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
+task atm_set_smlstep_pert_variables_work(cpr : region(ispace(int2d), cell_fs),
                                          er : region(ispace(int2d), edge_fs),
                                          vert_r : region(ispace(int1d), vertical_fs))
 where
-  reads (cr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, nEdgesOnCell, zb_cell, zb3_cell, zz},
+  reads (cpr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, nEdgesOnCell, zb_cell, zb3_cell, zz},
          er.u_tend, vert_r.{fzm, fzp}),
-  reads writes (cr.w)
+  reads writes (cpr.w)
 do
 
   --format.println("Calling atm_set_smlstep_pert_variables_work...")
 
   var cell_range = rect2d { int2d {0, 1}, int2d {nCells - 1, nVertLevels - 1} } --All vertical loops in the original code go from 2 to nVertLevels
 
+  -- TODO: Does the loop bound need to be adjusted?
   for iCell in cell_range do
-    if (cr[{iCell.x, 0}].bdyMaskCell <= nRelaxZone) then
-      for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
-        var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
-        var flux = cr[{iCell.x, 0}].edgesOnCell_sign[i] * (vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].u_tend + vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].u_tend)
+    if (cpr[{iCell.x, 0}].bdyMaskCell <= nRelaxZone) then
+      for i = 0, cpr[{iCell.x, 0}].nEdgesOnCell do
+        var iEdge = cpr[{iCell.x, 0}].edgesOnCell[i]
+        var flux = cpr[{iCell.x, 0}].edgesOnCell_sign[i] * (vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].u_tend + vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].u_tend)
         --sign function copied as copysign, _RKIND removed as done previously
-        cr[iCell].w -= (cr[iCell].zb_cell[i] + copysign(1.0, er[{iEdge, iCell.y}].u_tend) * cr[{iCell, iCell.y}].zb3_cell[i]) * flux
+        cpr[iCell].w -= (cpr[iCell].zb_cell[i] + copysign(1.0, er[{iEdge, iCell.y}].u_tend) * cpr[{iCell, iCell.y}].zb3_cell[i]) * flux
       end
 
-      cr[iCell].w *= ( vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz )
+      cpr[iCell].w *= ( vert_r[iCell.y].fzm * cpr[iCell].zz + vert_r[iCell.y].fzp * cpr[iCell - {0, 1}].zz )
     end
   end
 end
 
-task atm_set_smlstep_pert_variables(cr : region(ispace(int2d), cell_fs),
+task atm_set_smlstep_pert_variables(cpr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     vert_r : region(ispace(int1d), vertical_fs))
 where
-  reads writes (cr, er, vert_r)
+  reads writes (cpr, er, vert_r)
 do
 
-  atm_set_smlstep_pert_variables_work(cr, er, vert_r)
+  atm_set_smlstep_pert_variables_work(cpr, er, vert_r)
 end
 
 --Comments for atm_advance_acoustic_step_work
