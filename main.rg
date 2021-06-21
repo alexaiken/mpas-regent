@@ -45,7 +45,14 @@ task main()
 
   var cell_partition_fs = partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
 
+  fill(cell_region.isShared, false)
   for i = 0, constants.NUM_PARTITIONS do
+    mark_shared_cells(cell_partition_fs.shared_1[i])
+    mark_shared_cells(cell_partition_fs.shared_2[i])
+  end
+
+  --for i = 0, constants.NUM_PARTITIONS do
+  for i = 0, 1 do
     format.println("Calling init_atm_case_jw...")
     init_atm_case_jw(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region)
     format.println("Done calling init_atm_case_jw...\n")

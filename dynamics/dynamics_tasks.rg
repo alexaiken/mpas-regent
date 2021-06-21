@@ -616,8 +616,8 @@ do
     for iEdge in edge_range do
       var cell1 = er[iEdge].cellOne
       var cell2 = er[iEdge].cellTwo
-      er[iEdge].meshScalingDel2 = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell1.lo].meshDensity)/2.0, 0.25)
-      er[iEdge].meshScalingDel4 = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell1.lo].meshDensity)/2.0, 0.75)
+      er[iEdge].meshScalingDel2 = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell2.lo].meshDensity)/2.0, 0.25)
+      er[iEdge].meshScalingDel4 = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell2.lo].meshDensity)/2.0, 0.75)
     end
   end
 
@@ -1513,8 +1513,7 @@ do
 
   var cell_range = rect2d { int2d {0, 1}, int2d {nCells - 1, nVertLevels - 1} } --All vertical loops in the original code go from 2 to nVertLevels
 
-  -- TODO: Does the loop bound need to be adjusted?
-  for iCell in cell_range do
+  for iCell in cpr do
     if (cpr[{iCell.x, 0}].bdyMaskCell <= nRelaxZone) then
       for i = 0, cpr[{iCell.x, 0}].nEdgesOnCell do
         var iEdge = cpr[{iCell.x, 0}].edgesOnCell[i]
@@ -2002,5 +2001,14 @@ do
       cr[iCell].wwAvg = cr[iCell].wwAvg_split * inv_dynamics_split
       cr[iCell].rho_zz = cr[iCell].rho_zz_old_split
     end
+  end
+end
+
+task mark_shared_cells(csr : region(ispace(int2d), cell_fs))
+where
+  writes (csr.isShared)
+do
+  for iCell in csr do
+    csr[iCell].isShared = true
   end
 end

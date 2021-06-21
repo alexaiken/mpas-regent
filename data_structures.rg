@@ -18,7 +18,7 @@ fspace cell_fs {
     nEdgesOnCell : int,
     areaCell : double,
     partitionNumber: int1d,
-    isHalo: int,
+    isShared: bool,
     edgesOnCell : int[constants.maxEdges],
     edgesOnCell0 : rect2d, -- these pointers point to edge region
     edgesOnCell1 : rect2d,
