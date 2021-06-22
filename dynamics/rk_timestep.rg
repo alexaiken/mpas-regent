@@ -453,7 +453,7 @@ do
 
       atm_advance_acoustic_step(cr, er, vert_r, rk_sub_timestep[rk_step], small_step)
 
-      atm_divergence_damping_3d(cr, er, rk_sub_timestep[rk_step])
+      atm_divergence_damping_3d(cpr, er, rk_sub_timestep[rk_step])
     end
 
     --we need to fix this and comment in

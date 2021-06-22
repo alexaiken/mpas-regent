@@ -1723,11 +1723,11 @@ end
 -- 1.0_RKIND and 2.0_RKIND translated as 1.0 and 2.0
 -- This function also contains nCellsSolve, which has not been resolved yet
 __demand(__cuda)
-task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
+task atm_divergence_damping_3d(cpr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
                                dts : double)
 where
-  reads (cr.{rtheta_pp, rtheta_pp_old, theta_m}, er.{cellsOnEdge, specZoneMaskEdge}),
+  reads (cpr.{isShared, rtheta_pp, rtheta_pp_old, theta_m}, er.{cellOne, cellTwo, specZoneMaskEdge}),
   reads writes (er.ru_p)
 do
 
@@ -1741,22 +1741,24 @@ do
 
   for iEdgex in edge_range_1d do
 
-    var cell1 = er[{iEdgex, 0}].cellsOnEdge[0]
-    var cell2 = er[{iEdgex, 0}].cellsOnEdge[1]
+    var cell1 = er[{iEdgex, 0}].cellOne
+    var cell2 = er[{iEdgex, 0}].cellTwo
 
     -- update edges for block-owned cells
-    -- if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+    -- Originally, the code checked if either of the cells was within nCellsSolve, 
+    -- i.e. whether either of them is private. The same can be accomplished with the isShared field as follows.
+    if not (cpr[{cell1.lo, 0}].isShared and cpr[{cell2.lo, 0}].isShared) then
 
       for k = 0, nVertLevels do
 
         -- scaled 3d divergence damping
-        var divCell1 = -(cr[{cell1, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp_old)
-        var divCell2 = -(cr[{cell2, k}].rtheta_pp - cr[{cell2, k}].rtheta_pp_old)
+        var divCell1 = -(cpr[{cell1.lo, k}].rtheta_pp - cpr[{cell1.lo, k}].rtheta_pp_old)
+        var divCell2 = -(cpr[{cell2.lo, k}].rtheta_pp - cpr[{cell2.lo, k}].rtheta_pp_old)
         er[{iEdgex, k}].ru_p += coef_divdamp * (divCell2 - divCell1) *
                               (1.0 - er[{iEdgex, 0}].specZoneMaskEdge)
-                              / (cr[{cell1, k}].theta_m + cr[{cell2, k}].theta_m)
+                              / (cpr[{cell1.lo, k}].theta_m + cpr[{cell2.lo, k}].theta_m)
       end
-    -- end
+    end
   end
 end
 
