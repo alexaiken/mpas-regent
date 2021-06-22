@@ -1747,16 +1747,16 @@ do
     -- update edges for block-owned cells
     -- Originally, the code checked if either of the cells was within nCellsSolve, 
     -- i.e. whether either of them is private. The same can be accomplished with the isShared field as follows.
-    if not (cpr[{cell1.lo, 0}].isShared and cpr[{cell2.lo, 0}].isShared) then
+    if not (cpr[cell1.lo].isShared and cpr[cell2.lo].isShared) then
 
       for k = 0, nVertLevels do
 
         -- scaled 3d divergence damping
-        var divCell1 = -(cpr[{cell1.lo, k}].rtheta_pp - cpr[{cell1.lo, k}].rtheta_pp_old)
-        var divCell2 = -(cpr[{cell2.lo, k}].rtheta_pp - cpr[{cell2.lo, k}].rtheta_pp_old)
+        var divCell1 = -(cpr[cell1.lo + {0, k}].rtheta_pp - cpr[cell1.lo + {0, k}].rtheta_pp_old)
+        var divCell2 = -(cpr[cell2.lo + {0, k}].rtheta_pp - cpr[cell2.lo + {0, k}].rtheta_pp_old)
         er[{iEdgex, k}].ru_p += coef_divdamp * (divCell2 - divCell1) *
                               (1.0 - er[{iEdgex, 0}].specZoneMaskEdge)
-                              / (cpr[{cell1.lo, k}].theta_m + cpr[{cell2.lo, k}].theta_m)
+                              / (cpr[cell1.lo + {0, k}].theta_m + cpr[cell2.lo + {0, k}].theta_m)
       end
     end
   end
