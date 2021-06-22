@@ -43,20 +43,28 @@ task main()
   load_mesh(cell_region, edge_region, vertex_region, constants.FILE_NAME, constants.GRAPH_FILE_NAME)
   format.println("Done calling load mesh...\n")
 
-  --TODO: This doesn't actually return the halos yet (It creates them in the task but I haven't been able to return them). Need to return the halos.
-  partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
+  var cell_partition_fs = partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
 
-  format.println("Calling init_atm_case_jw...")
-  init_atm_case_jw(cell_region, edge_region, vertex_region, vertical_region)
-  format.println("Done calling init_atm_case_jw...\n")
+  fill(cell_region.isShared, false)
+  for i = 0, constants.NUM_PARTITIONS do
+    mark_shared_cells(cell_partition_fs.shared_1[i])
+    mark_shared_cells(cell_partition_fs.shared_2[i])
+  end
 
-  format.println("Calling atm_core_init...")
-  atm_core_init(cell_region, edge_region, vertex_region, vertical_region, phys_tbls)
-  format.println("Done calling atm_core_init...\n")
+  --for i = 0, constants.NUM_PARTITIONS do
+  for i = 0, 1 do
+    format.println("Calling init_atm_case_jw...")
+    init_atm_case_jw(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region)
+    format.println("Done calling init_atm_case_jw...\n")
 
-  for i = 0, constants.NUM_TIMESTEPS do
-    format.println("Calling atm_do_timestep...iteration {} \n", i)
-    atm_do_timestep(cell_region, edge_region, vertex_region, vertical_region, phys_tbls, constants.config_dt)
+    format.println("Calling atm_core_init...")
+    atm_core_init(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls)
+    format.println("Done calling atm_core_init...\n")
+
+    for j = 0, constants.NUM_TIMESTEPS do
+      format.println("Calling atm_do_timestep...iteration {} \n", j)
+      atm_do_timestep(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls, j)
+    end
   end
 
   atm_compute_output_diagnostics(cell_region)

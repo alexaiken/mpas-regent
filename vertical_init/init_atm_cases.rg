@@ -22,6 +22,9 @@ local cmath = terralib.includec("math.h")
 
 --__demand(__cuda)
 task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
+                      cpr : region(ispace(int2d), cell_fs),
+                      csr : region(ispace(int2d), cell_fs),
+                      cgr : region(ispace(int2d), cell_fs),
                       er : region(ispace(int2d), edge_fs),
                       vr : region(ispace(int2d), vertex_fs),
                       vertr : region(ispace(int1d), vertical_fs))

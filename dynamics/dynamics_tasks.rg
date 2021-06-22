@@ -593,10 +593,13 @@ end
 
 __demand(__cuda)
 task atm_compute_mesh_scaling(cr : region(ispace(int2d), cell_fs),
+                              cpr : region(ispace(int2d), cell_fs),
+                              csr : region(ispace(int2d), cell_fs),
+                              cgr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs),
                               config_h_ScaleWithMesh : bool)
 where
-  reads (cr.meshDensity, er.cellsOnEdge),
+  reads (cr.meshDensity, er.{cellsOnEdge, cellOne, cellTwo}),
   writes (cr.meshScalingRegionalCell, er.{meshScalingDel2, meshScalingDel4, meshScalingRegionalEdge})
 do
 
@@ -611,10 +614,10 @@ do
 
   if (config_h_ScaleWithMesh) then
     for iEdge in edge_range do
-      var cell1 = er[iEdge].cellsOnEdge[0]
-      var cell2 = er[iEdge].cellsOnEdge[1]
-      er[iEdge].meshScalingDel2 = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
-      er[iEdge].meshScalingDel4 = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.75)
+      var cell1 = er[iEdge].cellOne
+      var cell2 = er[iEdge].cellTwo
+      er[iEdge].meshScalingDel2 = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell2.lo].meshDensity)/2.0, 0.25)
+      er[iEdge].meshScalingDel4 = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell2.lo].meshDensity)/2.0, 0.75)
     end
   end
 
@@ -631,9 +634,9 @@ do
 
   if (config_h_ScaleWithMesh) then
     for iEdge in edge_range do
-      var cell1 = er[iEdge].cellsOnEdge[0]
-      var cell2 = er[iEdge].cellsOnEdge[1]
-      er[iEdge].meshScalingRegionalEdge = 1.0 / pow((cr[{cell1, 0}].meshDensity + cr[{cell2, 0}].meshDensity)/2.0, 0.25)
+      var cell1 = er[iEdge].cellOne
+      var cell2 = er[iEdge].cellTwo
+      er[iEdge].meshScalingRegionalEdge = 1.0 / pow((cr[cell1.lo].meshDensity + cr[cell2.lo].meshDensity)/2.0, 0.25)
     end
 
     for iCell in cell_range do
@@ -1497,41 +1500,41 @@ do
 end
 
 __demand(__cuda)
-task atm_set_smlstep_pert_variables_work(cr : region(ispace(int2d), cell_fs),
+task atm_set_smlstep_pert_variables_work(cpr : region(ispace(int2d), cell_fs),
                                          er : region(ispace(int2d), edge_fs),
                                          vert_r : region(ispace(int1d), vertical_fs))
 where
-  reads (cr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, nEdgesOnCell, zb_cell, zb3_cell, zz},
+  reads (cpr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, nEdgesOnCell, zb_cell, zb3_cell, zz},
          er.u_tend, vert_r.{fzm, fzp}),
-  reads writes (cr.w)
+  reads writes (cpr.w)
 do
 
   --format.println("Calling atm_set_smlstep_pert_variables_work...")
 
   var cell_range = rect2d { int2d {0, 1}, int2d {nCells - 1, nVertLevels - 1} } --All vertical loops in the original code go from 2 to nVertLevels
 
-  for iCell in cell_range do
-    if (cr[{iCell.x, 0}].bdyMaskCell <= nRelaxZone) then
-      for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
-        var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]
-        var flux = cr[{iCell.x, 0}].edgesOnCell_sign[i] * (vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].u_tend + vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].u_tend)
+  for iCell in cpr do
+    if (cpr[{iCell.x, 0}].bdyMaskCell <= nRelaxZone) then
+      for i = 0, cpr[{iCell.x, 0}].nEdgesOnCell do
+        var iEdge = cpr[{iCell.x, 0}].edgesOnCell[i]
+        var flux = cpr[{iCell.x, 0}].edgesOnCell_sign[i] * (vert_r[iCell.y].fzm * er[{iEdge, iCell.y}].u_tend + vert_r[iCell.y].fzp * er[{iEdge, iCell.y - 1}].u_tend)
         --sign function copied as copysign, _RKIND removed as done previously
-        cr[iCell].w -= (cr[iCell].zb_cell[i] + copysign(1.0, er[{iEdge, iCell.y}].u_tend) * cr[{iCell, iCell.y}].zb3_cell[i]) * flux
+        cpr[iCell].w -= (cpr[iCell].zb_cell[i] + copysign(1.0, er[{iEdge, iCell.y}].u_tend) * cpr[{iCell, iCell.y}].zb3_cell[i]) * flux
       end
 
-      cr[iCell].w *= ( vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz )
+      cpr[iCell].w *= ( vert_r[iCell.y].fzm * cpr[iCell].zz + vert_r[iCell.y].fzp * cpr[iCell - {0, 1}].zz )
     end
   end
 end
 
-task atm_set_smlstep_pert_variables(cr : region(ispace(int2d), cell_fs),
+task atm_set_smlstep_pert_variables(cpr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     vert_r : region(ispace(int1d), vertical_fs))
 where
-  reads writes (cr, er, vert_r)
+  reads writes (cpr, er, vert_r)
 do
 
-  atm_set_smlstep_pert_variables_work(cr, er, vert_r)
+  atm_set_smlstep_pert_variables_work(cpr, er, vert_r)
 end
 
 --Comments for atm_advance_acoustic_step_work
@@ -1720,11 +1723,11 @@ end
 -- 1.0_RKIND and 2.0_RKIND translated as 1.0 and 2.0
 -- This function also contains nCellsSolve, which has not been resolved yet
 __demand(__cuda)
-task atm_divergence_damping_3d(cr : region(ispace(int2d), cell_fs),
+task atm_divergence_damping_3d(cpr : region(ispace(int2d), cell_fs),
                                er : region(ispace(int2d), edge_fs),
                                dts : double)
 where
-  reads (cr.{rtheta_pp, rtheta_pp_old, theta_m}, er.{cellsOnEdge, specZoneMaskEdge}),
+  reads (cpr.{isShared, rtheta_pp, rtheta_pp_old, theta_m}, er.{cellOne, cellTwo, specZoneMaskEdge}),
   reads writes (er.ru_p)
 do
 
@@ -1738,22 +1741,24 @@ do
 
   for iEdgex in edge_range_1d do
 
-    var cell1 = er[{iEdgex, 0}].cellsOnEdge[0]
-    var cell2 = er[{iEdgex, 0}].cellsOnEdge[1]
+    var cell1 = er[{iEdgex, 0}].cellOne
+    var cell2 = er[{iEdgex, 0}].cellTwo
 
     -- update edges for block-owned cells
-    -- if (cell1 <= nCellsSolve or cell2 <= nCellsSolve) then
+    -- Originally, the code checked if either of the cells was within nCellsSolve, 
+    -- i.e. whether either of them is private. The same can be accomplished with the isShared field as follows.
+    if not (cpr[cell1.lo].isShared and cpr[cell2.lo].isShared) then
 
       for k = 0, nVertLevels do
 
         -- scaled 3d divergence damping
-        var divCell1 = -(cr[{cell1, k}].rtheta_pp - cr[{cell1, k}].rtheta_pp_old)
-        var divCell2 = -(cr[{cell2, k}].rtheta_pp - cr[{cell2, k}].rtheta_pp_old)
+        var divCell1 = -(cpr[cell1.lo + {0, k}].rtheta_pp - cpr[cell1.lo + {0, k}].rtheta_pp_old)
+        var divCell2 = -(cpr[cell2.lo + {0, k}].rtheta_pp - cpr[cell2.lo + {0, k}].rtheta_pp_old)
         er[{iEdgex, k}].ru_p += coef_divdamp * (divCell2 - divCell1) *
                               (1.0 - er[{iEdgex, 0}].specZoneMaskEdge)
-                              / (cr[{cell1, k}].theta_m + cr[{cell2, k}].theta_m)
+                              / (cpr[cell1.lo + {0, k}].theta_m + cpr[cell2.lo + {0, k}].theta_m)
       end
-    -- end
+    end
   end
 end
 
@@ -1998,5 +2003,14 @@ do
       cr[iCell].wwAvg = cr[iCell].wwAvg_split * inv_dynamics_split
       cr[iCell].rho_zz = cr[iCell].rho_zz_old_split
     end
+  end
+end
+
+task mark_shared_cells(csr : region(ispace(int2d), cell_fs))
+where
+  writes (csr.isShared)
+do
+  for iCell in csr do
+    csr[iCell].isShared = true
   end
 end

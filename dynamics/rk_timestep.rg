@@ -359,12 +359,16 @@ do
 end
 
 task atm_srk3(cr : region(ispace(int2d), cell_fs),
+              cpr : region(ispace(int2d), cell_fs),
+              csr : region(ispace(int2d), cell_fs),
+              cgr : region(ispace(int2d), cell_fs),
               er : region(ispace(int2d), edge_fs),
               vr : region(ispace(int2d), vertex_fs),
               vert_r : region(ispace(int1d), vertical_fs),
               dt : double)
 where
-  reads writes (cr, er, vr, vert_r)
+  reads writes (cr, er, vr, vert_r),
+  cpr <= cr, csr <= cr, cgr <= cr
 do
 
   -- 2 is default value from Registry.xml
@@ -434,7 +438,7 @@ do
     format.println("Inside atm_srk3: done calling atm_compute_dyn_tend...\n")
 
     format.println("Inside atm_srk3: calling atm_set_smlstep_pert_variables...")
-    atm_set_smlstep_pert_variables(cr, er, vert_r)
+    atm_set_smlstep_pert_variables(cpr, er, vert_r)
     format.println("Inside atm_srk3: done calling atm_compute_dyn_tend...\n")
 
 
@@ -449,7 +453,7 @@ do
 
       atm_advance_acoustic_step(cr, er, vert_r, rk_sub_timestep[rk_step], small_step)
 
-      atm_divergence_damping_3d(cr, er, rk_sub_timestep[rk_step])
+      atm_divergence_damping_3d(cpr, er, rk_sub_timestep[rk_step])
     end
 
     --we need to fix this and comment in
@@ -497,17 +501,19 @@ end
 
 --__demand(__cuda)
 task atm_timestep(cr : region(ispace(int2d), cell_fs),
+                  cpr : region(ispace(int2d), cell_fs),
+                  csr : region(ispace(int2d), cell_fs),
+                  cgr : region(ispace(int2d), cell_fs),
                   er : region(ispace(int2d), edge_fs),
                   vr : region(ispace(int2d), vertex_fs),
                   vert_r : region(ispace(int1d), vertical_fs),
                   dt : double)
 where
-  reads writes (cr, er, vr, vert_r)
+  reads writes (cr, er, vr, vert_r),
+  cpr <= cr, csr <= cr, cgr <= cr
 do
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 
-  format.println("Inside atm_timestep: about to call atm_srk3... \n")
-
-  atm_srk3(cr, er, vr, vert_r, dt)
+  atm_srk3(cr, cpr, csr, cgr, er, vr, vert_r, dt)
 
 end
