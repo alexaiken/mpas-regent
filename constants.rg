@@ -90,6 +90,9 @@ constants.nAerosols = 12
 constants.naer = 10
 constants.naer_all = 12
 
+constants.latsiz = 64                                           -- Used in oznini
+constants.lonsiz = 1                                            -- Used in oznini
+
 -- Physics - Radiation (parameters)
 constants.min_tp_h2o = terralib.constant(double, 160.0)        -- min T_p for pre-calculated abs/emis
 constants.max_tp_h2o = 349.999999   -- max T_p for pre-calculated abs/emis
