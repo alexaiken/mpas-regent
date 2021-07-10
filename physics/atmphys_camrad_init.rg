@@ -303,12 +303,6 @@ do
 
   -- read in ozone data
 
-  -- TODO: delete this comment.
-  -- Can't use region instead of 4d array for simplicity.
-  --var i_ozmixin = ispace(int4d, {constants.lonsiz, constants.nOznLevels, constants.latsiz, constants.nMonths })
-  --var ozmixin = region(ispace(int4d, {constants.lonsiz, constants.nOznLevels, constants.latsiz, constants.nMonths }), double)
-  --var ozmixin = region(i_ozmixin, double)
-
   -- Using 1d array since indexing into 4d array is complicated and int4d regions need special flags at compile and runtime.
   -- Array represents double[lonsiz][nOznLevels][latsiz][nMonths]
   var ozmixin : double[constants.lonsiz * constants.nOznLevels * constants.latsiz * constants.nMonths]
