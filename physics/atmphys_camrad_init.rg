@@ -260,8 +260,8 @@ end
 task oznini(cr : region(ispace(int2d), cell_fs),
             ozn_region : region(ispace(int2d), ozn_fs))
 where
-  reads (cr),
-  reads writes (ozn_region)
+  reads (cr.{lat, lon}),
+  reads writes (ozn_region.{pin, ozmixm})
 do
   -- Potentially outdated Fortran comment:
   -- This subroutine assumes uniform distribution of ozone concentration.
