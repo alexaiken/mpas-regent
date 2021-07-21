@@ -42,7 +42,7 @@ fabs = regentlib.fabs(double)
 pow = regentlib.pow(double)
 sqrt = regentlib.sqrt(double)
 
---__demand(__cuda)
+__demand(__cuda)
 task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
                        er : region(ispace(int2d), edge_fs),
                        vr : region(ispace(int2d), vertex_fs))
@@ -129,7 +129,7 @@ do
   end
 end
 
---_demand(__cuda)
+__demand(__cuda)
 task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs))
 where
@@ -141,7 +141,6 @@ do
   --format.println("Calling atm_adv_coef_compression...")
 
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, 0} }
-  var cell_list : int[maxEdges]
 
   for iEdge in edge_range do
     er[iEdge].nAdvCellsForEdge = 0
@@ -152,6 +151,7 @@ do
       -- do only if this edge flux is needed to update owned cells
       --
     if (cell1 <= nCells or cell2 <= nCells) then
+      var cell_list : int[maxEdges]
       cell_list[0] = cell1
       cell_list[1] = cell2
       var n = 1 -- n is index of cells currently in list
