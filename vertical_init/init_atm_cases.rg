@@ -3,7 +3,6 @@ require "data_structures"
 
 local constants = require("constants")
 local format = require("std/format")
-
 local nCells = constants.nCells
 local nEdges = constants.nEdges
 local nVertices = constants.nVertices
@@ -18,9 +17,15 @@ local nlat = constants.nlat
 
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
+-- Can't use terralib.includec("math.h") with Cuda.
+local pow = regentlib.pow(double)
+local cos = regentlib.cos(double)
+local sin = regentlib.sin(double)
+local exp = regentlib.exp(double)
+local sqrt = regentlib.sqrt(double)
 
 
---__demand(__cuda)
+__demand(__cuda)
 task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
                       cpr : region(ispace(int2d), cell_fs),
                       csr : region(ispace(int2d), cell_fs),
@@ -43,6 +48,26 @@ where
                 vertr.{dzu, fzm, fzp, cf1, cf2, cf3})
 do
 
+-- Ranges for Cuda code generation
+  var cell_range_1d = rect1d {0, nCells - 1 }
+  var cell_range_1d_0 = rect2d { int2d {0, 0}, int2d {nCells - 1, 0} }
+
+  var edge_range_1d = rect1d { 0, nEdges - 1 }
+  var edge_range_1d_0 = rect2d { int2d {0, 0}, int2d {nEdges - 1, 0} }
+  var edge_range_2d = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
+
+  var vertex_range_1d = rect2d { int2d {0, 0}, int2d {nVertices - 1, 0} } 
+
+  var vertical_range_1d = rect1d {0, nVertLevels - 1 } 
+  var vertical_range_s1_1d = rect1d { 1, nVertLevels - 1 } 
+  var vertical_range_extra_1d = rect1d { 0, nVertLevels } -- Loop goes to nVertLevels + 1. Should be replaced with rect1d.
+  var vertical_nlat_range = rect2d { int2d {0, 0}, int2d {nVertLevels - 1, nlat - 1} } 
+
+  var nlat_range_1d = rect1d { 0, nlat - 1 }
+
+  var cell_range_2d = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
+  var cell_range_extra_2d = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels} }
+  
 -- local vars/constants defined at beginning of subroutine
   var cp = constants.cp
   var rgas = constants.rgas
@@ -51,11 +76,12 @@ do
   var u0 = 35.0
   var alpha_grid = 0.0 -- no grid rotation
   var omega_e : double
-  var flux : double
-  var u_pert : double
-  var phi : double
-  var eoe : int
-  var ztemp : double
+  -- Moved because of Cuda. 
+  -- var flux : double 
+  -- var u_pert : double
+  -- var phi : double 
+  -- var eoe : int
+  -- var ztemp : double 
   var t0b = 250.0
   var t0 = 288.0
   var delta_t = 4.8E+05 -- TODO: scientific notation in regent?
@@ -84,55 +110,58 @@ do
   var qv_2d : double[nVertLevels * nlat]
 ---- Scale all distances and areas from a unit sphere to one with radius sphere_radius
 
-  for iCell = 0, nCells do
-    cr[{iCell, 0}].x = cr[{iCell, 0}].x * sphere_radius
-    cr[{iCell, 0}].y = cr[{iCell, 0}].y * sphere_radius
-    cr[{iCell, 0}].z = cr[{iCell, 0}].z * sphere_radius
-    cr[{iCell, 0}].areaCell = cr[{iCell, 0}].areaCell * cmath.pow(sphere_radius, 2.0)
+  for iCell in cell_range_1d_0 do
+    -- iCell is the same as { iCell.x, 0 }
+    cr[iCell].x = cr[iCell].x * sphere_radius
+    cr[iCell].y = cr[iCell].y * sphere_radius
+    cr[iCell].z = cr[iCell].z * sphere_radius
+    --cr[iCell].areaCell = cr[iCell].areaCell * cmath.pow(sphere_radius, 2.0)
+    cr[iCell].areaCell = cr[iCell].areaCell * sphere_radius * sphere_radius
   end
 
-  for iVert = 0, nVertices do
-    vr[{iVert, 0}].x = vr[{iVert, 0}].x * sphere_radius
-    vr[{iVert, 0}].y = vr[{iVert, 0}].y * sphere_radius
-    vr[{iVert, 0}].z = vr[{iVert, 0}].z * sphere_radius
-    vr[{iVert, 0}].areaTriangle = vr[{iVert, 0}].areaTriangle * cmath.pow(sphere_radius, 2.0)
+  for iVert in vertex_range_1d do
+    -- iVert is the same as { iVert.x, 0 }
+    vr[iVert].x = vr[iVert].x * sphere_radius
+    vr[iVert].y = vr[iVert].y * sphere_radius
+    vr[iVert].z = vr[iVert].z * sphere_radius
+    --vr[iVert].areaTriangle = vr[iVert].areaTriangle * cmath.pow(sphere_radius, 2.0)
+    vr[iVert].areaTriangle = vr[iVert].areaTriangle * sphere_radius * sphere_radius
     for vDeg = 0, vertexDegree do
-      vr[{iVert, 0}].kiteAreasOnVertex[vertexDegree] = vr[{iVert, 0}].kiteAreasOnVertex[vertexDegree] * cmath.pow(sphere_radius, 2.0)
+      --vr[iVert].kiteAreasOnVertex[vertexDegree] = vr[iVert].kiteAreasOnVertex[vertexDegree] * cmath.pow(sphere_radius, 2.0)
+      vr[iVert].kiteAreasOnVertex[vertexDegree] = vr[iVert].kiteAreasOnVertex[vertexDegree] * sphere_radius * sphere_radius
     end
   end
 
-  for iEdge = 0, nEdges do
-    er[{iEdge, 0}].x = er[{iEdge, 0}].x * sphere_radius
-    er[{iEdge, 0}].y = er[{iEdge, 0}].y * sphere_radius
-    er[{iEdge, 0}].z = er[{iEdge, 0}].z * sphere_radius
-    er[{iEdge, 0}].dvEdge = er[{iEdge, 0}].dvEdge * sphere_radius
-    er[{iEdge, 0}].dcEdge = er[{iEdge, 0}].dcEdge * sphere_radius
-
+  for iEdge in edge_range_1d_0 do
+    -- iEdge is the same as { iEdge.x, 0 }
+    er[iEdge].x = er[iEdge].x * sphere_radius
+    er[iEdge].y = er[iEdge].y * sphere_radius
+    er[iEdge].z = er[iEdge].z * sphere_radius
+    er[iEdge].dvEdge = er[iEdge].dvEdge * sphere_radius
+    er[iEdge].dcEdge = er[iEdge].dcEdge * sphere_radius
   end
 
 
 
 
 -- initialization of moisture:
-  for iCell = 0, nCells do
-    for k = 0, nVertLevels do
-      cr[{iCell, k}].qv = 0.0
-      cr[{iCell, k}].qsat = 0.0
-      cr[{iCell, k}].relhum = 0.0
-    end
+  for iCell in cell_range_2d do
+    -- iCell = { nCells, nVertLevels }
+    cr[iCell].qv = 0.0
+    cr[iCell].qsat = 0.0
+    cr[iCell].relhum = 0.0
   end
 
-  for i = 0, nVertLevels do
-    for j = 0, nlat do
-      qv_2d[i*nlat + j] = 0.0
-    end
+  for iVertLat in vertical_nlat_range do
+    qv_2d[iVertLat.x * nlat + iVertLat.y] = 0.0
   end
 
 -- end initialization of moisture.
 
 
-  for iCell = 0, nCells do
-    cr[{iCell, 0}].surface_pressure = 0.0
+  for iCell in cell_range_1d_0 do
+    -- iCell is the same as { iCell.x, 0 }
+    cr[iCell].surface_pressure = 0.0
   end
 
 --      call atm_initialize_advection_rk(mesh, nCells, nEdges, maxEdges, on_a_sphere, sphere_radius )
@@ -151,12 +180,10 @@ do
 
 --! We may pass in an hx(:,:) that has been precomputed elsewhere.
 --! For now it is independent of k
-
-  for iCell=0, nCells do
-    for k = 0, nz do
-      phi = cr[{iCell, 0}].lat
-      cr[{iCell, k}].hx = u0 / gravity * cmath.pow(cmath.cos(etavs), 1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi), 2.0) + 1.0/3.0) + 10.0/63.0) * u0*cmath.pow(cmath.cos(etavs), 1.5) + (1.6 * cmath.pow(cmath.cos(phi), 3) * (cmath.pow(cmath.sin(phi), 2) + 2.0/3.0) - pii/4.0)*r_earth*omega_e)
-    end
+  for iCell in cell_range_extra_2d do
+    -- Declared on each iteration to avoid compiler warning for loop-carried dependecy.
+    var phi = cr[{iCell.x, 0}].lat
+    cr[iCell].hx = u0 / gravity * pow(cos(etavs), 1.5) * ((-2.0 * pow(sin(phi), 6) * (pow(cos(phi), 2.0) + 1.0/3.0) + 10.0/63.0) * u0 * pow(cos(etavs), 1.5) + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0/3.0) - pii/4.0) * r_earth * omega_e)
   end
 
 
@@ -164,7 +191,7 @@ do
 
   var str = 1.5
   var zt = 45000.0
-  var dz = zt/nz1
+  var dz = zt / nz1
   var sh : double[nVertLevels + 1]
   var zw : double[nVertLevels + 1]
   var ah : double[nVertLevels + 1]
@@ -173,12 +200,13 @@ do
   var rdzwp : double[nVertLevels]
   var rdzwm : double[nVertLevels]
 
-  for k=0, nz do
+  for iVert in vertical_range_extra_1d do
+    var k = int(iVert)
     if k == 0 then
       sh[k] = -1
     else
   --!  sh[k] is the stretching specified for height surfaces
-      sh[k] = cmath.pow(([double](k - 1.0) * dz / zt), str) --- this was (real(k-1)) in mpas; do we need to cast it here too?
+      sh[k] = pow(([double](k - 1.0) * dz / zt), str) --- this was (real(k-1)) in mpas; do we need to cast it here too?
     end
 
     --cio.printf("dz is %f \n", dz)
@@ -195,7 +223,7 @@ do
 --!                zw[k] = sh[k]*zt yields nonconstant dzeta
 --!                        and nearly constant dzeta/dz
 
-    zw[k] = (k-1)*dz -- in mpas they cast to float
+    zw[k] = (k - 1) * dz -- in mpas they cast to float
 
 --!            zw[k] = sh[k]*zt --- see above comments for which version you want
 --!
@@ -204,80 +232,83 @@ do
 --!                ah[k] = 0 is a terrain-following coordinate
 --!                ah[k] = 1 is a height coordinate
 --
-    ah[k] = 1.0 - cmath.pow(cmath.cos(.5*pii*(k-1)*dz/zt), 6.0)
+    ah[k] = 1.0 - pow(cos(.5 * pii * (k - 1) * dz / zt), 6.0)
 --!            ah[k] = 0.
 
     --cio.printf("sh[%d] is %f \n", k, sh[k])
     --cio.printf("ah[%d] is %f \n", k, ah[k])
     --cio.printf("zw[%d] is %f \n", k, zw[k])
   end
-  for k=0, nz1 do -- nz1 is just nVertLevels, idk why mpas renamed it
-    dzw[k] = zw[k+1]-zw[k]
-    vertr[k].rdzw = 1.0/dzw[k]
-    zu[k] = .5*(zw[k]+zw[k+1])
+
+  for iVert in vertical_range_1d do -- Old comment: nz1 is just nVertLevels, idk why mpas renamed it
+    var k = int(iVert)
+    dzw[k] = zw[k + 1] - zw[k]
+    vertr[k].rdzw = 1.0 / dzw[k]
+    zu[k] = .5 * (zw[k] + zw[k + 1])
   end
 
-  for k=1, nz1 do -- k=2,nz1 in mpas
-    vertr[k].dzu = .5*(dzw[k]+dzw[k-1])
-    vertr[k].rdzu  =  1.0/vertr[k].dzu
-    vertr[k].fzp = .5* dzw[k]/vertr[k].dzu
-    vertr[k].fzm = .5* dzw[k-1]/vertr[k].dzu
-    rdzwp[k] = dzw[k-1]/(dzw[k]*(dzw[k]+dzw[k-1]))
-    rdzwm[k] = dzw[k]/(dzw[k-1]*(dzw[k]+dzw[k-1]))
+  for kIndex in vertical_range_s1_1d do -- k=2,nz1 in mpas
+    var k = int(kIndex)
+    vertr[k].dzu = .5 * (dzw[k] + dzw[k - 1])
+    vertr[k].rdzu = 1.0 / vertr[k].dzu
+    vertr[k].fzp = .5 * dzw[k] / vertr[k].dzu
+    vertr[k].fzm = .5 * dzw[k - 1] / vertr[k].dzu
+    rdzwp[k] = dzw[k - 1] / (dzw[k] * (dzw[k] + dzw[k - 1]))
+    rdzwm[k] = dzw[k] / (dzw[k - 1] * (dzw[k] + dzw[k - 1]))
   end
 
 
 
 --!**********  how are we storing cf1, cf2 and cf3?
 
-  var COF1 = (2.*vertr[1].dzu+vertr[2].dzu)/(vertr[1].dzu + vertr[2].dzu) * dzw[0]/ vertr[1].dzu
-  var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu)*dzw[0]/ vertr[2].dzu
-  vertr[0].cf1  = vertr[1].fzp + COF1
-  vertr[0].cf2  = vertr[1].fzm - COF1 - COF2
-  vertr[0].cf3  = COF2
+  var COF1 = (2. * vertr[1].dzu + vertr[2].dzu) / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[1].dzu
+  var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[2].dzu
+  vertr[0].cf1 = vertr[1].fzp + COF1
+  vertr[0].cf2 = vertr[1].fzm - COF1 - COF2
+  vertr[0].cf3 = COF2
 
 
 
 
-  for iCell=0, nCells do
+  for i in cell_range_1d do
+    var iCell = int(i)
     for k=0, nz do
-        cr[{iCell,k}].zgrid = (1.0-ah[k])*(sh[k]*(zt-cr[{iCell, k}].hx)+cr[{iCell, k}].hx) + ah[k] * sh[k]* zt
-        --cio.printf("ah[%d] is %f \n", k, ah[k])
-        --cio.printf("sh[%d] is %f \n", k, sh[k])
+        cr[{iCell, k}].zgrid = (1.0 - ah[k]) * (sh[k] * (zt - cr[{iCell, k}].hx) + cr[{iCell, k}].hx) + ah[k] * sh[k] * zt
+        --cio.printf("ah[%d] is %f \n", k, ah[k]) --cio.printf("sh[%d] is %f \n", k, sh[k])
         --cio.printf("cr[{%d, %d}].hx is %f\n", iCell, k, cr[{iCell, k}].hx)
     end
     for k=0, nz1 do
-      cr[{iCell, k}].zz = (zw[k+1]-zw[k])/(cr[{iCell, k+1}].zgrid-cr[{iCell,k}].zgrid)
+      cr[{iCell, k}].zz = (zw[k + 1] - zw[k]) / (cr[{iCell, k + 1}].zgrid - cr[{iCell, k}].zgrid)
       --cio.printf("cr[{iCell = %d, k = %d}].zz is %f \n", iCell, k, cr[{iCell, k}].zz)
       --cio.printf("zw[%d] is %f \n", k, zw[k]) : zw is set
       --cio.printf("cr[{%d, %d}].zgrid is %f", iCell, k, cr[{iCell,k}].zgrid) : zgrid is not set
     end
   end
 
-  for i=0, nEdges do
+  for index in cell_range_1d do
+    var i = int(index)
     var iCell1 = er[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
     var iCell2 = er[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
-    for k=1,nz1 do
-      er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid-cr[{iCell1, k}].zgrid + cr[{iCell2, k+1}].zgrid-cr[{iCell1, k+1}].zgrid) / er[{i, 0}].dcEdge
+    for k=1, nz1 do
+      er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid - cr[{iCell1, k}].zgrid + cr[{iCell2, k+1}].zgrid - cr[{iCell1, k + 1}].zgrid) / er[{i, 0}].dcEdge
     end
   end
-  for i=0, nCells do
-    for k=0, nz1 do
-      ztemp = .5*(cr[{i, k+1}].zgrid+cr[{k,i}].zgrid)
-      cr[{i, k}].dss = 0.0
-      ztemp = cr[{k,i}].zgrid
-      if(ztemp > zd+.1)  then
-         cr[{i, k}].dss = cr[{i, k}].dss+xnutr*cmath.pow(cmath.sin(.5*pii*(ztemp-zd)/(zt-zd)), 2)
-      end
+  for iCell in cell_range_2d do
+    var ztemp = .5 * (cr[{iCell.x, iCell.y + 1}].zgrid + cr[iCell].zgrid)
+    cr[iCell].dss = 0.0
+    ztemp = cr[iCell].zgrid -- TODO: This looks wrong. But, it's identical to the Fortran code.
+    if(ztemp > zd + .1)  then
+       cr[iCell].dss = cr[iCell].dss + xnutr * pow(sin( .5 * pii * (ztemp - zd) / (zt - zd)), 2)
     end
   end
+
 
 
 
 
 --!**************  section for 2d (z,lat) calc for zonal velocity
 
-  var dlat = 0.5*pii / float(nlat-1)
+  var dlat = 0.5 * pii / float(nlat - 1)
   var lat_2d : double[nlat]
   var zgrid_2d : double[(nVertLevels + 1) * nlat]
   var zz_2d : double[nVertLevels * nlat]
@@ -292,56 +323,64 @@ do
   var pp_2d : double[nVertLevels * nlat]
   var rr_2d : double[nVertLevels * nlat]
   var rtb_2d : double[nVertLevels * nlat]
-  var eta : double[nVertLevels]
-  var ppi : double[nVertLevels]
-  var teta : double[nVertLevels]
-  var tt : double[nVertLevels]
-  var etav : double[nVertLevels]
-  var temperature_1d : double[nVertLevels]
-  var ptemp : double
-  for i = 0,  nlat do
 
-    lat_2d[i] = float(i-1)*dlat
+
+  for iNlat in nlat_range_1d do
+    var i = int(iNlat)
+    -- Moved declarations of helper variables inside for loop to avoid loop-carried dependencies.
+    var eta : double[nVertLevels]
+    var teta : double[nVertLevels]
+    var tt : double[nVertLevels]
+    var etav : double[nVertLevels]
+    var temperature_1d : double[nVertLevels]
+    var ptemp : double
+    var ztemp : double
+    var phi : double
+
+    lat_2d[i] = float(i-1) * dlat
     phi = lat_2d[i]
-    var hx_1d = u0 / gravity * cmath.pow(cmath.cos(etavs),1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *(u0)*cmath.pow(cmath.cos(etavs),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)
+    var hx_1d = u0 / gravity * pow(cos(etavs), 1.5) * ((-2.0 * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) 
+                * (u0) * pow(cos(etavs), 1.5) + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e)
     for k=0, nz do
-      zgrid_2d[k * nlat + i] = (1.-ah[k])*(sh[k]*(zt-hx_1d)+hx_1d) + ah[k] * sh[k]* zt
+      zgrid_2d[k * nlat + i] = (1. - ah[k]) * (sh[k] * (zt - hx_1d) + hx_1d) + ah[k] * sh[k]* zt
     end
     for k=0, nz1 do
-      zz_2d[k* nlat + i] = (zw[k+1]-zw[k])/(zgrid_2d[(k+1) * nlat + i]-zgrid_2d[k*nlat + i])
+      zz_2d[k * nlat + i] = (zw[k + 1] - zw[k]) / (zgrid_2d[(k + 1) * nlat + i] - zgrid_2d[k * nlat + i])
     end
 
     for k=1,nz1 do
-      ztemp = .5*(zgrid_2d[(k+1)*nlat + i]+zgrid_2d[k*nlat + i])
-      ppb_2d[k * nlat + i] = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
-      pb_2d[k * nlat + i] = cmath.pow((ppb_2d[k * nlat + i]/p0),(rgas/cp))
-      rb_2d[k * nlat + i] = ppb_2d[k * nlat + i]/(rgas*t0b*zz_2d[k * nlat + i])
-      tb_2d[k * nlat + i] = t0b/pb_2d[k * nlat + i]
-      rtb_2d[k * nlat + i] = rb_2d[k * nlat + i]*tb_2d[k * nlat + i]
+      ztemp = .5 * (zgrid_2d[(k + 1) * nlat + i] + zgrid_2d[k * nlat + i])
+      ppb_2d[k * nlat + i] = p0 * exp(-gravity * ztemp / (rgas * t0b))
+      pb_2d[k * nlat + i] = pow((ppb_2d[k * nlat + i] / p0), (rgas / cp))
+      rb_2d[k * nlat + i] = ppb_2d[k * nlat + i] / (rgas * t0b * zz_2d[k * nlat + i])
+      tb_2d[k * nlat + i] = t0b / pb_2d[k * nlat + i]
+      rtb_2d[k * nlat + i] = rb_2d[k * nlat + i] * tb_2d[k * nlat + i]
       p_2d[k * nlat + i] = pb_2d[k * nlat + i]
       pp_2d[k * nlat + i] = 0.0
       rr_2d[k * nlat + i] = 0.0
     end
 
 
-    for itr = 0,10 do
+    for itr = 0, 10 do
 
-      for k=0,nz1 do
-        eta[k] = (ppb_2d[k * nlat + i]+pp_2d[k * nlat + i])/p0
-        etav[k] = (eta[k]-.252)*pii/2.0
+      for k=0, nz1 do
+        eta[k] = (ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]) / p0
+        etav[k] = (eta[k] - .252) * pii / 2.0
         if(eta[k] >= znut)  then
-          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity))
+          teta[k] = t0 * pow(eta[k], (rgas * dtdz / gravity))
         else
-          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
+          teta[k] = t0 * pow(eta[k], (rgas * dtdz / gravity)) + delta_t * pow((znut - eta[k]), 5)
         end
       end
 
       phi = lat_2d[i]
-      for k=1,nz1 do
-        temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0)  *2.0*u0*cmath.pow(cmath.cos(etav[k]),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.0+0.61*qv_2d[nlat*k + i])
+      for k=1, nz1 do
+        temperature_1d[k] = teta[k] + .75 * eta[k] * pii * u0 / rgas * sin(etav[k]) * sqrt(cos(etav[k])) * ((-2. * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) 
+                            * 2.0 * u0 * pow(cos(etav[k]), 1.5) + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e) / (1.0 + 0.61 * qv_2d[nlat * k + i])
 
-        ztemp   = .5*(zgrid_2d[k * nlat + i]+zgrid_2d[(k+1) * nlat + i])
-        ptemp   = ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]
+        -- Only used in skipped conditional below. Would change to var ... = ... for cuda generation.
+        -- ztemp = .5 * (zgrid_2d[k * nlat + i] + zgrid_2d[(k + 1) * nlat + i])
+        -- ptemp = ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]
 
         --get moisture
         ----SKIPPING THIS CONDITIONAL FOR NOW----
@@ -349,24 +388,25 @@ do
           --qv_2d[k * nlat + i] = env_qv( ztemp, temperature_1d[k], ptemp, rh_max )
         --end
 
-        tt[k] = temperature_1d[k]*(1.0+1.61*qv_2d[k * nlat + i])
+        tt[k] = temperature_1d[k] * (1.0 + 1.61 * qv_2d[k * nlat + i])
       end
 
       for itrp = 0,25 do
         for k=0,nz1 do
-          rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i]/(rgas*zz_2d[k * nlat + i]) - rb_2d[k * nlat + i]*(tt[k]-t0b))/tt[k]
+          rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i] / (rgas * zz_2d[k * nlat + i]) - rb_2d[k * nlat + i] * (tt[k] - t0b)) / tt[k]
         end
 
-        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(rr_2d[1 * nlat + i]+rb_2d[1 * nlat + i])*(1.0+qv_2d[1*nlat + i])  -.25*(rr_2d[2 * nlat + i]+rb_2d[2 * nlat + i])*(1.0+qv_2d[2 * nlat + i]))
+        var ppi : double[nVertLevels]
+        ppi[1] = p0 - .5 * dzw[1] * gravity * (1.25 * (rr_2d[1 * nlat + i] + rb_2d[1 * nlat + i]) * (1.0 + qv_2d[1 * nlat + i]) - .25* (rr_2d[2 * nlat + i] + rb_2d[2 * nlat + i]) * (1.0 + qv_2d[2 * nlat + i]))
 
-        ppi[1] = ppi[1]-ppb_2d[1 * nlat + i]
+        ppi[1] = ppi[1] - ppb_2d[1 * nlat + i]
+
         for k=0, nz1-1 do
-
-          ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity*  ( (rr_2d[k * nlat + i]+(rr_2d[k * nlat + i] +rb_2d[k * nlat + i])*qv_2d[k*nlat + i])*vertr[k+1].fzp  + (rr_2d[(k+1) * nlat + i]+(rr_2d[(k+1) * nlat + i]+rb_2d[(k+1) * nlat + i])*qv_2d[(k+1) * nlat + i])*vertr[k+1].fzm )
+          ppi[k + 1] = ppi[k] - vertr[k+1].dzu * gravity * ((rr_2d[k * nlat + i] + (rr_2d[k * nlat + i] + rb_2d[k * nlat + i]) * qv_2d[k * nlat + i]) * vertr[k+1].fzp + (rr_2d[(k + 1) * nlat + i] + (rr_2d[(k + 1) * nlat + i] + rb_2d[(k + 1) * nlat + i]) * qv_2d[(k + 1) * nlat + i]) * vertr[k + 1].fzm)
         end
 
         for k=0, nz1 do
-          pp_2d[k * nlat + i] = .2*ppi[k]+.8*pp_2d[k * nlat + i]
+          pp_2d[k * nlat + i] = .2 * ppi[k] + .8 * pp_2d[k * nlat + i]
         end
 
       end   -- end inner iteration loop itrp
@@ -375,9 +415,9 @@ do
 
 
     for k = 0, nz1 do
-      rho_2d[k * nlat + i] = rr_2d[k * nlat + i]+rb_2d[k * nlat + i]
-      etavs_2d[k * nlat + i] = ((ppb_2d[k * nlat + i]+pp_2d[k * nlat + i])/p0 - 0.252)*pii/2.0
-      u_2d[k * nlat + i] = u0*(cmath.pow(cmath.sin(2.*lat_2d[i]),2)) * (cmath.pow(cmath.cos(etavs_2d[k * nlat + i]),1.5))
+      rho_2d[k * nlat + i] = rr_2d[k * nlat + i] + rb_2d[k * nlat + i]
+      etavs_2d[k * nlat + i] = ((ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]) / p0 - 0.252) * pii / 2.0
+      u_2d[k * nlat + i] = u0 * (pow(sin(2. * lat_2d[i]), 2)) * (pow(cos(etavs_2d[k * nlat + i]), 1.5))
     end
 
   end   -- end loop over latitudes for 2D zonal wind field calc
@@ -414,14 +454,25 @@ do
 --!
 --!     reference sounding based on dry isothermal atmosphere
 --!
-  for i=0, nCells do
-    for k=0,nz1 do
-      ztemp    = .5*(cr[{i, k+1}].zgrid+cr[{k,i}].zgrid)
-      cr[{i, k}].pressure_base = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
-      cr[{i, k}].pressure_p = cmath.pow((cr[{i, k}].pressure_base/p0),(rgas/cp))
-      cr[{i, k}].rho_base = cr[{i, k}].pressure_base/(rgas*t0b*cr[{i, k}].zz)
-      cr[{i, k}].theta_base = t0b/cr[{i, k}].pressure_p
-      cr[{i, k}].rtheta_base = cr[{i, k}].rho_base*cr[{i, k}].theta_base
+  for iCell in cell_range_1d do
+    var i = int(iCell)
+    -- Moved declarations of helper variables inside for loop to avoid loop-carried dependencies.
+    var eta : double[nVertLevels]
+    var teta : double[nVertLevels]
+    var tt : double[nVertLevels]
+    var etav : double[nVertLevels]
+    var temperature_1d : double[nVertLevels]
+    var ptemp : double
+    var ztemp : double
+    var phi : double
+
+    for k=0, nz1 do
+      ztemp = .5 * (cr[{i, k + 1}].zgrid + cr[{k, i}].zgrid)
+      cr[{i, k}].pressure_base = p0 * exp(-gravity * ztemp / (rgas * t0b))
+      cr[{i, k}].pressure_p = pow((cr[{i, k}].pressure_base / p0), (rgas / cp))
+      cr[{i, k}].rho_base = cr[{i, k}].pressure_base / (rgas * t0b * cr[{i, k}].zz)
+      cr[{i, k}].theta_base = t0b / cr[{i, k}].pressure_p
+      cr[{i, k}].rtheta_base = cr[{i, k}].rho_base * cr[{i, k}].theta_base
       cr[{i, k}].exner = cr[{i, k}].pressure_p
       cr[{i, k}].pressure_p = 0.0
       cr[{i, k}].rho_p = 0.0
@@ -432,20 +483,21 @@ do
     for itr = 0, 10 do
 
       for k=0, nz1 do
-        eta[k] = (cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0
-        etav[k] = (eta[k]-.252)*pii/2.
-        if(eta[k] >= znut)  then
-          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity))
+        eta[k] = (cr[{i, k}].pressure_base + cr[{i, k}].pressure_p) / p0
+        etav[k] = (eta[k] - .252) * pii / 2.
+        if (eta[k] >= znut) then
+          teta[k] = t0 * pow(eta[k], (rgas * dtdz / gravity))
         else
-          teta[k] = t0*cmath.pow(eta[k],(rgas*dtdz/gravity)) + delta_t*cmath.pow((znut-eta[k]),5)
+          teta[k] = t0 * pow(eta[k], (rgas * dtdz / gravity)) + delta_t * pow((znut - eta[k]), 5)
         end
       end
       phi = cr[{i, 0}].lat
       for k=0,nz1 do
-        temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.+0.61*cr[{i, k}].qv)
-
-        ztemp   = .5*(cr[{k,i}].zgrid+cr[{i, k+1}].zgrid)
-        ptemp   = cr[{i, k}].pressure_base + cr[{i, k}].pressure_p
+        temperature_1d[k] = teta[k] + .75 * eta[k] * pii * u0 / rgas * sin(etav[k]) * sqrt(cos(etav[k])) * ((-2.0 * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) * 2. * u0 * pow(cos(etav[k]), 1.5) + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e) / (1. + 0.61 * cr[{i, k}].qv)
+        
+        -- Only needed for conditional below.
+        --ztemp = .5 * (cr[{k,i}].zgrid + cr[{i, k + 1}].zgrid)
+        --ptemp = cr[{i, k}].pressure_base + cr[{i, k}].pressure_p
 
 ------SKIPPING BECAUSE CONDITIONAL ----------
 --  --!get moisture
@@ -474,7 +526,7 @@ do
 --           scalars(index_qv,k,i) = relhum(k,i)*qsat(k,i)
 --        end
 
-        tt[k] = temperature_1d[k]*(1.+1.61*cr[{i, k}].qv)
+        tt[k] = temperature_1d[k] * (1. + 1.61 * cr[{i, k}].qv)
 
       end
 
@@ -482,22 +534,21 @@ do
 
 
       for itrp = 0,25 do
-        for k=0,nz1 do
-          cr[{i,k}].rho_p  = (cr[{i, k}].pressure_p/(rgas*cr[{i, k}].zz) - cr[{i, k}].rho_base*(tt[k]-t0b))/tt[k]
+        for k=0, nz1 do
+          cr[{i, k}].rho_p = (cr[{i, k}].pressure_p / (rgas * cr[{i, k}].zz) - cr[{i, k}].rho_base * (tt[k] - t0b)) / tt[k]
         end
 
-        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+cr[{i, 0}].qv ) -.25*(cr[{i, 2}].rho_p+cr[{i, 2}].rho_base)*(1.+cr[{i, 1}].qv))
+        var ppi : double[nVertLevels]
+        ppi[1] = p0 - .5 * dzw[1] * gravity * (1.25 * (cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1. + cr[{i, 0}].qv ) - .25 * (cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1. + cr[{i, 1}].qv))
 
-        ppi[1] = ppi[1]-cr[{i, 1}].pressure_base
-        for k=0,nz1-1 do
-
-
-           ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity* ( (cr[{i,k}].rho_p+(cr[{i,k}].rho_p+cr[{i, k}].rho_base)*cr[{i, k}].qv)*vertr[k+1].fzp   + (cr[{i, k+1}].rho_p+(cr[{i, k+1}].rho_p+cr[{i, k+1}].rho_base)*cr[{i, k+1}].qv)*vertr[k+1].fzm)
-
+        ppi[1] = ppi[1] - cr[{i, 1}].pressure_base
+        for k=0, nz1-1 do
+           ppi[k + 1] = ppi[k] - vertr[k + 1].dzu * gravity * ( (cr[{i, k}].rho_p + (cr[{i, k}].rho_p + cr[{i, k}].rho_base) 
+                        * cr[{i, k}].qv) * vertr[k + 1].fzp + (cr[{i, k + 1}].rho_p + (cr[{i, k + 1}].rho_p + cr[{i, k + 1}].rho_base) * cr[{i, k + 1}].qv) * vertr[k + 1].fzm)
         end
 
-        for k=0 ,nz1 do
-          cr[{i, k}].pressure_p = .2*ppi[k]+.8*cr[{i, k}].pressure_p
+        for k=0, nz1 do
+          cr[{i, k}].pressure_p = .2 * ppi[k] + .8 * cr[{i, k}].pressure_p
         end
 
       end   -- end inner iteration loop itrp
@@ -506,36 +557,35 @@ do
 
 
 
-
-
-    for k=0,nz1 do
-      cr[{i, k}].exner = cmath.pow(((cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0),(rgas/cp))
-      cr[{i, k}].theta_m = tt[k]/cr[{i, k}].exner
-      cr[{i, k}].rtheta_p = cr[{i, k}].theta_m * cr[{i,k}].rho_p+cr[{i, k}].rho_base*(cr[{i, k}].theta_m-cr[{i, k}].theta_base)
+    for k=0, nz1 do
+      cr[{i, k}].exner = pow(((cr[{i, k}].pressure_base + cr[{i, k}].pressure_p) / p0), (rgas / cp))
+      cr[{i, k}].theta_m = tt[k] / cr[{i, k}].exner
+      cr[{i, k}].rtheta_p = cr[{i, k}].theta_m * cr[{i,k}].rho_p + cr[{i, k}].rho_base * (cr[{i, k}].theta_m - cr[{i, k}].theta_base)
       cr[{i, k}].rho_zz = cr[{i, k}].rho_base + cr[{i,k}].rho_p
     end
 
     --calculation of surface pressure:
-    cr[{i, 0}].surface_pressure = 0.5*dzw[1]*gravity * (1.25*(cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 0}].qv) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
+    cr[{i, 0}].surface_pressure = 0.5 * dzw[1] * gravity * (1.25 * (cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 0}].qv) - 0.25 * (cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
     cr[{i, 0}].surface_pressure = cr[{i, 0}].surface_pressure + cr[{i, 1}].pressure_p + cr[{i, 1}].pressure_base
 
   end   -- end loop over cells
 
-  var lat_pert = latitude_pert*pii/180.0
-  var lon_pert = longitude_pert*pii/180.0
+  var lat_pert = latitude_pert * pii / 180.0
+  var lon_pert = longitude_pert * pii / 180.0
 
 
 
+  for i in edge_range_1d do
+    var iEdge = int(i)
+    var u_pert : double
 
-  for iEdge=0,nEdges do
-
-     var vtx1 = er[{iEdge, 0}].verticesOnEdge[0] --verticesOnEdge(1,iEdge)
-     var vtx2 = er[{iEdge, 0}].verticesOnEdge[1]
-     var lat1 = vr[{vtx1, 0}].lat
-     var lat2 = vr[{vtx2, 0}].lat
-     var iCell1 = er[{iEdge, 0}].cellsOnEdge[0]
-     var iCell2 = er[{iEdge, 0}].cellsOnEdge[1]
-     var flux = (0.5*(lat2-lat1) - 0.125*(cmath.sin(4.*lat2) - cmath.sin(4.*lat1))) * sphere_radius / er[{iEdge, 0}].dvEdge
+    var vtx1 = er[{iEdge, 0}].verticesOnEdge[0] --verticesOnEdge(1,iEdge)
+    var vtx2 = er[{iEdge, 0}].verticesOnEdge[1]
+    var lat1 = vr[{vtx1, 0}].lat
+    var lat2 = vr[{vtx2, 0}].lat
+    var iCell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var iCell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    var flux = (0.5 * (lat2 - lat1) - 0.125 * (sin(4. * lat2) - sin(4. * lat1))) * sphere_radius / er[{iEdge, 0}].dvEdge
 
 --     if (config_init_case == 2) then
 --        r_pert = sphere_distance( er[{iEdge, 0}].lat, er[{iEdge, 0}].lon, &
@@ -574,30 +624,30 @@ do
 --     end if
 
 
-     for k=0, nVertLevels do
-       etavs = (0.5*(cr[{iCell1, k}].pressure_base+cr[{iCell2, k}].pressure_base+cr[{iCell1, k}].pressure_p+cr[{iCell2, k}].pressure_p)/p0 - 0.252)*pii/2.0
-       var fluxk = u0*flux*(cmath.pow(cmath.cos(etavs),1.5))
-       er[{iEdge, k}].u = fluxk + u_pert
-     end
+    for k=0, nVertLevels do
+      var etavs = (0.5 * (cr[{iCell1, k}].pressure_base + cr[{iCell2, k}].pressure_base + cr[{iCell1, k}].pressure_p + cr[{iCell2, k}].pressure_p) / p0 - 0.252) * pii / 2.0
+      var fluxk = u0 * flux * (pow(cos(etavs), 1.5))
+      er[{iEdge, k}].u = fluxk + u_pert
+    end
 
 ------end conditional else---------
 
-     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
-     for k=0,nz1 do
-        er[{iEdge, k}].ru  = 0.5*(cr[{cell1, k}].rho_zz+cr[{cell2, k}].rho_zz)*er[{iEdge, k}].u
-     end
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    for k=0, nz1 do
+       er[{iEdge, k}].ru = 0.5 * (cr[{cell1, k}].rho_zz + cr[{cell2, k}].rho_zz) * er[{iEdge, k}].u
+    end
 
 --  !
 --  ! Generate rotated Coriolis field
 --  !
 
-     er[{iEdge, 0}].fEdge = 2.0 * omega_e *  ( -1.0*cmath.cos(er[{iEdge, 0}].lon) * cmath.cos(er[{iEdge, 0}].lat) * cmath.sin(alpha_grid) +  cmath.sin(er[{iEdge, 0}].lat) * cmath.cos(alpha_grid) )
+    er[{iEdge, 0}].fEdge = 2.0 * omega_e * ( -1.0 * cos(er[{iEdge, 0}].lon) * cos(er[{iEdge, 0}].lat) * sin(alpha_grid) + sin(er[{iEdge, 0}].lat) * cos(alpha_grid) )
   end
 
 
-  for iVtx=0,nVertices do
-     vr[{iVtx, 0}].fVertex = 2.0 * omega_e *  (-1.0*cmath.cos(vr[{iVtx, 0}].lon) * cmath.cos(vr[{iVtx, 0}].lat) * cmath.sin(alpha_grid) +  cmath.sin(vr[{iVtx, 0}].lat) * cmath.cos(alpha_grid))
+  for iVtx=0, nVertices do
+    vr[{iVtx, 0}].fVertex = 2.0 * omega_e * (-1.0 * cos(vr[{iVtx, 0}].lon) * cos(vr[{iVtx, 0}].lat) * sin(alpha_grid) + sin(vr[{iVtx, 0}].lat) * cos(alpha_grid))
   end
 
 
@@ -611,17 +661,20 @@ do
 --  !
 
 
-  var z_edge : double
-  var z_edge3 : double
-  for iEdge = 0,nEdges do
-     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+
+  for i in edge_range_1d do
+    var iEdge = int(i)
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
+    -- Moved z_edges declaration inside because of Cuda.
+    var z_edge : double
+    var z_edge3 : double
 
     --Below conditional is unnecessary because we use regions, not pools/threads
      --! Avoid a potential divide by zero below if areaCell(nCells+1) is used in the denominator
     -- if (cell1 <= nCellsSolve or cell2 <= nCellsSolve ) then
         for k = 0, nVertLevels do
-          z_edge = (cr[{cell1, k}].zgrid+cr[{cell2, k}].zgrid)/2.0
+          z_edge = (cr[{cell1, k}].zgrid + cr[{cell2, k}].zgrid) / 2.0
           -- if (config_theta_adv_order == 2) then
 
             --  z_edge = (cr[{cell1, k}].zgrid+cr[{cell2, k}].zgrid)/2.
@@ -654,10 +707,10 @@ do
                z_edge3 = 0.0
      --      end
 
-           er[{iEdge, k}].zb[0] = (z_edge-cr[{cell1, k}].zgrid)*er[{iEdge, 0}].dvEdge/cr[{cell1, 0}].areaCell
-           er[{iEdge, k}].zb[1] = (z_edge-cr[{cell2, k}].zgrid)*er[{iEdge, 0}].dvEdge/cr[{cell2, 0}].areaCell
-           er[{iEdge, k}].zb3[0]=  z_edge3*er[{iEdge, 0}].dvEdge/cr[{cell1, 0}].areaCell
-           er[{iEdge, k}].zb3[1] =  z_edge3*er[{iEdge, 0}].dvEdge/cr[{cell2, 0}].areaCell
+           er[{iEdge, k}].zb[0] = (z_edge - cr[{cell1, k}].zgrid) * er[{iEdge, 0}].dvEdge / cr[{cell1, 0}].areaCell
+           er[{iEdge, k}].zb[1] = (z_edge - cr[{cell2, k}].zgrid) * er[{iEdge, 0}].dvEdge / cr[{cell2, 0}].areaCell
+           er[{iEdge, k}].zb3[0] = z_edge3 * er[{iEdge, 0}].dvEdge / cr[{cell1, 0}].areaCell
+           er[{iEdge, k}].zb3[1] = z_edge3 * er[{iEdge, 0}].dvEdge / cr[{cell2, 0}].areaCell
 
         end
     -- end
@@ -665,23 +718,20 @@ do
   end
 
   --! for including terrain
-  for iEdge = 0,nEdges do
+  for i in edge_range_1d do
+    var iEdge = int(i)
 
-     var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
-     var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
-
-
+    var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
+    var cell2 = er[{iEdge, 0}].cellsOnEdge[1]
 
 -------------------------------------------------------------------------------
 ----------TODO: past this point, conversion from Fortran is incomplete---------
 -------------------------------------------------------------------------------
 
-
-
-     for k = 1, nVertLevels do
-        flux =  (vertr[k].fzm*er[{iEdge, k}].ru+vertr[k].fzp*er[{iEdge, k-1}].ru)
-        cr[{cell2, k}].rw = cr[{cell2, k}].rw + (vertr[k].fzm*cr[{cell2, k}].zz+vertr[k].fzp*cr[{cell2, k-1}].zz)*er[{iEdge, k}].zb[1]*flux
-        cr[{cell1, k}].rw = cr[{cell1, k}].rw - (vertr[k].fzm*cr[{cell1, k}].zz+vertr[k].fzp*cr[{cell1, k-1}].zz)*er[{iEdge, k}].zb[0]*flux
+    for k = 1, nVertLevels do
+       var flux = (vertr[k].fzm * er[{iEdge, k}].ru + vertr[k].fzp * er[{iEdge, k - 1}].ru)
+       cr[{cell2, k}].rw = cr[{cell2, k}].rw + (vertr[k].fzm * cr[{cell2, k}].zz + vertr[k].fzp * cr[{cell2, k-1}].zz) * er[{iEdge, k}].zb[1] * flux
+       cr[{cell1, k}].rw = cr[{cell1, k}].rw - (vertr[k].fzm * cr[{cell1, k}].zz + vertr[k].fzp * cr[{cell1, k-1}].zz) * er[{iEdge, k}].zb[0] * flux
 
 --        if (config_theta_adv_order ==3) then
 --           cr[{cell2, k}].rw = cr[{cell2, k}].rw    &
@@ -692,34 +742,31 @@ do
 --                                          (vertr[k].fzm*zz(k,cell1)+vertr[k].fzp*zz(k-1,cell1))*zb3(k,1,iEdge)*flux
 --        end
 
-     end
-
+    end
   end
 
   --! Compute w from rho_zz and rw
-  for iCell=0,nCells do
-     for k=1,nVertLevels do
-        cr[{iCell, k}].w = cr[{iCell, k}].rw / (vertr[k].fzp * cr[{iCell, k-1}].rho_zz + vertr[k].fzm * cr[{iCell, k}].rho_zz)
-     end
+  var cell_range_2d_special = rect2d { int2d {0, 1}, int2d {nCells - 1, nVertLevels - 1} }
+  for iCell in cell_range_2d_special do
+    cr[iCell].w = cr[iCell].rw / (vertr[iCell.y].fzp * cr[{iCell.x, iCell.y - 1}].rho_zz + vertr[iCell.y].fzm * cr[iCell].rho_zz)
   end
 
 
   --!
   --! Compute mass fluxes tangential to each edge (i.e., through the faces of dual grid cells)
   --!
-  for iEdge = 0, nEdges do
-    for k =0, nVertLevels do
-      er[{iEdge, k}].v = 0.0
-    end
+  for iEdge in edge_range_2d do
+    er[iEdge].v = 0.0
   end
 
-  for iEdge = 0, nEdges do
-     for i=0, er[{iEdge, 0}].nEdgesOnEdge do
-        eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i]
-        for k = 0, nVertLevels do
-           er[{iEdge, k}].v = er[{iEdge, k}].v + er[{iEdge, 0}].weightsOnEdge[i] * er[{eoe, k}].u
-        end
-     end
+  for i in edge_range_1d do
+    var iEdge = int(i)
+    for i = 0, er[{iEdge, 0}].nEdgesOnEdge do
+      var eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i]
+      for k = 0, nVertLevels do
+        er[{iEdge, k}].v = er[{iEdge, k}].v + er[{iEdge, 0}].weightsOnEdge[i] * er[{eoe, k}].u
+      end
+    end
   end
 
 --------PSURF is never used, in mpas it only exists for purposes of logging. excluding because of this
@@ -733,11 +780,8 @@ do
 --  end
 
   --! Compute rho and theta from rho_zz and theta_m
-  for iCell=0,nCells do
-     for k=0,nVertLevels do
-        cr[{iCell, k}].rho = cr[{iCell, k}].rho_zz * cr[{iCell, k}].zz
-        cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1.0 + 1.61 * cr[{iCell, k}].qv)
-     end
+  for iCell in cell_range_2d do
+      cr[iCell].rho = cr[iCell].rho_zz * cr[iCell].zz
+      cr[iCell].theta = cr[iCell].theta_m / (1.0 + 1.61 * cr[iCell].qv)
   end
-
 end
