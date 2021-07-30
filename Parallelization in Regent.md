@@ -71,9 +71,61 @@ end
 
 
 
+## Stack-allocated arrays
+
+The following will not compile since there is both region access and an assignment to a stack-allocated array in the same for loop.
+
+```c++
+__demand(__cuda)
+task example2(reg : region(ispace(int1d), double), n : int)
+where
+  writes (reg)
+do
+  var range_1d = rect1d {0, n - 1}
+  var a : double[n]
+ 
+  --__demand(__openmp)
+  for i in range_1d do
+    a[int(i)] = 1
+    reg[int(i)] = 1
+  end
+end
+```
+
+Stack-allocated arrays don’t get assigned to a GPU, only regions do. This means that…
+
+1. For loops containing only stack-allocated arrays don’t get run in parallel since they are run “host side”.
+2. CUDA simply ignores certain ineligible loops instead of converting them, whereas OpenMP would complain. (OpenMP operates on a per-loop basis instead of a per-task basis). That's why sometimes `__demand(__openmp)` will raise an error while `__demand(__cuda)` will not.
+3. One cannot write to a stack-allocated array in a loop that runs in parallel.
+
+For more info, read this [issue](https://github.com/StanfordLegion/legion/issues/1124).
+
+
+
 ## Debugging Tips
 
 As one will quickly be able to tell, the compiler's error messages are not very useful. We go over some common error messages here.  
 
 - `CUDA code generation failed: found a region access outside parallelizable loops`. This error will always point to the beginning of a for loop. Use the annotation `__demand(__openmp)` directly in front of the for loop, and run your program again. This time the error message will be more informative.
+
 - `option __demand(__cuda) is not permitted for non-leaf task`. This error is thrown when you try to annotate a `task` that calls other tasks. The Cuda code generation does not work for such tasks since the overhead for each function is too big. 
+
+- Math statements cause an `inadmissable statement` error. 
+
+  ```c++
+  -- Error --
+  cmath = terralib.includec("math.h")
+  for iCell in cell_range_1d do
+    cr[iCell].hx = cmath.pow(etavs, 1.5)
+  end
+  ```
+
+  ```c++
+  -- Fix --
+  local pow = regentlib.pow(double)
+  for iCell in cell_range_1d do
+    cr[iCell].hx = pow(etavs, 1.5)
+  end
+  ```
+
+- Currently there is an [issue](https://github.com/StanfordLegion/legion/issues/1121) when using a `rect1d` to loop over a region. Explicitly cast the iterator to an int with `int(x)` as a temporary fix.  
