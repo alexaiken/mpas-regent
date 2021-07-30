@@ -16,7 +16,7 @@ local sphere_radius = constants.sphere_radius
 local nlat = constants.nlat
 
 local cio = terralib.includec("stdio.h")
-local cmath = terralib.includec("math.h")
+-- local cmath = terralib.includec("math.h")
 -- Can't use terralib.includec("math.h") with Cuda.
 local pow = regentlib.pow(double)
 local cos = regentlib.cos(double)
@@ -243,8 +243,14 @@ do
   for iVert in vertical_range_1d do -- Old comment: nz1 is just nVertLevels, idk why mpas renamed it
     var k = int(iVert)
     dzw[k] = zw[k + 1] - zw[k]
-    vertr[k].rdzw = 1.0 / dzw[k]
+    -- Can't mix assignments to stack-allocated arrays and regions.
+    -- vertr[k].rdzw = 1.0 / dzw[k] 
     zu[k] = .5 * (zw[k] + zw[k + 1])
+  end
+  -- Split for loop into two to allow for Cuda code generation.
+  for iVert in vertical_range_1d do -- Old comment: nz1 is just nVertLevels, idk why mpas renamed it
+    var k = int(iVert)
+    vertr[k].rdzw = 1.0 / dzw[k]
   end
 
   for kIndex in vertical_range_s1_1d do -- k=2,nz1 in mpas
@@ -253,6 +259,10 @@ do
     vertr[k].rdzu = 1.0 / vertr[k].dzu
     vertr[k].fzp = .5 * dzw[k] / vertr[k].dzu
     vertr[k].fzm = .5 * dzw[k - 1] / vertr[k].dzu
+  end
+  -- Split for loop into two to allow for Cuda code generation.
+  for kIndex in vertical_range_s1_1d do -- k=2,nz1 in mpas
+    var k = int(kIndex)
     rdzwp[k] = dzw[k - 1] / (dzw[k] * (dzw[k] + dzw[k - 1]))
     rdzwm[k] = dzw[k] / (dzw[k - 1] * (dzw[k] + dzw[k - 1]))
   end
@@ -261,43 +271,45 @@ do
 
 --!**********  how are we storing cf1, cf2 and cf3?
 
-  var COF1 = (2. * vertr[1].dzu + vertr[2].dzu) / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[1].dzu
-  var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[2].dzu
-  vertr[0].cf1 = vertr[1].fzp + COF1
-  vertr[0].cf2 = vertr[1].fzm - COF1 - COF2
-  vertr[0].cf3 = COF2
+-- TODO: What to do with this?
+--  var COF1 = (2. * vertr[1].dzu + vertr[2].dzu) / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[1].dzu
+--  var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[2].dzu
+--  vertr[0].cf1 = vertr[1].fzp + COF1
+--  vertr[0].cf2 = vertr[1].fzm - COF1 - COF2
+--  vertr[0].cf3 = COF2
 
 
-
-
-  for i in cell_range_1d do
-    var iCell = int(i)
-    for k=0, nz do
-        cr[{iCell, k}].zgrid = (1.0 - ah[k]) * (sh[k] * (zt - cr[{iCell, k}].hx) + cr[{iCell, k}].hx) + ah[k] * sh[k] * zt
-        --cio.printf("ah[%d] is %f \n", k, ah[k]) --cio.printf("sh[%d] is %f \n", k, sh[k])
-        --cio.printf("cr[{%d, %d}].hx is %f\n", iCell, k, cr[{iCell, k}].hx)
-    end
-    for k=0, nz1 do
-      cr[{iCell, k}].zz = (zw[k + 1] - zw[k]) / (cr[{iCell, k + 1}].zgrid - cr[{iCell, k}].zgrid)
-      --cio.printf("cr[{iCell = %d, k = %d}].zz is %f \n", iCell, k, cr[{iCell, k}].zz)
-      --cio.printf("zw[%d] is %f \n", k, zw[k]) : zw is set
-      --cio.printf("cr[{%d, %d}].zgrid is %f", iCell, k, cr[{iCell,k}].zgrid) : zgrid is not set
-    end
+  for iCell in cell_range_extra_2d do
+    cr[iCell].zgrid = (1.0 - ah[iCell.y]) * (sh[iCell.y] * (zt - cr[iCell].hx) + cr[iCell].hx) + ah[iCell.y] * sh[iCell.y] * zt
+    --cio.printf("ah[%d] is %f \n", k, ah[k]) --cio.printf("sh[%d] is %f \n", k, sh[k])
+    --cio.printf("cr[{%d, %d}].hx is %f\n", iCell, k, cr[{iCell, k}].hx)
+  end
+  -- Split for loop into two to allow for Cuda code generation.
+  for iCell in cell_range_2d do
+    cr[iCell].zz = (zw[iCell.y + 1] - zw[iCell.y]) / (cr[{iCell.x, iCell.y + 1}].zgrid - cr[iCell].zgrid)
+    --cio.printf("cr[{iCell = %d, k = %d}].zz is %f \n", iCell, k, cr[{iCell, k}].zz)
+    --cio.printf("zw[%d] is %f \n", k, zw[k]) : zw is set
+    --cio.printf("cr[{%d, %d}].zgrid is %f", iCell, k, cr[{iCell,k}].zgrid) : zgrid is not set
   end
 
-  for index in cell_range_1d do
-    var i = int(index)
-    var iCell1 = er[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
-    var iCell2 = er[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
-    for k=1, nz1 do
-      er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid - cr[{iCell1, k}].zgrid + cr[{iCell2, k+1}].zgrid - cr[{iCell1, k + 1}].zgrid) / er[{i, 0}].dcEdge
-    end
+  for iCell in cell_range_2d do
+    var iCell1 = er[{iCell.x, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
+    var iCell2 = er[{iCell.x, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
+    er[iCell].zxu = 0.5 * (cr[{iCell2, iCell.y}].zgrid - cr[{iCell1, iCell.y}].zgrid + cr[{iCell2, iCell.y + 1}].zgrid - cr[{iCell1, iCell.y + 1}].zgrid) / er[{iCell.x, 0}].dcEdge
   end
+--  for index in cell_range_1d do
+--    var i = int(index)
+--    var iCell1 = er[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
+--    var iCell2 = er[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
+--    for k=1, nz1 do -- TODO: should this be 0?
+--      er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid - cr[{iCell1, k}].zgrid + cr[{iCell2, k + 1}].zgrid - cr[{iCell1, k + 1}].zgrid) / er[{i, 0}].dcEdge
+--    end
+--  end
   for iCell in cell_range_2d do
     var ztemp = .5 * (cr[{iCell.x, iCell.y + 1}].zgrid + cr[iCell].zgrid)
     cr[iCell].dss = 0.0
     ztemp = cr[iCell].zgrid -- TODO: This looks wrong. But, it's identical to the Fortran code.
-    if(ztemp > zd + .1)  then
+    if (ztemp > zd + .1) then
        cr[iCell].dss = cr[iCell].dss + xnutr * pow(sin( .5 * pii * (ztemp - zd) / (zt - zd)), 2)
     end
   end
@@ -325,9 +337,10 @@ do
   var rtb_2d : double[nVertLevels * nlat]
 
 
+  -- TODO: This loops seems to accomplish nothing.
   for iNlat in nlat_range_1d do
     var i = int(iNlat)
-    -- Moved declarations of helper variables inside for loop to avoid loop-carried dependencies.
+    -- Moved declarations of helper variables inside of for loop to avoid loop-carried dependencies.
     var eta : double[nVertLevels]
     var teta : double[nVertLevels]
     var tt : double[nVertLevels]
@@ -397,23 +410,25 @@ do
         end
 
         var ppi : double[nVertLevels]
+        -- TODO: I believe this should be ppi[0].
         ppi[1] = p0 - .5 * dzw[1] * gravity * (1.25 * (rr_2d[1 * nlat + i] + rb_2d[1 * nlat + i]) * (1.0 + qv_2d[1 * nlat + i]) - .25* (rr_2d[2 * nlat + i] + rb_2d[2 * nlat + i]) * (1.0 + qv_2d[2 * nlat + i]))
 
         ppi[1] = ppi[1] - ppb_2d[1 * nlat + i]
 
         for k=0, nz1-1 do
-          ppi[k + 1] = ppi[k] - vertr[k+1].dzu * gravity * ((rr_2d[k * nlat + i] + (rr_2d[k * nlat + i] + rb_2d[k * nlat + i]) * qv_2d[k * nlat + i]) * vertr[k+1].fzp + (rr_2d[(k + 1) * nlat + i] + (rr_2d[(k + 1) * nlat + i] + rb_2d[(k + 1) * nlat + i]) * qv_2d[(k + 1) * nlat + i]) * vertr[k + 1].fzm)
+          -- TODO: Can't access vertr here.
+--          ppi[k + 1] = ppi[k] - vertr[k+1].dzu * gravity * ((rr_2d[k * nlat + i] + (rr_2d[k * nlat + i] + rb_2d[k * nlat + i]) * qv_2d[k * nlat + i]) * vertr[k+1].fzp + (rr_2d[(k + 1) * nlat + i] + (rr_2d[(k + 1) * nlat + i] + rb_2d[(k + 1) * nlat + i]) * qv_2d[(k + 1) * nlat + i]) * vertr[k + 1].fzm)
         end
 
         for k=0, nz1 do
           pp_2d[k * nlat + i] = .2 * ppi[k] + .8 * pp_2d[k * nlat + i]
         end
-
+--
       end   -- end inner iteration loop itrp
 
     end   -- end outer iteration loop itr
-
-
+--
+--
     for k = 0, nz1 do
       rho_2d[k * nlat + i] = rr_2d[k * nlat + i] + rb_2d[k * nlat + i]
       etavs_2d[k * nlat + i] = ((ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]) / p0 - 0.252) * pii / 2.0
@@ -463,11 +478,12 @@ do
     var etav : double[nVertLevels]
     var temperature_1d : double[nVertLevels]
     var ptemp : double
-    var ztemp : double
     var phi : double
 
     for k=0, nz1 do
-      ztemp = .5 * (cr[{i, k + 1}].zgrid + cr[{k, i}].zgrid)
+      -- TODO: Seems incorrect! 
+      -- Fortran: ztemp = .5*(zgrid(k+1,i)+zgrid(k,i))
+      var ztemp = .5 * (cr[{i, k + 1}].zgrid + cr[{i, k}].zgrid)
       cr[{i, k}].pressure_base = p0 * exp(-gravity * ztemp / (rgas * t0b))
       cr[{i, k}].pressure_p = pow((cr[{i, k}].pressure_base / p0), (rgas / cp))
       cr[{i, k}].rho_base = cr[{i, k}].pressure_base / (rgas * t0b * cr[{i, k}].zz)
@@ -539,6 +555,7 @@ do
         end
 
         var ppi : double[nVertLevels]
+        -- TODO: should be 0.
         ppi[1] = p0 - .5 * dzw[1] * gravity * (1.25 * (cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1. + cr[{i, 0}].qv ) - .25 * (cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1. + cr[{i, 1}].qv))
 
         ppi[1] = ppi[1] - cr[{i, 1}].pressure_base
