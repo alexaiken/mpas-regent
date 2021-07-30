@@ -224,6 +224,7 @@ end
 -- the solar radiation.
 --
 -- NOTE: variable eccf is unused everywhere, so not included in regent version
+__demand(__cuda)
 task radinp(cr : region(ispace(int2d), cell_fs),
             camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
             radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
@@ -242,24 +243,28 @@ where
     pnm
   )
 do
+  -- Mainly unused currently.
   ---------------------------Local variables-----------------------------
-  var i : int           -- Longitude loop index
-  var k : int           -- Vertical loop index
+  --var i : int           -- Longitude loop index
+  --var k : int           -- Vertical loop index
 
-  var calday : double   -- current calendar day
+  --var calday : double   -- current calendar day
   var vmmr : double     -- Ozone volume mixing ratio
-  var delta : double    -- Solar declination angle
+  --var delta : double    -- Solar declination angle
   -----------------------------------------------------------------------
 
+  -- Variables for CUDA
+  var pver_ncol_2d = rect2d{ {0, 0}, {pver - 1, ncol - 1} }
+  var ncol_1d = rect2d{ {0, pverp}, {ncol - 1, pverp} }
+
   -- Convert pressure from pascals to dynes/cm2
-  for k=0, pver do
-    for i=0, ncol do
-        radctl_2d_pverr_r[{i, k}].pbr = camrad_2d_r[{i, k}].pmid * 10.0
-        pnm[{i, k}] = camrad_2d_r[{i, k}].pint * 10.0
-      end
+  for i in pver_ncol_2d do
+    radctl_2d_pverr_r[i].pbr = camrad_2d_r[i].pmid * 10.0
+    pnm[i] = camrad_2d_r[i].pint * 10.0
   end
-  for i=0, ncol do
-    pnm[{i, pverp}] = camrad_2d_r[{i, pverp}].pint * 10.0
+  for iNcol in ncol_1d do
+    --pnm[{i, pverp}] = camrad_2d_r[{i, pverp}].pint * 10.0
+    pnm[iNcol] = camrad_2d_r[iNcol].pint * 10.0
   end
 
   -- Convert ozone volume mixing ratio to mass mixing ratio:
@@ -473,7 +478,7 @@ do
     -- must extrapolate from the bottom or top pressure level for at least some
     -- of the longitude points.
 
-    if(not lev_interp_comp) then
+    if (not lev_interp_comp) then
       for i = 0, ncol do
         for m = 1, constants.naer do
           if (camrad_2d_r[{i,k}].pint < m_hybi[0] * Match_ps[i]) then
