@@ -256,7 +256,6 @@ end
 
 -- initialization of climatological monthly-mean ozone profiles.
 -- Fortran equivalent can be found in src/core_atmosphere/mpas_atmphys_camrad_init.F
--- TODO: Check input parameters in other files.
 task oznini(cr : region(ispace(int2d), cell_fs),
             ozn_region : region(ispace(int2d), ozn_fs))
 where
