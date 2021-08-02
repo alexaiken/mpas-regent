@@ -106,7 +106,10 @@ For more info, read this [issue](https://github.com/StanfordLegion/legion/issues
 
 As one will quickly be able to tell, the compiler's error messages are not very useful. We go over some common error messages here.  
 
-- `CUDA code generation failed: found a region access outside parallelizable loops`. This error will always point to the beginning of a for loop. Use the annotation `__demand(__openmp)` directly in front of the for loop, and run your program again. This time the error message will be more informative.
+- `CUDA code generation failed: found a region access outside parallelizable loops`. 
+
+  - This error usually points to the beginning of a for loop. Use the annotation `__demand(__openmp)` directly in front of the for loop, and run your program again. This time the error message will be more informative. 
+  - In the case this actually points to a region access outside a for loop, you will have to wrap the block of code with a dummy for loop that only runs once.
 
 - `option __demand(__cuda) is not permitted for non-leaf task`. This error is thrown when you try to annotate a `task` that calls other tasks. The Cuda code generation does not work for such tasks since the overhead for each function is too big. 
 
@@ -129,3 +132,5 @@ As one will quickly be able to tell, the compiler's error messages are not very 
   ```
 
 - Currently there is an [issue](https://github.com/StanfordLegion/legion/issues/1121) when using a `rect1d` to loop over a region. Explicitly cast the iterator to an int with `int(x)` as a temporary fix.  
+
+ 
