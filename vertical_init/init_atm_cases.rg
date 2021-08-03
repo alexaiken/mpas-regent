@@ -16,7 +16,6 @@ local sphere_radius = constants.sphere_radius
 local nlat = constants.nlat
 
 local cio = terralib.includec("stdio.h")
--- local cmath = terralib.includec("math.h")
 -- Can't use terralib.includec("math.h") with Cuda.
 local pow = regentlib.pow(double)
 local cos = regentlib.cos(double)
@@ -115,8 +114,7 @@ do
     cr[iCell].x = cr[iCell].x * sphere_radius
     cr[iCell].y = cr[iCell].y * sphere_radius
     cr[iCell].z = cr[iCell].z * sphere_radius
-    --cr[iCell].areaCell = cr[iCell].areaCell * cmath.pow(sphere_radius, 2.0)
-    cr[iCell].areaCell = cr[iCell].areaCell * sphere_radius * sphere_radius
+    cr[iCell].areaCell = cr[iCell].areaCell * pow(sphere_radius, 2.0)
   end
 
   for iVert in vertex_range_1d do
@@ -124,11 +122,9 @@ do
     vr[iVert].x = vr[iVert].x * sphere_radius
     vr[iVert].y = vr[iVert].y * sphere_radius
     vr[iVert].z = vr[iVert].z * sphere_radius
-    --vr[iVert].areaTriangle = vr[iVert].areaTriangle * cmath.pow(sphere_radius, 2.0)
-    vr[iVert].areaTriangle = vr[iVert].areaTriangle * sphere_radius * sphere_radius
+    vr[iVert].areaTriangle = vr[iVert].areaTriangle * pow(sphere_radius, 2.0)
     for vDeg = 0, vertexDegree do
-      --vr[iVert].kiteAreasOnVertex[vertexDegree] = vr[iVert].kiteAreasOnVertex[vertexDegree] * cmath.pow(sphere_radius, 2.0)
-      vr[iVert].kiteAreasOnVertex[vertexDegree] = vr[iVert].kiteAreasOnVertex[vertexDegree] * sphere_radius * sphere_radius
+      vr[iVert].kiteAreasOnVertex[vertexDegree] = vr[iVert].kiteAreasOnVertex[vertexDegree] * pow(sphere_radius, 2.0)
     end
   end
 
@@ -248,6 +244,8 @@ do
     zu[k] = .5 * (zw[k] + zw[k + 1])
   end
   -- Split for loop into two to allow for Cuda code generation.
+  -- Stack allocated arrays and regions can't be written to in the same for loop.
+  -- For loops with array assignments are not run in parallel.
   for iVert in vertical_range_1d do -- Old comment: nz1 is just nVertLevels, idk why mpas renamed it
     var k = int(iVert)
     vertr[k].rdzw = 1.0 / dzw[k]
@@ -270,13 +268,16 @@ do
 
 
 --!**********  how are we storing cf1, cf2 and cf3?
-
--- TODO: What to do with this?
---  var COF1 = (2. * vertr[1].dzu + vertr[2].dzu) / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[1].dzu
---  var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[2].dzu
---  vertr[0].cf1 = vertr[1].fzp + COF1
---  vertr[0].cf2 = vertr[1].fzm - COF1 - COF2
---  vertr[0].cf3 = COF2
+  -- Created dummy for loop for CUDA code generation.
+  var one_1d = rect1d { 0, 0 }
+  for i in one_1d do
+    var zero = int(i)
+    var COF1 = (2. * vertr[1].dzu + vertr[2].dzu) / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[1].dzu
+    var COF2 = vertr[1].dzu / (vertr[1].dzu + vertr[2].dzu) * dzw[0] / vertr[2].dzu
+    vertr[zero].cf1 = vertr[1].fzp + COF1
+    vertr[zero].cf2 = vertr[1].fzm - COF1 - COF2
+    vertr[zero].cf3 = COF2
+  end
 
 
   for iCell in cell_range_extra_2d do
@@ -338,104 +339,104 @@ do
 
 
   -- TODO: This loops seems to accomplish nothing.
-  for iNlat in nlat_range_1d do
-    var i = int(iNlat)
-    -- Moved declarations of helper variables inside of for loop to avoid loop-carried dependencies.
-    var eta : double[nVertLevels]
-    var teta : double[nVertLevels]
-    var tt : double[nVertLevels]
-    var etav : double[nVertLevels]
-    var temperature_1d : double[nVertLevels]
-    var ptemp : double
-    var ztemp : double
-    var phi : double
-
-    lat_2d[i] = float(i-1) * dlat
-    phi = lat_2d[i]
-    var hx_1d = u0 / gravity * pow(cos(etavs), 1.5) * ((-2.0 * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) 
-                * (u0) * pow(cos(etavs), 1.5) + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e)
-    for k=0, nz do
-      zgrid_2d[k * nlat + i] = (1. - ah[k]) * (sh[k] * (zt - hx_1d) + hx_1d) + ah[k] * sh[k]* zt
-    end
-    for k=0, nz1 do
-      zz_2d[k * nlat + i] = (zw[k + 1] - zw[k]) / (zgrid_2d[(k + 1) * nlat + i] - zgrid_2d[k * nlat + i])
-    end
-
-    for k=1,nz1 do
-      ztemp = .5 * (zgrid_2d[(k + 1) * nlat + i] + zgrid_2d[k * nlat + i])
-      ppb_2d[k * nlat + i] = p0 * exp(-gravity * ztemp / (rgas * t0b))
-      pb_2d[k * nlat + i] = pow((ppb_2d[k * nlat + i] / p0), (rgas / cp))
-      rb_2d[k * nlat + i] = ppb_2d[k * nlat + i] / (rgas * t0b * zz_2d[k * nlat + i])
-      tb_2d[k * nlat + i] = t0b / pb_2d[k * nlat + i]
-      rtb_2d[k * nlat + i] = rb_2d[k * nlat + i] * tb_2d[k * nlat + i]
-      p_2d[k * nlat + i] = pb_2d[k * nlat + i]
-      pp_2d[k * nlat + i] = 0.0
-      rr_2d[k * nlat + i] = 0.0
-    end
-
-
-    for itr = 0, 10 do
-
-      for k=0, nz1 do
-        eta[k] = (ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]) / p0
-        etav[k] = (eta[k] - .252) * pii / 2.0
-        if(eta[k] >= znut)  then
-          teta[k] = t0 * pow(eta[k], (rgas * dtdz / gravity))
-        else
-          teta[k] = t0 * pow(eta[k], (rgas * dtdz / gravity)) + delta_t * pow((znut - eta[k]), 5)
-        end
-      end
-
-      phi = lat_2d[i]
-      for k=1, nz1 do
-        temperature_1d[k] = teta[k] + .75 * eta[k] * pii * u0 / rgas * sin(etav[k]) * sqrt(cos(etav[k])) * ((-2. * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) 
-                            * 2.0 * u0 * pow(cos(etav[k]), 1.5) + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e) / (1.0 + 0.61 * qv_2d[nlat * k + i])
-
-        -- Only used in skipped conditional below. Would change to var ... = ... for cuda generation.
-        -- ztemp = .5 * (zgrid_2d[k * nlat + i] + zgrid_2d[(k + 1) * nlat + i])
-        -- ptemp = ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]
-
-        --get moisture
-        ----SKIPPING THIS CONDITIONAL FOR NOW----
-        --if (moisture) then
-          --qv_2d[k * nlat + i] = env_qv( ztemp, temperature_1d[k], ptemp, rh_max )
-        --end
-
-        tt[k] = temperature_1d[k] * (1.0 + 1.61 * qv_2d[k * nlat + i])
-      end
-
-      for itrp = 0,25 do
-        for k=0,nz1 do
-          rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i] / (rgas * zz_2d[k * nlat + i]) - rb_2d[k * nlat + i] * (tt[k] - t0b)) / tt[k]
-        end
-
-        var ppi : double[nVertLevels]
-        -- TODO: I believe this should be ppi[0].
-        ppi[1] = p0 - .5 * dzw[1] * gravity * (1.25 * (rr_2d[1 * nlat + i] + rb_2d[1 * nlat + i]) * (1.0 + qv_2d[1 * nlat + i]) - .25* (rr_2d[2 * nlat + i] + rb_2d[2 * nlat + i]) * (1.0 + qv_2d[2 * nlat + i]))
-
-        ppi[1] = ppi[1] - ppb_2d[1 * nlat + i]
-
-        for k=0, nz1-1 do
-          -- TODO: Can't access vertr here.
+--  for iNlat in nlat_range_1d do
+--    var i = int(iNlat)
+--    -- Moved declarations of helper variables inside of for loop to avoid loop-carried dependencies.
+--    var eta : double[nVertLevels]
+--    var teta : double[nVertLevels]
+--    var tt : double[nVertLevels]
+--    var etav : double[nVertLevels]
+--    var temperature_1d : double[nVertLevels]
+--    var ptemp : double
+--    var ztemp : double
+--    var phi : double
+--
+--    lat_2d[i] = float(i-1) * dlat
+--    phi = lat_2d[i]
+--    var hx_1d = u0 / gravity * pow(cos(etavs), 1.5) * ((-2.0 * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) 
+--                * (u0) * pow(cos(etavs), 1.5) + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e)
+--    for k=0, nz do
+--      zgrid_2d[k * nlat + i] = (1. - ah[k]) * (sh[k] * (zt - hx_1d) + hx_1d) + ah[k] * sh[k]* zt
+--    end
+--    for k=0, nz1 do
+--      zz_2d[k * nlat + i] = (zw[k + 1] - zw[k]) / (zgrid_2d[(k + 1) * nlat + i] - zgrid_2d[k * nlat + i])
+--    end
+--
+--    for k=1,nz1 do
+--      ztemp = .5 * (zgrid_2d[(k + 1) * nlat + i] + zgrid_2d[k * nlat + i])
+--      ppb_2d[k * nlat + i] = p0 * exp(-gravity * ztemp / (rgas * t0b))
+--      pb_2d[k * nlat + i] = pow((ppb_2d[k * nlat + i] / p0), (rgas / cp))
+--      rb_2d[k * nlat + i] = ppb_2d[k * nlat + i] / (rgas * t0b * zz_2d[k * nlat + i])
+--      tb_2d[k * nlat + i] = t0b / pb_2d[k * nlat + i]
+--      rtb_2d[k * nlat + i] = rb_2d[k * nlat + i] * tb_2d[k * nlat + i]
+--      p_2d[k * nlat + i] = pb_2d[k * nlat + i]
+--      pp_2d[k * nlat + i] = 0.0
+--      rr_2d[k * nlat + i] = 0.0
+--    end
+--
+--
+--    for itr = 0, 10 do
+--
+--      for k=0, nz1 do
+--        eta[k] = (ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]) / p0
+--        etav[k] = (eta[k] - .252) * pii / 2.0
+--        if(eta[k] >= znut)  then
+--          teta[k] = t0 * pow(eta[k], (rgas * dtdz / gravity))
+--        else
+--          teta[k] = t0 * pow(eta[k], (rgas * dtdz / gravity)) + delta_t * pow((znut - eta[k]), 5)
+--        end
+--      end
+--
+--      phi = lat_2d[i]
+--      for k=1, nz1 do
+--        temperature_1d[k] = teta[k] + .75 * eta[k] * pii * u0 / rgas * sin(etav[k]) * sqrt(cos(etav[k])) * ((-2. * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) 
+--                            * 2.0 * u0 * pow(cos(etav[k]), 1.5) + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e) / (1.0 + 0.61 * qv_2d[nlat * k + i])
+--
+--        -- Only used in skipped conditional below. Would change to var ... = ... for cuda generation.
+--        -- ztemp = .5 * (zgrid_2d[k * nlat + i] + zgrid_2d[(k + 1) * nlat + i])
+--        -- ptemp = ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]
+--
+--        --get moisture
+--        ----SKIPPING THIS CONDITIONAL FOR NOW----
+--        --if (moisture) then
+--          --qv_2d[k * nlat + i] = env_qv( ztemp, temperature_1d[k], ptemp, rh_max )
+--        --end
+--
+--        tt[k] = temperature_1d[k] * (1.0 + 1.61 * qv_2d[k * nlat + i])
+--      end
+--
+--      for itrp = 0,25 do
+--        for k=0,nz1 do
+--          rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i] / (rgas * zz_2d[k * nlat + i]) - rb_2d[k * nlat + i] * (tt[k] - t0b)) / tt[k]
+--        end
+--
+--        var ppi : double[nVertLevels]
+--        -- TODO: I believe this should be ppi[0].
+--        ppi[1] = p0 - .5 * dzw[1] * gravity * (1.25 * (rr_2d[1 * nlat + i] + rb_2d[1 * nlat + i]) * (1.0 + qv_2d[1 * nlat + i]) - .25* (rr_2d[2 * nlat + i] + rb_2d[2 * nlat + i]) * (1.0 + qv_2d[2 * nlat + i]))
+--
+--        ppi[1] = ppi[1] - ppb_2d[1 * nlat + i]
+--
+--        for k=0, nz1-1 do
+--          -- TODO: Can't access vertr here.
 --          ppi[k + 1] = ppi[k] - vertr[k+1].dzu * gravity * ((rr_2d[k * nlat + i] + (rr_2d[k * nlat + i] + rb_2d[k * nlat + i]) * qv_2d[k * nlat + i]) * vertr[k+1].fzp + (rr_2d[(k + 1) * nlat + i] + (rr_2d[(k + 1) * nlat + i] + rb_2d[(k + 1) * nlat + i]) * qv_2d[(k + 1) * nlat + i]) * vertr[k + 1].fzm)
-        end
-
-        for k=0, nz1 do
-          pp_2d[k * nlat + i] = .2 * ppi[k] + .8 * pp_2d[k * nlat + i]
-        end
+--        end
 --
-      end   -- end inner iteration loop itrp
-
-    end   -- end outer iteration loop itr
+--        for k=0, nz1 do
+--          pp_2d[k * nlat + i] = .2 * ppi[k] + .8 * pp_2d[k * nlat + i]
+--        end
+--
+--      end   -- end inner iteration loop itrp
+--
+--    end   -- end outer iteration loop itr
 --
 --
-    for k = 0, nz1 do
-      rho_2d[k * nlat + i] = rr_2d[k * nlat + i] + rb_2d[k * nlat + i]
-      etavs_2d[k * nlat + i] = ((ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]) / p0 - 0.252) * pii / 2.0
-      u_2d[k * nlat + i] = u0 * (pow(sin(2. * lat_2d[i]), 2)) * (pow(cos(etavs_2d[k * nlat + i]), 1.5))
-    end
-
-  end   -- end loop over latitudes for 2D zonal wind field calc
+--    for k = 0, nz1 do
+--      rho_2d[k * nlat + i] = rr_2d[k * nlat + i] + rb_2d[k * nlat + i]
+--      etavs_2d[k * nlat + i] = ((ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]) / p0 - 0.252) * pii / 2.0
+--      u_2d[k * nlat + i] = u0 * (pow(sin(2. * lat_2d[i]), 2)) * (pow(cos(etavs_2d[k * nlat + i]), 1.5))
+--    end
+--
+--  end   -- end loop over latitudes for 2D zonal wind field calc
 
 
 ------------TODO: skipping this conditional for now ---------------
@@ -469,6 +470,7 @@ do
 --!
 --!     reference sounding based on dry isothermal atmosphere
 --!
+  __demand(__openmp)
   for iCell in cell_range_1d do
     var i = int(iCell)
     -- Moved declarations of helper variables inside for loop to avoid loop-carried dependencies.
