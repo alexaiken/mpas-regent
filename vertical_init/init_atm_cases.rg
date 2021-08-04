@@ -17,7 +17,6 @@ local sphere_radius = constants.sphere_radius
 local nlat = constants.nlat
 
 local cio = terralib.includec("stdio.h")
-local cmath = terralib.includec("math.h")
 local pow = regentlib.pow(double)
 local sin = regentlib.sin(double)
 local cos = regentlib.cos(double)
@@ -131,7 +130,7 @@ do
 
   for i = 0, nVertLevels do
     for j = 0, nlat do
-      qv_2d[i*nlat + j] = 0.0
+      qv_2d[i * nlat + j] = 0.0
     end
   end
 
@@ -202,7 +201,7 @@ do
 --!                zw[k] = sh[k]*zt yields nonconstant dzeta
 --!                        and nearly constant dzeta/dz
 
-    zw[k] = (k-1)*dz -- in mpas they cast to float
+    zw[k] = (k - 1) * dz -- in mpas they cast to float
 
 --!            zw[k] = sh[k]*zt --- see above comments for which version you want
 --!
@@ -264,15 +263,15 @@ do
   for i=0, nEdges do
     var iCell1 = er[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
     var iCell2 = er[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
-    for k=1,nz1 do
+    for k=0,nz1 do
       er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid - cr[{iCell1, k}].zgrid + cr[{iCell2, k+1}].zgrid - cr[{iCell1, k+1}].zgrid) / er[{i, 0}].dcEdge
     end
   end
   for i=0, nCells do
     for k=0, nz1 do
-      ztemp = .5 * (cr[{i, k+1}].zgrid + cr[{k,i}].zgrid)
+      ztemp = .5 * (cr[{i, k+1}].zgrid + cr[{i, k}].zgrid)
       cr[{i, k}].dss = 0.0
-      ztemp = cr[{k,i}].zgrid
+      ztemp = cr[{i, k}].zgrid -- Looks wrong, but is identical to the Fortran code.
       if(ztemp > zd + .1)  then
          cr[{i, k}].dss = cr[{i, k}].dss + xnutr * pow(sin(.5 * pii * (ztemp - zd) / (zt - zd)), 2)
       end
@@ -318,7 +317,8 @@ do
       zz_2d[k * nlat + i] = (zw[k + 1] - zw[k]) / (zgrid_2d[(k + 1) * nlat + i] - zgrid_2d[k * nlat + i])
     end
 
-    for k=1,nz1 do
+    -- TODO: Should be 0? 740 in the Fortran code.
+    for k=0, nz1 do
       ztemp = .5 * (zgrid_2d[(k + 1) * nlat + i] + zgrid_2d[k * nlat + i])
       ppb_2d[k * nlat + i] = p0 * exp(-gravity * ztemp / (rgas * t0b))
       pb_2d[k * nlat + i] = pow((ppb_2d[k * nlat + i] / p0), (rgas / cp))
@@ -333,7 +333,7 @@ do
 
     for itr = 0,10 do
 
-      for k=0,nz1 do
+      for k=0, nz1 do
         eta[k] = (ppb_2d[k * nlat + i] + pp_2d[k * nlat + i]) / p0
         etav[k] = (eta[k] - .252) * pii / 2.0
         if(eta[k] >= znut)  then
@@ -344,7 +344,8 @@ do
       end
 
       phi = lat_2d[i]
-      for k=1,nz1 do
+      -- TODO: Should be 0? 766 in Fortran code.
+      for k=0, nz1 do
         temperature_1d[k] = teta[k] + .75 * eta[k] * pii * u0 / rgas * sin(etav[k]) * sqrt(cos(etav[k])) * ((-2. * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) * 2.0 * u0 * pow(cos(etav[k]), 1.5) 
                             + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e) / (1.0 + 0.61 * qv_2d[nlat * k + i])
 
@@ -365,10 +366,12 @@ do
           rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i] / (rgas * zz_2d[k * nlat + i]) - rb_2d[k * nlat + i] * (tt[k] - t0b)) / tt[k]
         end
 
-        ppi[1] = p0 - .5 * dzw[1] * gravity * (1.25 * (rr_2d[1 * nlat + i] + rb_2d[1 * nlat + i]) * (1.0 + qv_2d[1 * nlat + i])  - .25 * (rr_2d[2 * nlat + i] + rb_2d[2 * nlat + i]) * (1.0 + qv_2d[2 * nlat + i]))
+        -- TODO: Indexing was wrong.
+        -- Should rr_2d[1 * nlat + i] be rr_2d[0 * nlat + i]
+        ppi[0] = p0 - .5 * dzw[0] * gravity * (1.25 * (rr_2d[i] + rb_2d[i]) * (1.0 + qv_2d[i])  - .25 * (rr_2d[1 * nlat + i] + rb_2d[1 * nlat + i]) * (1.0 + qv_2d[1 * nlat + i]))
 
-        ppi[1] = ppi[1] - ppb_2d[1 * nlat + i]
-        for k=0, nz1-1 do
+        ppi[0] = ppi[0] - ppb_2d[i]
+        for k=0, nz1 - 1 do
           ppi[k+1] = ppi[k] - vertr[k+1].dzu * gravity * ( (rr_2d[k * nlat + i]+(rr_2d[k * nlat + i] + rb_2d[k * nlat + i]) * qv_2d[k * nlat + i]) * vertr[k+1].fzp + (rr_2d[(k+1) * nlat + i] + (rr_2d[(k+1) * nlat + i] + rb_2d[(k+1) * nlat + i]) * qv_2d[(k+1) * nlat + i]) * vertr[k+1].fzm )
         end
 
@@ -423,7 +426,7 @@ do
 --!
   for i=0, nCells do
     for k=0,nz1 do
-      ztemp = .5 * (cr[{i, k+1}].zgrid + cr[{k,i}].zgrid)
+      ztemp = .5 * (cr[{i, k+1}].zgrid + cr[{i, k}].zgrid)
       cr[{i, k}].pressure_base = p0 * exp(-gravity * ztemp / (rgas * t0b))
       cr[{i, k}].pressure_p = pow((cr[{i, k}].pressure_base / p0), (rgas / cp))
       cr[{i, k}].rho_base = cr[{i, k}].pressure_base / (rgas * t0b * cr[{i, k}].zz)
@@ -452,7 +455,7 @@ do
         temperature_1d[k] = teta[k] + .75 * eta[k] * pii * u0 / rgas * sin(etav[k]) * sqrt(cos(etav[k])) * ((-2.0 * pow(sin(phi), 6) * (pow(cos(phi), 2) + 1.0 / 3.0) + 10.0 / 63.0) * 2. * u0 * pow(cos(etav[k]), 1.5)   
                             + (1.6 * pow(cos(phi), 3) * (pow(sin(phi), 2) + 2.0 / 3.0) - pii / 4.0) * r_earth * omega_e) / (1. + 0.61 * cr[{i, k}].qv)
 
-        ztemp = .5 * (cr[{k,i}].zgrid + cr[{i, k+1}].zgrid)
+        ztemp = .5 * (cr[{i, k}].zgrid + cr[{i, k+1}].zgrid)
         ptemp = cr[{i, k}].pressure_base + cr[{i, k}].pressure_p
 
 ------SKIPPING BECAUSE CONDITIONAL ----------
@@ -491,14 +494,16 @@ do
 
       for itrp = 0,25 do
         for k=0,nz1 do
-          cr[{i,k}].rho_p  = (cr[{i, k}].pressure_p / (rgas * cr[{i, k}].zz) - cr[{i, k}].rho_base * (tt[k] - t0b)) / tt[k]
+          cr[{i, k}].rho_p  = (cr[{i, k}].pressure_p / (rgas * cr[{i, k}].zz) - cr[{i, k}].rho_base * (tt[k] - t0b)) / tt[k]
         end
 
-        ppi[1] = p0 - .5 * dzw[1] * gravity * (1.25 * (cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1. + cr[{i, 0}].qv ) - .25 * (cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1. + cr[{i, 1}].qv))
+        -- TODO: Indexing was wrong.
+        -- Should cr[{i, 1}].property be cr[{i, 0}].0
+        ppi[0] = p0 - .5 * dzw[0] * gravity * (1.25 * (cr[{i, 0}].rho_p + cr[{i, 0}].rho_base) * (1. + cr[{i, 0}].qv ) - .25 * (cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1. + cr[{i, 1}].qv))
 
-        ppi[1] = ppi[1] - cr[{i, 1}].pressure_base
+        ppi[0] = ppi[0] - cr[{i, 0}].pressure_base
         for k=0,nz1-1 do
-           ppi[k+1] = ppi[k] - vertr[k+1].dzu * gravity * ( (cr[{i,k}].rho_p + (cr[{i,k}].rho_p + cr[{i, k}].rho_base) * cr[{i, k}].qv) * vertr[k+1].fzp + (cr[{i, k+1}].rho_p + (cr[{i, k+1}].rho_p + cr[{i, k+1}].rho_base) * cr[{i, k+1}].qv) * vertr[k+1].fzm)
+           ppi[k+1] = ppi[k] - vertr[k+1].dzu * gravity * ( (cr[{i, k}].rho_p + (cr[{i,k }].rho_p + cr[{i, k}].rho_base) * cr[{i, k}].qv) * vertr[k+1].fzp + (cr[{i, k+1}].rho_p + (cr[{i, k+1}].rho_p + cr[{i, k+1}].rho_base) * cr[{i, k+1}].qv) * vertr[k+1].fzm)
         end
 
         for k=0 ,nz1 do
@@ -521,8 +526,9 @@ do
     end
 
     --calculation of surface pressure:
-    cr[{i, 0}].surface_pressure = 0.5 * dzw[1] * gravity * (1.25 * (cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 0}].qv) - 0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
-    cr[{i, 0}].surface_pressure = cr[{i, 0}].surface_pressure + cr[{i, 1}].pressure_p + cr[{i, 1}].pressure_base
+    -- TODO: Should cr[{i, 1}].property be cr[{i, 0}].0
+    cr[{i, 0}].surface_pressure = 0.5 * dzw[0] * gravity * (1.25 * (cr[{i, 0}].rho_p + cr[{i, 0}].rho_base) * (1.0 + cr[{i, 0}].qv) - 0.25 * (cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 1}].qv))
+    cr[{i, 0}].surface_pressure = cr[{i, 0}].surface_pressure + cr[{i, 0}].pressure_p + cr[{i, 0}].pressure_base
 
   end   -- end loop over cells
 
