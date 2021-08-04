@@ -1664,7 +1664,7 @@ do
                           * (cr[iCell].zz * cr[iCell].rtheta_pp - cr[iCell - {0, 1}].zz * cr[iCell - {0, 1}].rtheta_pp))
                           - cr[iCell].cofwr * ((rs[iCell.y] + rs[iCell.y - 1]) + resm * (cr[iCell].rho_pp + cr[iCell - {0, 1}].rho_pp))
                           + cr[iCell].cofwt * (ts[iCell.y] + resm * cr[iCell].rtheta_pp)
-                          + cr[iCell - {0, 1}].cofwt * (ts[iCell.y - 1] +resm * cr[iCell - {0, 1}].rtheta_pp)
+                          + cr[iCell - {0, 1}].cofwt * (ts[iCell.y - 1] + resm * cr[iCell - {0, 1}].rtheta_pp)
 
         -- tridiagonal solve sweeping up and then down the column
         cr[iCell].rw_p -= cr[iCell].a_tri * cr[iCell - {0, 1}].rw_p
@@ -1673,7 +1673,7 @@ do
 
       --TODO: how to parallelize this???
       --for k = nVertLevels, 1, -1 do
-      --  cr[{iCell, k}].rw_p -= cr[{iCell, k}].gamma_tri * cr[{iCell, k+1}].rw_p
+      --  cr[{iCell, k}].rw_p -= cr[{iCell, k}].gamma_tri * cr[{iCell, k + 1}].rw_p
       --end
 
 
@@ -1691,7 +1691,7 @@ do
 
       -- update rho_pp and theta_pp given updated rw_p
 
-      cr[iCell].rho_pp = rs[iCell.y] - vert_r[iCell.y].cofrz*(cr[iCell + {0, 1}].rw_p - cr[iCell].rw_p)
+      cr[iCell].rho_pp = rs[iCell.y] - vert_r[iCell.y].cofrz * (cr[iCell + {0, 1}].rw_p - cr[iCell].rw_p)
       cr[iCell].rtheta_pp = ts[iCell.y] - vert_r[iCell.y].rdzw
                             * (cr[iCell + {0, 1}].coftz * cr[iCell + {0, 1}].rw_p - cr[iCell].coftz * cr[iCell].rw_p)
 
