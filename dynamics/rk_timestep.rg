@@ -499,7 +499,6 @@ do
 
 end
 
---__demand(__cuda)
 task atm_timestep(cr : region(ispace(int2d), cell_fs),
                   cpr : region(ispace(int2d), cell_fs),
                   csr : region(ispace(int2d), cell_fs),
