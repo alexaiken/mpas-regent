@@ -1629,6 +1629,7 @@ do
     end
   end
 
+  __demand(__openmp)
   for iCell in cell_range do
     if (small_step == 0) then
       cr[iCell].rho_pp = 0
@@ -1636,10 +1637,14 @@ do
     end
 
     if (cr[{iCell, 0}].specZoneMaskCell == 0.0) then -- not specified zone, compute...
-      for i = 0, nVertLevels do
-        ts[i] = 0
-        rs[i] = 0
-      end
+      -- Otherwise previous calculations for ts[i - 1] will be erased. That field is required for calculations later on, though.
+      --for i = 0, nVertLevels do
+      --  ts[i] = 0
+      --  rs[i] = 0
+      --end
+      -- This fix is also not 100% correct.
+      ts[iCell.y] = 0
+      rs[iCell.y] = 0
 
       for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
         var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]    --edgesOnCell(i,iCell)
