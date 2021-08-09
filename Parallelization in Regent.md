@@ -133,4 +133,16 @@ As one will quickly be able to tell, the compiler's error messages are not very 
 
 - Currently there is an [issue](https://github.com/StanfordLegion/legion/issues/1121) when using a `rect1d` to loop over a region. Explicitly cast the iterator to an int with `int(x)` as a temporary fix.  
 
- 
+- Currently there is an [issue](https://github.com/StanfordLegion/legion/issues/1126) when using the following access pattern:
+
+  ```c++
+  for i in ... do
+    for k = 1, K do
+      r[{i, k}].f = r[{i, k-1}].f + ...
+    end
+  end
+  ```
+
+  The compiler will think that this is a loop carried dependency even though the outer loop is independent. As outlined in the issue above use the flag `-foverride-demand-cuda 1` to overcome this. This flag should not be used when testing other parts of the code.
+
+  
