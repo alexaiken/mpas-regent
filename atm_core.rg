@@ -6,7 +6,6 @@ require "physics/atmphys_driver"
 local constants = require("constants")
 local format = require("std/format")
 
---__demand(__cuda)
 task atm_core_init(cr : region(ispace(int2d), cell_fs),
                    cpr : region(ispace(int2d), cell_fs),
                    csr : region(ispace(int2d), cell_fs),
