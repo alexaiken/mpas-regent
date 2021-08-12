@@ -21,11 +21,12 @@ local nVertLevels = constants.nVertLevels
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
---Comments for summarize_timestep
---Unsure what associated(block) is. Also found in atm_srk3 but ignored
---nCellsSolve, nEdgesSolve: not sure what these are
---Scalars
---Translated latCell and lonCell as lat and lon
+-- Comments for summarize_timestep
+-- Unsure what associated(block) is. Also found in atm_srk3 but ignored
+-- nCellsSolve, nEdgesSolve: not sure what these are
+-- Scalars
+-- Translated latCell and lonCell as lat and lon
+-- Didn't add __demand(__cuda) since function mainly finds min, max values of certain fields.
 task summarize_timestep(cr : region(ispace(int2d), cell_fs),
                         er : region(ispace(int2d), edge_fs),
                         config_print_detailed_minmax_vel : bool,
