@@ -27,6 +27,7 @@ local sqrt = regentlib.sqrt(double)
 --__demand(__cuda)
 -- CUDA optimization is very difficult here since there exists region access and write statements to
 -- stack-allocated arrays in the same for loop.
+-- For more info read this issue: https://github.com/StanfordLegion/legion/issues/1124.
 task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
                       cpr : region(ispace(int2d), cell_fs),
                       csr : region(ispace(int2d), cell_fs),
