@@ -97,7 +97,7 @@ do
   var finddate : bool = false
   -- do m = 1, constants.nMonths
   for m = 0, constants.nMonths do
-    if(date_oz[m] > intjulian and finddate == false) then
+    if (date_oz[m] > intjulian and finddate == false) then
       np1 = m
       finddate = true
     end
@@ -279,6 +279,7 @@ end
 --
 -- Saturation vapor pressure table lookup
 --
+__demand(__inline)
 task estblf(td : double,            -- Temperature for saturation lookup  
             phys_tbls : region(ispace(int1d), phys_tbls_fs))
 where
@@ -301,6 +302,7 @@ end
 -- (g/g),for input arrays of temperature and pressure (dimensioned ii,kk)
 -- This routine is useful for evaluating only a selected region in the
 -- vertical.
+__demand(__cuda)
 task aqsat(cr : region(ispace(int2d), cell_fs),
            phys_tbls : region(ispace(int1d), phys_tbls_fs),
            camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
@@ -316,29 +318,26 @@ where
 do
   format.println("{}, {}", klen, ilen)
   var omeps = 1.0 - constants.ep_2
-  var k : int
-  var i : int
-  for k = 0, klen do
-    for i = 0, ilen do
-      radctl_2d_pverr_r[{i, k}].esat = estblf(camrad_2d_r[{i, k}].t, phys_tbls)
+  var ik_range = rect2d{ {0, 0}, {ilen - 1, klen - 1} }
+  for ik in ik_range do
+    radctl_2d_pverr_r[ik].esat = estblf(camrad_2d_r[ik].t, phys_tbls)
 
-      --
-      -- Saturation specific humidity
-      --
-      radctl_2d_pverr_r[{i, k}].qsat = 
-        constants.ep_2 * radctl_2d_pverr_r[{i, k}].esat 
-        / (camrad_2d_r[{i, k}].pmid - omeps * radctl_2d_pverr_r[{i, k}].esat)
+    --
+    -- Saturation specific humidity
+    --
+    radctl_2d_pverr_r[ik].qsat = 
+      constants.ep_2 * radctl_2d_pverr_r[ik].esat 
+      / (camrad_2d_r[ik].pmid - omeps * radctl_2d_pverr_r[ik].esat)
 
-      --
-      -- The following check is to avoid the generation of negative values
-      -- that can occur in the upper stratosphere and mesosphere
-      --
-      radctl_2d_pverr_r[{i, k}].qsat = min(1.0, radctl_2d_pverr_r[{i, k}].qsat)
+    --
+    -- The following check is to avoid the generation of negative values
+    -- that can occur in the upper stratosphere and mesosphere
+    --
+    radctl_2d_pverr_r[ik].qsat = min(1.0, radctl_2d_pverr_r[ik].qsat)
 
-      if (radctl_2d_pverr_r[{i, k}].qsat < 0.0) then
-        radctl_2d_pverr_r[{i, k}].qsat = 1.0
-        radctl_2d_pverr_r[{i, k}].esat = camrad_2d_r[{i, k}].pmid
-      end
+    if (radctl_2d_pverr_r[ik].qsat < 0.0) then
+      radctl_2d_pverr_r[ik].qsat = 1.0
+      radctl_2d_pverr_r[ik].esat = camrad_2d_r[ik].pmid
     end
   end
 end
