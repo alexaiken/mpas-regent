@@ -119,7 +119,6 @@ do
   end
   itype = itypo
   return itype
-
 end
 
 task radaeini(phys_tbls : region(ispace(int1d), phys_tbls_fs),
@@ -367,8 +366,6 @@ do
                                                - ozmixin[j + (constants.lonsiz * k) + (constants.lonsiz * constants.nOznLevels * i1) 
                                                            + (constants.lonsiz * constants.nOznLevels * constants.latsiz * m)])
                                                * dlatCell / dlat
-
-
 
           end 
         end
