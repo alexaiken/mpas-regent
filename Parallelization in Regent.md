@@ -146,3 +146,33 @@ As one will quickly be able to tell, the compiler's error messages are not very 
   The compiler will think that this is a loop carried dependency even though the outer loop is independent. As outlined in the issue above use the flag `-foverride-demand-cuda 1` to overcome this. This flag should not be used when testing other parts of the code.
 
   
+
+## Running the code
+
+If the Regent version you are using was built without cuda support, you will get the following error message: `CUDA code generation failed since Terra is built without CUDA support.`
+
+To solve this you probably have to install a local version of legion. Use the following commands. (If salloc doesn't work, run `module load slurm`).
+
+```bash
+git clone https://gitlab.com/StanfordLegion/legion.git
+
+cd legion/language
+
+salloc -N 1 -n 1 -p gpu --exclusive
+
+srun --pty bash --login
+
+module load cuda
+
+CMAKE_PREFIX_PATH=/scratch2/eslaught/sw/llvm/llvm-11/install_g_nodes ./install.py --cuda
+```
+
+From there use the following command to run your code:
+
+```bash
+../legion/language/regent.py ~/mpas-regent/main.rg -fcuda 1 -ll:gpu 4
+```
+
+You can also add `-lg:prof 1 -lg:prof_logfile prof_%.gz` which will let you render profiles to make sure things look the way you expect.
+
+In case you run into `error 511: Exceeded maximum number of allocated fields for field space 1`, edit `LEGION_MAX_FIELDS` in `legion/runtime/legion/legion_config.h`. For example, set it to 512.
