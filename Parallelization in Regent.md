@@ -151,23 +151,18 @@ As one will quickly be able to tell, the compiler's error messages are not very 
 
 If the Regent version you are using was built without cuda support, you will get the following error message: `CUDA code generation failed since Terra is built without CUDA support.`
 
-To solve this you probably have to install a local version of legion. Use the following commands. (If salloc doesn't work, run `module load slurm`).
+To solve this you probably have to install a local version of legion. Use the following commands. If salloc doesn't work, run `module load slurm`.
 
 ```bash
 git clone https://gitlab.com/StanfordLegion/legion.git
-
 cd legion/language
-
 salloc -N 1 -n 1 -p gpu --exclusive
-
 srun --pty bash --login
-
 module load cuda
-
 CMAKE_PREFIX_PATH=/scratch2/eslaught/sw/llvm/llvm-11/install_g_nodes ./install.py --cuda
 ```
 
-From there use the following command to run your code:
+From there use the following command to run your code. This example is run from inside the mpas folder. Adapt to your needs.
 
 ```bash
 ../legion/language/regent.py ~/mpas-regent/main.rg -fcuda 1 -ll:gpu 4
