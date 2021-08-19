@@ -56,7 +56,7 @@ else
 fi
 
 echo "Start of performance script." >> $file_name
-for i in {1..$num}
+for i in $(seq 1 $num)
 do
     echo "$i"
     echo "Run $i:" >> $file_name
