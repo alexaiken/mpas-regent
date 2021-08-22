@@ -1546,7 +1546,7 @@ end
 -- Currently the compiler doesn't recognize the outer loop being independent of the inner ones.
 -- In order to use __demand(__cuda) regent needs to be run with the flag `-foverride-demand-cuda 1`.
 -- See https://github.com/StanfordLegion/legion/issues/1126 for more info.
---__demand(__cuda)
+__demand(__cuda)
 task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     vert_r : region(ispace(int1d), vertical_fs),
