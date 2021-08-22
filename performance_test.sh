@@ -62,7 +62,7 @@ do
     echo "Run $i:" >> $file_name
     if [ "$cuda" = true ]
     then
-      (time -p ( ../legion/language/regent.py ~/mpas-regent/main.rg -fcuda 1 -ll:gpu 4 &> /dev/null)) 2>> parallel_times.txt
+      (time -p ( ../legion/language/regent.py ~/mpas-regent/main.rg -fcuda 1 -foverride-demand-cuda 1 -ll:gpu 4 &> /dev/null)) 2>> parallel_times.txt
     else
       (time -p (/home/zengcs/regent ~/mpas-regent/main.rg &> /dev/null)) 2>> sequential_times.txt
     fi
