@@ -1,0 +1,202 @@
+Start of performance script.
+Run 1:
+real 110.88
+user 105.81
+sys 6.01
+
+Run 2:
+real 110.05
+user 104.94
+sys 6.12
+
+Run 3:
+real 109.94
+user 104.95
+sys 5.83
+
+Run 4:
+real 112.62
+user 107.61
+sys 6.23
+
+Run 5:
+real 108.95
+user 103.79
+sys 6.11
+
+Run 6:
+real 111.87
+user 106.57
+sys 6.04
+
+Run 7:
+real 109.70
+user 104.62
+sys 6.06
+
+Run 8:
+real 109.88
+user 104.76
+sys 6.14
+
+Run 9:
+real 111.04
+user 105.93
+sys 6.12
+
+Run 10:
+real 109.81
+user 104.92
+sys 5.90
+
+Run 11:
+real 110.06
+user 105.08
+sys 6.17
+
+Run 12:
+real 110.70
+user 105.46
+sys 6.13
+
+Run 13:
+real 109.64
+user 104.19
+sys 6.24
+
+Run 14:
+real 109.86
+user 104.73
+sys 6.08
+
+Run 15:
+real 110.73
+user 105.66
+sys 5.98
+
+Run 16:
+real 108.37
+user 103.40
+sys 5.90
+
+Run 17:
+real 109.48
+user 104.51
+sys 5.95
+
+Run 18:
+real 108.98
+user 103.87
+sys 5.83
+
+Run 19:
+real 110.50
+user 103.40
+sys 6.27
+
+Run 20:
+real 110.43
+user 105.08
+sys 6.36
+
+Run 21:
+real 111.29
+user 105.99
+sys 6.12
+
+Run 22:
+real 108.29
+user 103.66
+sys 5.65
+
+Run 23:
+real 108.82
+user 104.14
+sys 5.68
+
+Run 24:
+real 111.87
+user 106.66
+sys 6.10
+
+Run 25:
+real 108.89
+user 103.94
+sys 5.81
+
+Run 26:
+real 109.50
+user 104.20
+sys 6.34
+
+Run 27:
+real 110.52
+user 105.09
+sys 6.19
+
+Run 28:
+real 110.22
+user 104.66
+sys 5.87
+
+Run 29:
+real 109.11
+user 103.94
+sys 6.19
+
+Run 30:
+real 110.01
+user 105.08
+sys 5.84
+
+Start of performance script.
+Run 1:
+real 110.37
+user 104.84
+sys 6.54
+
+Run 2:
+real 107.04
+user 102.52
+sys 5.56
+
+Run 3:
+real 110.45
+user 105.49
+sys 5.97
+
+Run 4:
+real 108.94
+user 104.01
+sys 5.94
+
+Run 5:
+real 109.09
+user 104.21
+sys 5.91
+
+Run 6:
+real 109.25
+user 104.38
+sys 5.95
+
+Run 7:
+real 109.10
+user 104.26
+sys 5.80
+
+Run 8:
+real 109.88
+user 104.69
+sys 6.22
+
+Run 9:
+real 109.97
+user 104.62
+sys 6.25
+
+Run 10:
+real 109.11
+user 104.07
+sys 5.96
+
