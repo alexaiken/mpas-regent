@@ -119,7 +119,6 @@ do
   end
   itype = itypo
   return itype
-
 end
 
 task radaeini(phys_tbls : region(ispace(int1d), phys_tbls_fs),
@@ -254,13 +253,126 @@ do
   gestbl(phys_tbls)
 end
 
--- initialization of ozone mixing ratios:
+-- initialization of climatological monthly-mean ozone profiles.
+-- Fortran equivalent can be found in src/core_atmosphere/mpas_atmphys_camrad_init.F
 task oznini(cr : region(ispace(int2d), cell_fs),
-            er : region(ispace(int2d), edge_fs))
+            ozn_region : region(ispace(int2d), ozn_fs))
 where
-  reads writes (cr)
+  reads (cr.{lat, lon}),
+  reads writes (ozn_region.{pin, ozmixm})
 do
-  -- TODO
+  -- Potentially outdated Fortran comment:
+  -- This subroutine assumes uniform distribution of ozone concentration.
+  -- It should be replaced by monthly climatology that varies latitudinally and vertically
+
+  -- nCells = constants.nCells
+  -- num_Months = constants.nMonths
+  -- levsiz = constants.nOznLevels
+  -- latsiz = constants.latsiz
+  -- lonsiz = constants.lonsiz
+
+  -- Assumes TBL files have one value per line.
+
+  -- read in ozone pressure data
+  var file = constants.cio.fopen("OZONE_PLEV.TBL", "r")
+  regentlib.assert(not isnull(file), "failed to open OZONE_PLEV.TBL file")
+  var buff : int8[constants.MAXCHAR] 
+  for k = 0, constants.nOznLevels do
+    if (not isnull(constants.cio.fgets(buff, constants.MAXCHAR, file))) then 
+      var pressure : double = constants.clib.atof(buff)
+      -- TODO: How to set up pin?
+      -- ozn_region is indexed by {constants.nCells, constants.nOznLevels + 1}
+      ozn_region[{0, k}].pin = pressure * 100
+    end
+  end
+  constants.cio.fclose(file)
+
+  -- read in ozone lat data
+  var lat_ozone : double[constants.latsiz]
+
+  file = constants.cio.fopen("OZONE_LAT.TBL", "r")
+  regentlib.assert(not isnull(file), "failed to open OZONE_LAT.TBL file")
+  for i = 0, constants.latsiz do
+    if (not isnull(constants.cio.fgets(buff, constants.MAXCHAR, file))) then
+      lat_ozone[i] = constants.clib.atof(buff)
+    end
+  end
+  constants.cio.fclose(file)
+
+  -- read in ozone data
+
+  -- Using 1d array since indexing into 4d array is complicated and int4d regions need special flags at compile and runtime.
+  -- Array represents double[lonsiz][nOznLevels][latsiz][nMonths]
+  var ozmixin : double[constants.lonsiz * constants.nOznLevels * constants.latsiz * constants.nMonths]
+
+  file = constants.cio.fopen("OZONE_DAT.TBL", "r")
+  regentlib.assert(not isnull(file), "failed to open OZONE_DAT.TBL file")
+  for m = 0, constants.nMonths do
+    for j = 0, constants.latsiz do
+      for k = 0, constants.nOznLevels do
+        for i = 0, constants.lonsiz do
+          if (not isnull(constants.cio.fgets(buff, constants.MAXCHAR, file))) then
+            -- ozmixin[{i, k, j, m}] = constants.clib.atof(buff)
+            ozmixin[i + (constants.lonsiz * k) + (constants.lonsiz * constants.nOznLevels * j) 
+                    + (constants.lonsiz * constants.nOznLevels * constants.latsiz * m)] = constants.clib.atof(buff)
+          end
+        end
+      end
+    end
+  end
+  constants.cio.fclose(file)
+
+  -- Interpolation of input ozone data to mpas grid.
+  var i1 : int
+  var i2 : int
+
+  for iCell = 0, constants.nCells do
+    -- cell_id_space = {constants.nCells, constants.nVertlevels + 1}
+    var lat : double = cr[{iCell, 0}].lat / constants.degrad
+    var lon : double = cr[{iCell, 0}].lon / constants.degrad
+    if (lat > lat_ozone[constants.latsiz - 1]) then
+      i1 = constants.latsiz - 1
+      i2 = constants.latsiz - 1
+    elseif (lat < lat_ozone[0]) then
+      i1 = 0
+      i2 = 0
+    else
+      for i = 0, constants.latsiz do
+        i1 = i
+        i2 = i + 1
+        if (lat >= lat_ozone[i] and lat < lat_ozone[i + 1]) then
+          break
+        end
+      end
+    end
+
+    for m = 0, constants.nMonths do
+      for k = 0, constants.nOznLevels do
+        for j = 0, constants.lonsiz do
+          var dlat = lat_ozone[i2] - lat_ozone[i1]
+          var dlatCell = lat - lat_ozone[i1]
+          -- Future improvement: Also check whether dflat is close enough to 0 to get underflow.
+          if (dlat == 0.) then
+            --ozn_region[{iCell, k}].ozmixm[m] = ozmixin[{j, k, i1, m}]
+            ozn_region[{iCell, k}].ozmixm[m] = ozmixin[j + (constants.lonsiz * k) + (constants.lonsiz * constants.nOznLevels * i1) 
+                                                       + (constants.lonsiz * constants.nOznLevels * constants.latsiz * m)]
+          else
+            --ozn_region[{iCell, k}].ozmixm[m] = ozmixin[{j, k, i1, m}] + (ozmixin[{j, k, i2, m}] 
+            --                                 - ozmixin[{j, k, i1, m}]) * dlatCell / dlat
+            ozn_region[{iCell, k}].ozmixm[m] = ozmixin[j + (constants.lonsiz * k) + (constants.lonsiz * constants.nOznLevels * i1) 
+                                                       + (constants.lonsiz * constants.nOznLevels * constants.latsiz * m)]
+                                               + (ozmixin[j + (constants.lonsiz * k) + (constants.lonsiz * constants.nOznLevels * i2) 
+                                                            + (constants.lonsiz * constants.nOznLevels * constants.latsiz * m)]
+                                               - ozmixin[j + (constants.lonsiz * k) + (constants.lonsiz * constants.nOznLevels * i1) 
+                                                           + (constants.lonsiz * constants.nOznLevels * constants.latsiz * m)])
+                                               * dlatCell / dlat
+
+          end 
+        end
+      end
+    end
+
+  end
 end
 
 task aer_optics_initialize()
@@ -309,14 +421,15 @@ end
 -- 
 task camradinit(cr : region(ispace(int2d), cell_fs),
                 er : region(ispace(int2d), edge_fs),
-                phys_tbls : region(ispace(int1d), phys_tbls_fs))
-where reads writes (cr, phys_tbls)
+                phys_tbls : region(ispace(int1d), phys_tbls_fs),
+                ozn_region : region(ispace(int2d), ozn_fs))
+where reads writes (cr, phys_tbls, ozn_region)
 do
 
   var pstd : double = 101325.0
 
   radini(phys_tbls, constants.gravity, constants.cp, constants.ep_2, constants.stbolt, pstd*10.0)
   esinti(phys_tbls)
-  oznini(cr, er)
+  oznini(cr, ozn_region)
   aerosol_init(cr, er)
 end

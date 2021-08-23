@@ -97,7 +97,7 @@ do
   var finddate : bool = false
   -- do m = 1, constants.nMonths
   for m = 0, constants.nMonths do
-    if(date_oz[m] > intjulian and finddate == false) then
+    if (date_oz[m] > intjulian and finddate == false) then
       np1 = m
       finddate = true
     end
@@ -224,6 +224,7 @@ end
 -- the solar radiation.
 --
 -- NOTE: variable eccf is unused everywhere, so not included in regent version
+__demand(__cuda)
 task radinp(cr : region(ispace(int2d), cell_fs),
             camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
             radctl_2d_pverr_r : region(ispace(int2d), radctl_2d_pverr_fs),
@@ -242,24 +243,28 @@ where
     pnm
   )
 do
+  -- Mainly unused currently.
   ---------------------------Local variables-----------------------------
-  var i : int           -- Longitude loop index
-  var k : int           -- Vertical loop index
+  --var i : int           -- Longitude loop index
+  --var k : int           -- Vertical loop index
 
-  var calday : double   -- current calendar day
+  --var calday : double   -- current calendar day
   var vmmr : double     -- Ozone volume mixing ratio
-  var delta : double    -- Solar declination angle
+  --var delta : double    -- Solar declination angle
   -----------------------------------------------------------------------
 
+  -- Variables for CUDA
+  var pver_ncol_2d = rect2d{ {0, 0}, {pver - 1, ncol - 1} }
+  var ncol_1d = rect2d{ {0, pverp}, {ncol - 1, pverp} }
+
   -- Convert pressure from pascals to dynes/cm2
-  for k=0, pver do
-    for i=0, ncol do
-        radctl_2d_pverr_r[{i, k}].pbr = camrad_2d_r[{i, k}].pmid * 10.0
-        pnm[{i, k}] = camrad_2d_r[{i, k}].pint * 10.0
-      end
+  for i in pver_ncol_2d do
+    radctl_2d_pverr_r[i].pbr = camrad_2d_r[i].pmid * 10.0
+    pnm[i] = camrad_2d_r[i].pint * 10.0
   end
-  for i=0, ncol do
-    pnm[{i, pverp}] = camrad_2d_r[{i, pverp}].pint * 10.0
+  for iNcol in ncol_1d do
+    --pnm[{i, pverp}] = camrad_2d_r[{i, pverp}].pint * 10.0
+    pnm[iNcol] = camrad_2d_r[iNcol].pint * 10.0
   end
 
   -- Convert ozone volume mixing ratio to mass mixing ratio:
@@ -274,6 +279,7 @@ end
 --
 -- Saturation vapor pressure table lookup
 --
+__demand(__inline)
 task estblf(td : double,            -- Temperature for saturation lookup  
             phys_tbls : region(ispace(int1d), phys_tbls_fs))
 where
@@ -296,6 +302,7 @@ end
 -- (g/g),for input arrays of temperature and pressure (dimensioned ii,kk)
 -- This routine is useful for evaluating only a selected region in the
 -- vertical.
+__demand(__cuda)
 task aqsat(cr : region(ispace(int2d), cell_fs),
            phys_tbls : region(ispace(int1d), phys_tbls_fs),
            camrad_2d_r : region(ispace(int2d), camrad_2d_fs),
@@ -311,29 +318,26 @@ where
 do
   format.println("{}, {}", klen, ilen)
   var omeps = 1.0 - constants.ep_2
-  var k : int
-  var i : int
-  for k = 0, klen do
-    for i = 0, ilen do
-      radctl_2d_pverr_r[{i, k}].esat = estblf(camrad_2d_r[{i, k}].t, phys_tbls)
+  var ik_range = rect2d{ {0, 0}, {ilen - 1, klen - 1} }
+  for ik in ik_range do
+    radctl_2d_pverr_r[ik].esat = estblf(camrad_2d_r[ik].t, phys_tbls)
 
-      --
-      -- Saturation specific humidity
-      --
-      radctl_2d_pverr_r[{i, k}].qsat = 
-        constants.ep_2 * radctl_2d_pverr_r[{i, k}].esat 
-        / (camrad_2d_r[{i, k}].pmid - omeps * radctl_2d_pverr_r[{i, k}].esat)
+    --
+    -- Saturation specific humidity
+    --
+    radctl_2d_pverr_r[ik].qsat = 
+      constants.ep_2 * radctl_2d_pverr_r[ik].esat 
+      / (camrad_2d_r[ik].pmid - omeps * radctl_2d_pverr_r[ik].esat)
 
-      --
-      -- The following check is to avoid the generation of negative values
-      -- that can occur in the upper stratosphere and mesosphere
-      --
-      radctl_2d_pverr_r[{i, k}].qsat = min(1.0, radctl_2d_pverr_r[{i, k}].qsat)
+    --
+    -- The following check is to avoid the generation of negative values
+    -- that can occur in the upper stratosphere and mesosphere
+    --
+    radctl_2d_pverr_r[ik].qsat = min(1.0, radctl_2d_pverr_r[ik].qsat)
 
-      if (radctl_2d_pverr_r[{i, k}].qsat < 0.0) then
-        radctl_2d_pverr_r[{i, k}].qsat = 1.0
-        radctl_2d_pverr_r[{i, k}].esat = camrad_2d_r[{i, k}].pmid
-      end
+    if (radctl_2d_pverr_r[ik].qsat < 0.0) then
+      radctl_2d_pverr_r[ik].qsat = 1.0
+      radctl_2d_pverr_r[ik].esat = camrad_2d_r[ik].pmid
     end
   end
 end
@@ -473,7 +477,7 @@ do
     -- must extrapolate from the bottom or top pressure level for at least some
     -- of the longitude points.
 
-    if(not lev_interp_comp) then
+    if (not lev_interp_comp) then
       for i = 0, ncol do
         for m = 1, constants.naer do
           if (camrad_2d_r[{i,k}].pint < m_hybi[0] * Match_ps[i]) then

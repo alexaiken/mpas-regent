@@ -112,6 +112,7 @@ end
 task vinterp_ozn()
 end
 
+__demand(__cuda)
 task radiation_lw_from_MPAS(cr : region(ispace(int2d), cell_fs),
                             ozn_r : region(ispace(int2d), ozn_fs),
                             aer_r : region(ispace(int2d), aerosol_fs),
@@ -136,238 +137,220 @@ where
           ozn_r.{o3clim_p, ozmixm_p, pin_p}),
   reads writes (cr.o32d)
 do
+  var cell_range_1d = rect2d{ {0, 0}, {nCellsSolve - 1, 0} }
+  var cell_range_2d = rect2d{ {0, 0}, {nCellsSolve - 1, nVertLevels - 1} }
+  var cell_range_extra_2d = rect2d{ {0, 0}, {nCellsSolve - 1, nVertLevels} } -- for loop goes from 0 to nVertLevels + 1 
+  var ozn_range_1d = rect2d{ {0, 0}, {0, nOznLevels - 1} }
+  var ozn_range_2d = rect2d{ {0, 0}, {nCellsSolve - 1, nOznLevels - 1} }
 
-  for j = jts, jte do
-    for i = 0, nCellsSolve do
-      cr[{i, 0}].sfc_emiss_p = cr[{i, 0}].sfc_emiss
-      cr[{i, 0}].tsk_p       = cr[{i, 0}].skintemp
-      cr[{i, 0}].snow_p      = cr[{i, 0}].snow
-      cr[{i, 0}].xice_p      = cr[{i, 0}].xice
-      cr[{i, 0}].xland_p     = cr[{i, 0}].xland
+
+  -- Removed j loop because it doesn't seem to do anything in current code.
+  --for j = jts, jte do
+    for iCell in cell_range_1d do
+      cr[iCell].sfc_emiss_p = cr[iCell].sfc_emiss
+      cr[iCell].tsk_p       = cr[iCell].skintemp
+      cr[iCell].snow_p      = cr[iCell].snow
+      cr[iCell].xice_p      = cr[iCell].xice
+      cr[iCell].xland_p     = cr[iCell].xland
     end
-  end
-  for j = jts, jte do
-    for k = 0, nVertLevels do
-      for i = 0, nCellsSolve do
-        cr[{i, k}].cldfrac_p = cr[{i, k}].cldfrac
-      end
+  --end
+    for iCell in cell_range_2d do
+      cr[iCell].cldfrac_p = cr[iCell].cldfrac
     end
-  end
+  --end
 
   -- initialization:
-  for j = jts, jte do
-    for k = 0, nVertLevels do
-      for i = 0, nCellsSolve do
-        cr[{i, k}].f_ice  = 0.0
-        cr[{i, k}].f_rain = 0.0
-      end
+  --for j = jts, jte do
+    for iCell in cell_range_2d do
+      cr[iCell].f_ice  = 0.0
+      cr[iCell].f_rain = 0.0
     end
-  end
+  --end
 
-  for j = jts, jte do
-    for i = 0, nCellsSolve do
-      cr[{i, 0}].glw_p      = 0.0
-      cr[{i, 0}].lwcf_p     = 0.0
-      cr[{i, 0}].lwdnb_p    = 0.0
-      cr[{i, 0}].lwdnbc_p   = 0.0
-      cr[{i, 0}].lwdnt_p    = 0.0
-      cr[{i, 0}].lwdntc_p   = 0.0
-      cr[{i, 0}].lwupb_p    = 0.0
-      cr[{i, 0}].lwupbc_p   = 0.0
-      cr[{i, 0}].lwupt_p    = 0.0
-      cr[{i, 0}].lwuptc_p   = 0.0
-      cr[{i, 0}].olrtoa_p   = 0.0
+  --for j = jts, jte do
+    for iCell in cell_range_1d do
+      cr[iCell].glw_p      = 0.0
+      cr[iCell].lwcf_p     = 0.0
+      cr[iCell].lwdnb_p    = 0.0
+      cr[iCell].lwdnbc_p   = 0.0
+      cr[iCell].lwdnt_p    = 0.0
+      cr[iCell].lwdntc_p   = 0.0
+      cr[iCell].lwupb_p    = 0.0
+      cr[iCell].lwupbc_p   = 0.0
+      cr[iCell].lwupt_p    = 0.0
+      cr[iCell].lwuptc_p   = 0.0
+      cr[iCell].olrtoa_p   = 0.0
     end
   
-    for k = 0, nVertLevels do
-      for i = 0, nCellsSolve do
-        cr[{i, k}].rthratenlw_p = 0.0
-      end
+    for iCell in cell_range_2d do
+        cr[iCell].rthratenlw_p = 0.0
     end
-  end
+  --end
 
   if ([rawstring](radt_lw_scheme) == "rrtmg_lw") then -- string should be trimmed
     if ([rawstring](microp_scheme) == "mp_thompson" or [rawstring](microp_scheme) == "mp_wsm6") then
       if (config_microp_re) then
 
-        for j = jts, jte do
-          for k = 0, nVertLevels do
-            for i = 0, nCellsSolve do
-              cr[{i, k}].recloud_p = cr[{i, k}].re_cloud
-              cr[{i, k}].reice_p   = cr[{i, k}].re_ice
-              cr[{i, k}].resnow_p  = cr[{i, k}].re_snow
-            end
+        --for j = jts, jte do
+          for iCell in cell_range_2d do
+            cr[iCell].recloud_p = cr[iCell].re_cloud
+            cr[iCell].reice_p   = cr[iCell].re_ice
+            cr[iCell].resnow_p  = cr[iCell].re_snow
           end
-        end
+        --end
       else
-        for j = jts, jte do
-          for k = 0, nVertLevels do
-            for i = 0, nCellsSolve do
-              cr[{i, k}].recloud_p = 0.0
-              cr[{i, k}].reice_p   = 0.0
-              cr[{i, k}].resnow_p  = 0.0
-            end
+        --for j = jts, jte do
+          for iCell in cell_range_2d do
+            cr[iCell].recloud_p = 0.0
+            cr[iCell].reice_p   = 0.0
+            cr[iCell].resnow_p  = 0.0
           end
-        end
+        --end
       end
-      for j = jts, jte do
-        for k = 0, nVertLevels do
-          for i = 0, nCellsSolve do
-            cr[{i, k}].rrecloud_p = 0.0
-            cr[{i, k}].rreice_p   = 0.0
-            cr[{i, k}].rresnow_p  = 0.0
-          end
+      --for j = jts, jte do
+        for iCell in cell_range_2d do
+          cr[iCell].rrecloud_p = 0.0
+          cr[iCell].rreice_p   = 0.0
+          cr[iCell].rresnow_p  = 0.0
         end
-      end
+      --end
     end
 
-    for j = jts, jte do
-      for k = 0, nVertLevels + 2 do
-        for i = 0, nCellsSolve do
+    -- Commented out the loop since inner part of the loop was commented out.
+    --for j = jts, jte do
+    --  for k = 0, nVertLevels + 2 do
+    --    for i = 0, nCellsSolve do
           --lwdnflx_p[{i, k, j}]  = 0.0
           --lwdnflxc_p[{i, k, j}] = 0.0
           --lwupflx_p[{i, k, j}]  = 0.0
           --lwupflxc_p[{i, k, j}] = 0.0
-        end
-      end
-    end
-
+    --    end
+    --  end
+    --end
+    
     if (config_o3climatology) then
       -- ozone mixing ratio:
-      for k = 0, nOznLevels do
-        ozn_r[{0, k}].pin_p = ozn_r[{0, k}].pin
+      for index in ozn_range_1d do
+        ozn_r[index].pin_p = ozn_r[index].pin
       end
-      for j = jts, jte do
-        for k = 0, nOznLevels do
-          for i = 0, nCellsSolve do
-            ozn_r[{i, k}].o3clim_p = ozn_r[{i, k}].o3clim
-          end
+      --for j = jts, jte do
+        for index in ozn_range_2d do
+          ozn_r[index].o3clim_p = ozn_r[index].o3clim
         end
-      end
+      --end
 
-      var nlevs = nVertLevels + 1
-      var ncols = nCellsSolve + 1
+      -- Only get used in call vinterp_ozn
+      --var nlevs = nVertLevels + 1
+      --var ncols = nCellsSolve + 1
       --if(.not.allocated(p2d) ) allocate(p2d(its:ite,kts:kte) )
       --if(.not.allocated(o32d)) allocate(o32d(its:ite,kts:kte))
-      for j = jts, jte do
-        for i = 0, nCellsSolve do
-          for k = 0, nVertLevels do
-            cr[{i, k}].o32d = 0.0
-            cr[{i, k}].p2d  = cr[{i, k}].pres_hyd_p / 100.0
-          end
+      --for j = jts, jte do
+        for iCell in cell_range_2d do
+          cr[iCell].o32d = 0.0
+          cr[iCell].p2d  = cr[iCell].pres_hyd_p / 100.0
         end
         --vinterp_ozn(cr, ozn_r, 1, ncols, ncols, nlevs)
-        for i = 0, nCellsSolve do
-          for k = 0, nVertLevels do
-            cr[{i, k}].o3vmr = cr[{i, k}].o32d
-          end
+        for iCell in cell_range_2d do
+            cr[iCell].o3vmr = cr[iCell].o32d
         end
-      end
+      --end
       --if(allocated(p2d))  deallocate(p2d)
       --if(allocated(o32d)) deallocate(o32d)
     else
-      for k = 0, nOznLevels do
-        ozn_r[{0, k}].pin_p = 0.0
+      for index in ozn_range_1d do
+        ozn_r[index].pin_p = 0.0
       end
-      for j = jts, jte do
-        for k = 0, nOznLevels do
-          for i = 0, nCellsSolve do
-            ozn_r[{i, k}].o3clim_p = 0.0
-          end
+      --for j = jts, jte do
+        for index in ozn_range_2d do
+          ozn_r[index].o3clim_p = 0.0
         end
-      end
+      --end
     end
   end
   if ([rawstring](radt_lw_scheme) == "cam_lw") then
-    for j = jts, jte do
-      for i = 0, nCellsSolve do
-        cr[{i, 0}].xlat_p = cr[{i, 0}].lat / degrad
-        cr[{i, 0}].xlon_p = cr[{i, 0}].lon / degrad
-        cr[{i, 0}].sfc_albedo_p = cr[{i, 0}].sfc_albedo
+    --for j = jts, jte do
+      for iCell in cell_range_1d do
+        cr[iCell].xlat_p = cr[iCell].lat / degrad
+        cr[iCell].xlon_p = cr[iCell].lon / degrad
+        cr[iCell].sfc_albedo_p = cr[iCell].sfc_albedo
 
-        cr[{i, 0}].coszr_p      = 0.0
-        cr[{i, 0}].gsw_p        = 0.0
-        cr[{i, 0}].swcf_p       = 0.0
-        cr[{i, 0}].swdnb_p      = 0.0
-        cr[{i, 0}].swdnbc_p     = 0.0
-        cr[{i, 0}].swdnt_p      = 0.0
-        cr[{i, 0}].swdntc_p     = 0.0
-        cr[{i, 0}].swupb_p      = 0.0
-        cr[{i, 0}].swupbc_p     = 0.0
-        cr[{i, 0}].swupt_p      = 0.0
-        cr[{i, 0}].swuptc_p     = 0.0
+        cr[iCell].coszr_p      = 0.0
+        cr[iCell].gsw_p        = 0.0
+        cr[iCell].swcf_p       = 0.0
+        cr[iCell].swdnb_p      = 0.0
+        cr[iCell].swdnbc_p     = 0.0
+        cr[iCell].swdnt_p      = 0.0
+        cr[iCell].swdntc_p     = 0.0
+        cr[iCell].swupb_p      = 0.0
+        cr[iCell].swupbc_p     = 0.0
+        cr[iCell].swupt_p      = 0.0
+        cr[iCell].swuptc_p     = 0.0
       end
-      for k = 0, nVertLevels do
-        for i = 0, nCellsSolve do
-          cr[{i, k}].rthratensw_p = 0.0
-          cr[{i, k}].cemiss_p     = 0.0
-          cr[{i, k}].taucldc_p    = 0.0
-          cr[{i, k}].taucldi_p    = 0.0
-        end
+      for iCell in cell_range_2d do
+        cr[iCell].rthratensw_p = 0.0
+        cr[iCell].cemiss_p     = 0.0
+        cr[iCell].taucldc_p    = 0.0
+        cr[iCell].taucldi_p    = 0.0
       end
-    end
+    --end
 
     -- On the first time-step of each model run, the local arrays absnxt_p, absnst_p,
     -- and emstot_p are filled with the MPAS arrays abstot, absnxt, and emstot. If it
     -- is a new run, these three arrays will be initialized to zero;If a restart run,
     -- these three arrays will be filled with the restart values.
     if (xtime_s < 1.0e-12) then
-      for j = jts, jte do
-        for n = 0, constants.cam_abs_dim1 do -- Originally from 1 to cam_abs_dim1
-          for k = 0, nVertLevels do
-            for i = 0, nCellsSolve do
-              cr[{i, k}].absnxt_p[n] = 0.0
-            end
+      --for j = jts, jte do
+        for iCell in cell_range_2d do
+          for n = 0, constants.cam_abs_dim1 do -- Originally from 1 to cam_abs_dim1
+            cr[iCell].absnxt_p[n] = 0.0
           end
         end
-        for n = 0, constants.cam_abs_dim2 do -- Originally from 1 to cam_abs_dim2
-          for k = 0, nVertLevels + 1 do
-            for i = 0, nCellsSolve do
-              cr[{i, k}].abstot_p[n] = 0.0
-            end
+        for iCell in cell_range_extra_2d do
+          for n = 0, constants.cam_abs_dim2 do -- Originally from 1 to cam_abs_dim2
+            cr[iCell].abstot_p[n] = 0.0
           end
         end
-        for k = 0, nVertLevels + 1 do
-          for i = 0, nCellsSolve do
-            cr[{i, k}].emstot_p = 0.0
-          end
+        for iCell in cell_range_extra_2d do
+          cr[iCell].emstot_p = 0.0
         end
-      end
+      --end
     end
 
     -- ozone mixing ratio:
-    for k = 0, nOznLevels do
-      ozn_r[{0, k}].pin_p = ozn_r[{0, k}].pin
+    for index in ozn_range_1d do
+      ozn_r[index].pin_p = ozn_r[index].pin
     end
-    for n = 0, constants.nMonths do
-      for j = jts, jte do
-        for k = 0, nOznLevels do
-          for i = 0, nCellsSolve do
-            ozn_r[{i, k}].ozmixm_p[n] = ozn_r[{i, k}].ozmixm[n]
+    --for n = 0, constants.nMonths do -- Moved inside the loop
+      --for j = jts, jte do
+        for index in ozn_range_2d do
+          for n = 0, constants.nMonths do -- Moved inside the loop
+            ozn_r[index].ozmixm_p[n] = ozn_r[index].ozmixm[n]
           end
         end
-      end
-    end
+      --end
+    --end
     --aerosol mixing ratio:
-    for k = 0, nAerLevels do
-      aer_r[{0, k}].m_hybi_p = aer_r[{0, k}].m_hybi
+    var aer_range_1d = rect2d{ {0, 0}, {0, nAerLevels - 1} }
+    var aer_range_2d = rect2d{ {0, 0}, {nCellsSolve - 1, nAerLevels - 1} }
+    for index in aer_range_1d do
+      aer_r[index].m_hybi_p = aer_r[index].m_hybi
     end
-    for i = 0, nCellsSolve do
-      for j = jts, jte do
-        cr[{i, 0}].m_psp_p = cr[{i, 0}].m_ps
-        cr[{i, 0}].m_psn_p = cr[{i, 0}].m_ps
-      end
+    for iCell in cell_range_1d do
+      --for j = jts, jte do
+        cr[iCell].m_psp_p = cr[iCell].m_ps
+        cr[iCell].m_psn_p = cr[iCell].m_ps
+      --end
     end
-    for n = 0, nAerosols do
-      for j = jts, jte do
-        for k = 0, nAerLevels do
-          for i = 0, nCellsSolve do
-            aer_r[{i, k}].aerosolcp_p[n] = aer_r[{i, k}].aerosols[n]
-            aer_r[{i, k}].aerosolcn_p[n] = aer_r[{i, k}].aerosols[n]
+    --for n = 0, nAerosols do -- moved inside for loop
+      --for j = jts, jte do
+        for index in aer_range_2d do
+          for n = 0, nAerosols do -- moved inside for loop
+            aer_r[index].aerosolcp_p[n] = aer_r[index].aerosols[n]
+            aer_r[index].aerosolcn_p[n] = aer_r[index].aerosols[n]
           end
         end
-      end
-    end
+      --end
+    --end
   end
 end
 

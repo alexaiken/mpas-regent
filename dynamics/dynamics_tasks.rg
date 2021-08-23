@@ -42,7 +42,7 @@ fabs = regentlib.fabs(double)
 pow = regentlib.pow(double)
 sqrt = regentlib.sqrt(double)
 
---__demand(__cuda)
+__demand(__cuda)
 task atm_compute_signs(cr : region(ispace(int2d), cell_fs),
                        er : region(ispace(int2d), edge_fs),
                        vr : region(ispace(int2d), vertex_fs))
@@ -129,7 +129,7 @@ do
   end
 end
 
---_demand(__cuda)
+__demand(__cuda)
 task atm_adv_coef_compression(cr : region(ispace(int2d), cell_fs),
                               er : region(ispace(int2d), edge_fs))
 where
@@ -141,7 +141,6 @@ do
   --format.println("Calling atm_adv_coef_compression...")
 
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, 0} }
-  var cell_list : int[maxEdges]
 
   for iEdge in edge_range do
     er[iEdge].nAdvCellsForEdge = 0
@@ -152,6 +151,7 @@ do
       -- do only if this edge flux is needed to update owned cells
       --
     if (cell1 <= nCells or cell2 <= nCells) then
+      var cell_list : int[maxEdges]
       cell_list[0] = cell1
       cell_list[1] = cell2
       var n = 1 -- n is index of cells currently in list
@@ -1537,12 +1537,16 @@ do
   atm_set_smlstep_pert_variables_work(cpr, er, vert_r)
 end
 
---Comments for atm_advance_acoustic_step_work
---dts is passed in as double now - in code, passed in as rk_sub_timestep(rk_step)
---1.0_RKIND translated as just 1.0
---Tendency variables: tend_rw, tend_rt, tend_rho (added to CR), tend_ru (added to ER). Not in registry
---Other variables not in registry: rs, ts: added to CR as part of vertical grid, ru_Avg (added to ER)
---__demand(__cuda)
+-- Comments for atm_advance_acoustic_step_work
+-- dts is passed in as double now - in code, passed in as rk_sub_timestep(rk_step)
+-- 1.0_RKIND translated as just 1.0
+-- Tendency variables: tend_rw, tend_rt, tend_rho (added to CR), tend_ru (added to ER). Not in registry
+-- Other variables not in registry: rs, ts: added to CR as part of vertical grid, ru_Avg (added to ER)
+-- 
+-- Currently the compiler doesn't recognize the outer loop being independent of the inner ones.
+-- In order to use __demand(__cuda) regent needs to be run with the flag `-foverride-demand-cuda 1`.
+-- See https://github.com/StanfordLegion/legion/issues/1126 for more info.
+__demand(__cuda)
 task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     vert_r : region(ispace(int1d), vertical_fs),
@@ -1564,6 +1568,7 @@ do
 
   var cell_range = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels - 1} }
   var cell_range_P1 = rect2d { int2d {0, 0}, int2d {nCells - 1, nVertLevels} }
+  var cell_range_1d = rect1d { 0, nCells - 1 }
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
 
   var epssm = constants.config_epssm
@@ -1572,9 +1577,6 @@ do
   var c2 = constants.cp * rcv
   var resm = (1.0 - epssm) / (1.0 + epssm)
   var rdts = 1.0 / dts
-
-  var rs : double[nVertLevels]
-  var ts : double[nVertLevels]
 
   --format.println("Calling atm_advance_acoustic_step_work...")
 
@@ -1622,84 +1624,117 @@ do
     end
   end
 
-  for iCell in cell_range_P1 do
-    if (small_step == 0) then
-      cr[iCell].wwAvg = 0
-      cr[iCell].rw_p = 0
+  -- Code was originally in big for loop below.
+  -- Moved outside for greater parallelization.
+  -- Switched for loop with if statement to avoid unnecessary checks.
+  if (small_step == 0) then
+    for iCell in cell_range_P1 do
+      --TODO: switch order of loop and if statement?
+      --if (small_step == 0) then
+        cr[iCell].wwAvg = 0
+        cr[iCell].rw_p = 0
+      --end
+    end
+    for iCell in cell_range do
+      --TODO: switch order?
+      --if (small_step == 0) then
+        cr[iCell].rho_pp = 0
+        cr[iCell].rtheta_pp = 0
+      --end
     end
   end
 
-  for iCell in cell_range do
-    if (small_step == 0) then
-      cr[iCell].rho_pp = 0
-      cr[iCell].rtheta_pp = 0
-    end
+  --__demand(__openmp)
+  for i in cell_range_1d do
+    var iCell = int(i)
+
+    -- Moved outside
+    --if (small_step == 0) then
+    --  cr[iCell].rho_pp = 0
+    --  cr[iCell].rtheta_pp = 0
+    --end
 
     if (cr[{iCell, 0}].specZoneMaskCell == 0.0) then -- not specified zone, compute...
-      for i = 0, nVertLevels do
-        ts[i] = 0
-        rs[i] = 0
+      var rs : double[nVertLevels]
+      var ts : double[nVertLevels]
+
+      for k = 0, nVertLevels do
+        ts[k] = 0
+        rs[k] = 0
       end
 
-      for i = 0, cr[{iCell.x, 0}].nEdgesOnCell do
-        var iEdge = cr[{iCell.x, 0}].edgesOnCell[i]    --edgesOnCell(i,iCell)
+      for i = 0, cr[{iCell, 0}].nEdgesOnCell do
+        var iEdge = cr[{iCell, 0}].edgesOnCell[i]    --edgesOnCell(i,iCell)
         var cell1 = er[{iEdge, 0}].cellsOnEdge[0]
         var cell2 = er[{iEdge, 0}].cellsOnEdge[1]    --cell2 = cellsOnEdge(2,iEdge)
 
-        var flux = cr[{iCell.x, 0}].edgesOnCellSign[i] * dts * er[{iEdge, 0}].dvEdge * er[{iEdge, iCell.y}].ru_p * cr[{iCell.x, 0}].invAreaCell
-        rs[iCell.y] -= flux
-        ts[iCell.y] -= flux * 0.5 * (cr[{cell2, iCell.y}].theta_m + cr[{cell1, iCell.y}].theta_m)
+        for k = 0, nVertLevels do
+          var flux = cr[{iCell, 0}].edgesOnCellSign[i] * dts * er[{iEdge, 0}].dvEdge * er[{iEdge, k}].ru_p * cr[{iCell, 0}].invAreaCell
+          rs[k] -= flux
+          ts[k] -= flux * 0.5 * (cr[{cell2, k}].theta_m + cr[{cell1, k}].theta_m)
+        end
       end
 
       -- vertically implicit acoustic and gravity wave integration.
       -- this follows Klemp et al MWR 2007, with the addition of an implicit Rayleigh damping of w
       -- serves as a gravity-wave absorbing layer, from Klemp et al 2008.
-      rs[iCell.y] = cr[iCell].rho_pp + dts * cr[iCell].tend_rho + rs[iCell.y] - vert_r[iCell.y].cofrz* resm * (cr[iCell + {0, 1}].rw_p - cr[iCell].rw_p)
-      ts[iCell.y] = cr[iCell].rtheta_pp + dts * cr[iCell].theta_m + ts[iCell.y] - resm * vert_r[iCell.y].rdzw * (cr[iCell + {0, 1}].coftz * cr[iCell + {0, 1}].rw_p  - cr[iCell].coftz * cr[iCell].rw_p )
-
-      if (iCell.y > 0) then
-        cr[iCell].wwAvg += 0.5 * (1.0 - epssm) * cr[iCell].rw_p
-        cr[iCell].rw_p += dts * cr[iCell].w - cr[iCell].cofwz
-                          * ((cr[iCell].zz * ts[iCell.y] - cr[iCell - {0, 1}].zz * ts[iCell.y - 1]) + resm
-                          * (cr[iCell].zz * cr[iCell].rtheta_pp - cr[iCell - {0, 1}].zz * cr[iCell - {0, 1}].rtheta_pp))
-                          - cr[iCell].cofwr * ((rs[iCell.y] + rs[iCell.y - 1]) + resm * (cr[iCell].rho_pp + cr[iCell - {0, 1}].rho_pp))
-                          + cr[iCell].cofwt * (ts[iCell.y] + resm * cr[iCell].rtheta_pp)
-                          + cr[iCell - {0, 1}].cofwt * (ts[iCell.y - 1] +resm * cr[iCell - {0, 1}].rtheta_pp)
-
-        -- tridiagonal solve sweeping up and then down the column
-        cr[iCell].rw_p -= cr[iCell].a_tri * cr[iCell - {0, 1}].rw_p
-        cr[iCell].rw_p *= cr[iCell].alpha_tri
+      for k = 0, nVertLevels do
+        rs[k] = cr[{iCell, k}].rho_pp + dts * cr[{iCell, k}].tend_rho + rs[k] - vert_r[k].cofrz* resm * (cr[{iCell, k + 1}].rw_p - cr[{iCell, k}].rw_p)
+        ts[k] = cr[{iCell, k}].rtheta_pp + dts * cr[{iCell, k}].theta_m + ts[k] - resm * vert_r[k].rdzw * (cr[{iCell, k + 1}].coftz * cr[{iCell, k + 1}].rw_p  - cr[{iCell, k}].coftz * cr[{iCell, k}].rw_p )
       end
 
-      --TODO: how to parallelize this???
-      --for k = nVertLevels, 1, -1 do
-      --  cr[{iCell, k}].rw_p -= cr[{iCell, k}].gamma_tri * cr[{iCell, k+1}].rw_p
-      --end
+      for k = 1, nVertLevels do -- Fortran: do k=2, nVertLevels
+        cr[{iCell, k}].wwAvg += 0.5 * (1.0 - epssm) * cr[{iCell, k}].rw_p
+      end
+
+      for k = 1, nVertLevels do -- Fortran: do k=2, nVertLevels
+        cr[{iCell, k}].rw_p += dts * cr[{iCell, k}].w - cr[{iCell, k}].cofwz
+                          * ((cr[{iCell, k}].zz * ts[k] - cr[{iCell, k - 1}].zz * ts[k - 1]) + resm
+                          * (cr[{iCell, k}].zz * cr[{iCell, k}].rtheta_pp - cr[{iCell, k - 1}].zz * cr[{iCell, k - 1}].rtheta_pp))
+                          - cr[{iCell, k}].cofwr * ((rs[k] + rs[k - 1]) + resm * (cr[{iCell, k}].rho_pp + cr[{iCell, k - 1}].rho_pp))
+                          + cr[{iCell, k}].cofwt * (ts[k] + resm * cr[{iCell, k}].rtheta_pp)
+                          + cr[{iCell, k - 1}].cofwt * (ts[k - 1] + resm * cr[{iCell, k - 1}].rtheta_pp)
+      end
+
+      -- tridiagonal solve sweeping up and then down the column
+      for k = 1, nVertLevels do -- Fortran: do k=2, nVertLevels
+        cr[{iCell, k}].rw_p -= cr[{iCell, k}].a_tri * cr[{iCell, k - 1}].rw_p
+        cr[{iCell, k}].rw_p *= cr[{iCell, k}].alpha_tri
+      end
+
+      for k = nVertLevels, 1, -1 do
+        cr[{iCell, k}].rw_p -= cr[{iCell, k}].gamma_tri * cr[{iCell, k + 1}].rw_p
+      end
 
 
       -- the implicit Rayleigh damping on w (gravity-wave absorbing)
-      if (iCell.y > 0) then
-        cr[iCell].rw_p += (cr[iCell].rw_save - cr[iCell].rw) - dts * cr[iCell].dss
-                          * (vert_r[iCell.y].fzm * cr[iCell].zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].zz)
-                          * (vert_r[iCell.y].fzm * cr[iCell].rho_zz + vert_r[iCell.y].fzp * cr[iCell - {0, 1}].rho_zz) * cr[iCell].w
-        cr[iCell].rw_p /= (1.0 + dts * cr[iCell].dss)
-        cr[iCell].rw_p -= (cr[iCell].rw_save - cr[iCell].rw)
+      for k = 1, nVertLevels do -- Fortran: do k=2, nVertLevels
+        cr[{iCell, k}].rw_p += (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw) - dts * cr[{iCell, k}].dss
+                          * (vert_r[k].fzm * cr[{iCell, k}].zz + vert_r[k].fzp * cr[{iCell, k - 1}].zz)
+                          * (vert_r[k].fzm * cr[{iCell, k}].rho_zz + vert_r[k].fzp * cr[{iCell, k - 1}].rho_zz) * cr[{iCell, k}].w
+        cr[{iCell, k}].rw_p /= (1.0 + dts * cr[{iCell, k}].dss)
+        cr[{iCell, k}].rw_p -= (cr[{iCell, k}].rw_save - cr[{iCell, k}].rw)
+      end
 
-        -- accumulate (rho*omega)' for use later in scalar transport
-        cr[iCell].wwAvg += 0.5 * (1.0 + epssm) * cr[iCell].rw_p
+      -- accumulate (rho*omega)' for use later in scalar transport
+      for k = 1, nVertLevels do -- Fortran: do k=2, nVertLevels
+        cr[{iCell, k}].wwAvg += 0.5 * (1.0 + epssm) * cr[{iCell, k}].rw_p
       end
 
       -- update rho_pp and theta_pp given updated rw_p
-
-      cr[iCell].rho_pp = rs[iCell.y] - vert_r[iCell.y].cofrz*(cr[iCell + {0, 1}].rw_p - cr[iCell].rw_p)
-      cr[iCell].rtheta_pp = ts[iCell.y] - vert_r[iCell.y].rdzw
-                            * (cr[iCell + {0, 1}].coftz * cr[iCell + {0, 1}].rw_p - cr[iCell].coftz * cr[iCell].rw_p)
+      for k = 0, nVertLevels do
+        cr[{iCell, k}].rho_pp = rs[k] - vert_r[k].cofrz * (cr[{iCell, k + 1}].rw_p - cr[{iCell, k}].rw_p)
+        cr[{iCell, k}].rtheta_pp = ts[k] - vert_r[k].rdzw
+                            * (cr[{iCell, k + 1}].coftz * cr[{iCell, k + 1}].rw_p - cr[{iCell, k}].coftz * cr[{iCell, k}].rw_p)
+      end
 
     else -- specifed zone in regional_MPAS
-      cr[iCell].rho_pp  = cr[iCell].rho_pp + dts * cr[iCell].tend_rho
-      cr[iCell].rtheta_pp = cr[iCell].rtheta_pp + dts * cr[iCell].theta_m
-      cr[iCell].rw_p = cr[iCell].rw_p + dts * cr[iCell].w
-      cr[iCell].wwAvg = cr[iCell].wwAvg + 0.5 * (1.0+epssm) * cr[iCell].rw_p
+      for k = 0, nVertLevels do
+        cr[{iCell, k}].rho_pp  = cr[{iCell, k}].rho_pp + dts * cr[{iCell, k}].tend_rho
+        cr[{iCell, k}].rtheta_pp = cr[{iCell, k}].rtheta_pp + dts * cr[{iCell, k}].theta_m
+        cr[{iCell, k}].rw_p = cr[{iCell, k}].rw_p + dts * cr[{iCell, k}].w
+        cr[{iCell, k}].wwAvg = cr[{iCell, k}].wwAvg + 0.5 * (1.0 + epssm) * cr[{iCell, k}].rw_p
+      end
     end
   end -- end of loop over cells
 end

@@ -58,7 +58,7 @@ task main()
     format.println("Done calling init_atm_case_jw...\n")
 
     format.println("Calling atm_core_init...")
-    atm_core_init(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls)
+    atm_core_init(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls, ozn_region)
     format.println("Done calling atm_core_init...\n")
 
     for j = 0, constants.NUM_TIMESTEPS do
