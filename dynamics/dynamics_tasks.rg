@@ -647,13 +647,13 @@ end
 
 --Not sure how to translate: scalars(index_qv,k,iCell)
 --sign(1.0_RKIND,flux) translated as copysign(1.0, flux)
-__demand(__cuda)
+--__demand(__cuda)
 task atm_init_coupled_diagnostics(cr : region(ispace(int2d), cell_fs),
                                   er : region(ispace(int2d), edge_fs),
                                   vert_r : region(ispace(int1d), vertical_fs))
 where
   reads (cr.{edgesOnCell, edgesOnCellSign, nEdgesOnCell, rho_base, theta, theta_base, theta_m, w,
-             zb_cell, zb3_cell, zz},
+             zb_cell, zb3_cell, zz, pressure_p, qv, rho_p, rho, pressure_base},
          er.{cellsOnEdge, u},
          vert_r.{fzm, fzp}),
   writes (cr.{pressure_base, pressure_p}),
@@ -670,8 +670,8 @@ do
   var edge_range = rect2d { int2d {0, 0}, int2d {nEdges - 1, nVertLevels - 1} }
 
   for iCell in cell_range do
-    --cr[iCell].theta_m = cr[iCell].theta * (1.0 + constants.rvord * cr[iCell].scalars[index_qv])
-    cr[iCell].rho_zz /= cr[iCell].zz
+    cr[iCell].theta_m = cr[iCell].theta * (1.0 + constants.rvord * cr[iCell].qv)
+    cr[iCell].rho_zz = cr[iCell].rho / cr[iCell].zz
   end
 
   for iEdge in edge_range do
@@ -679,7 +679,7 @@ do
     var cell2 = er[{iEdge.x, 0}].cellsOnEdge[1]
     er[iEdge].ru = 0.5 * er[iEdge].u * (cr[{cell1, iEdge.y}].rho_zz + cr[{cell2, iEdge.y}].rho_zz)
   end
-
+  
   -- Compute rw (i.e. rho_zz * omega) from rho_zz, w, and ru.
   -- We are reversing the procedure we use in subroutine atm_recover_large_step_variables.
   -- first, the piece that depends on w.
@@ -714,21 +714,14 @@ do
     cr[iCell].pressure_p = cr[iCell].zz * rgas * (cr[iCell].exner * cr[iCell].rtheta_p + cr[iCell].rtheta_base
                                                   * (cr[iCell].exner - cr[iCell].exner_base))
     cr[iCell].pressure_base = cr[iCell].zz * rgas * cr[iCell].exner_base * cr[iCell].rtheta_base
-
-    --format.println("zz at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].zz)
-    --format.println("exner at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].exner)
-    --format.println("rtheta_p at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].rtheta_p)
-    --format.println("rtheta_base at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].rtheta_base)
-    --format.println("exner_base at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].exner_base)
-    --format.println("Pressure_p at cell ({}, {}) is {} \n", iCell.x, iCell.y, cr[iCell].pressure_p)
   end
 end
 
 --Not sure how to translate: scalars(index_qv,k,iCell)
-__demand(__cuda)
+--__demand(__cuda)
 task atm_compute_output_diagnostics(cr : region(ispace(int2d), cell_fs))
 where
-  reads (cr.{pressure_base, pressure_p, rho_zz, theta_m, zz}),
+  reads (cr.{pressure_base, pressure_p, rho_zz, theta_m, zz, qv}),
   writes (cr.{pressure, rho, theta})
 do
   --format.println("Calling atm_compute_output_diagnostics...")
@@ -736,11 +729,10 @@ do
   var cell_range = rect2d { int2d{0, 0}, int2d{nCells - 1, nVertLevels - 1} }
   for iCell in cell_range do
     --Original contains scalars(index_qv,k,iCell). Currently translating as follows
-    --cr[iCell].theta = cr[iCell].theta_m / (1 + constants.rvord * cr[iCell].scalars[index_qv])
+    cr[iCell].theta = cr[iCell].theta_m / (1 + constants.rvord * cr[iCell].qv)
     cr[iCell].rho = cr[iCell].rho_zz * cr[iCell].zz
     cr[iCell].pressure = cr[iCell].pressure_base + cr[iCell].pressure_p
   end
-
 end
 
 __demand(__cuda)
@@ -1552,7 +1544,7 @@ task atm_advance_acoustic_step_work(cr : region(ispace(int2d), cell_fs),
 where
   reads (cr.{a_tri, alpha_tri, coftz, cofwr, cofwt, cofwz, dss, edgesOnCell, edgesOnCellSign, exner,
              gamma_tri, invAreaCell, nEdgesOnCell, rho_pp, rho_zz, rtheta_pp, rw, rw_save, specZoneMaskCell,
-             tend_rho, theta_m, theta_m, w, zz},
+             tend_rho, theta_m, theta_m, w, zz, rho, tend_rtheta_adv},
          er.{cellsOnEdge, cqu, dvEdge, invDcEdge, specZoneMaskEdge, tend_ru, zxu},
          vert_r.{cofrz, fzm, fzp, rdzw}),
   writes (cr.rtheta_pp_old),
@@ -1672,9 +1664,9 @@ do
       end
 
       --TODO: how to parallelize this???
-      --for k = nVertLevels, 1, -1 do
-      --  cr[{iCell, k}].rw_p -= cr[{iCell, k}].gamma_tri * cr[{iCell, k+1}].rw_p
-      --end
+      for k = nVertLevels, 1, -1 do
+        cr[{iCell, k}].rw_p -= cr[{iCell, k}].gamma_tri * cr[{iCell, k+1}].rw_p
+      end
 
 
       -- the implicit Rayleigh damping on w (gravity-wave absorbing)
@@ -1762,7 +1754,7 @@ do
   end
 end
 
-__demand(__cuda)
+--__demand(__cuda)
 task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
                                     er : region(ispace(int2d), edge_fs),
                                     vert_r : region(ispace(int1d), vertical_fs),
@@ -1771,14 +1763,13 @@ task atm_recover_large_step_variables_work(cr : region(ispace(int2d), cell_fs),
                                     dt : double)
 where
   reads (cr.{bdyMaskCell, edgesOnCell, edgesOnCell_sign, exner_base, nEdgesOnCell, rho_base, rho_p_save, rho_pp,
-             rt_diabatic_tend, rtheta_base, rtheta_p_save, rtheta_pp, rw_p, rw_save, zb_cell, zb3_cell, zz},
+             rt_diabatic_tend, rtheta_base, rtheta_p_save, rtheta_pp, rw_p, rw_save, zb_cell, zb3_cell, zz, pressure_p},
          er.{cellsOnEdge, ru_p, ru_save},
          vert_r.{cf1, cf2, cf3, fzm, fzp}),
   writes (cr.{pressure_p, theta_m}, er.u),
   reads writes (cr.{exner, rho_p, rho_zz, rtheta_p, rw, w, wwAvg},
                 er.{ruAvg, ru})
 do
-
   var rgas = constants.rgas
   var rcv = rgas / (constants.cp - rgas)
   var p0 = 100000
@@ -1830,7 +1821,7 @@ do
   -- we will compute ru and u here also, given we are here, even though we only need them on nEdgesSolve
 
   --format.println("er[{0, 0}].ru: {}, cr[{0, 0}].rho_zz: {}, cr[{0, 0}].rho_zz: {}, \n", er[{0, 0}].ru, cr[{0, 0}].rho_zz, cr[{0, 0}].rho_zz)
-  format.println("er[{0, 0}].ru: {}, cr[{0, 0}].rho_zz: {}, cr[{0, 0}].rho_zz: {}, \n", 1, 2, 3)
+  --format.println("er[{0, 0}].ru: {}, cr[{0, 0}].rho_zz: {}, cr[{0, 0}].rho_zz: {}, \n", 1, 2, 3)
 
   for iEdge in edge_range do
     var cell1 = er[{iEdge.x, 0}].cellsOnEdge[0]

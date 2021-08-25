@@ -13,7 +13,7 @@ constants.FILE_NAME = "mesh_loading/x1.2562.grid.nc"
 constants.GRAPH_FILE_NAME = "mesh_loading/x1.2562.graph.info.part.16"
 constants.NUM_PARTITIONS = 16
 constants.MAXCHAR = 5
-constants.NUM_TIMESTEPS = 10
+constants.NUM_TIMESTEPS = 15
 
 constants.nCells = 2562
 constants.nEdges = 7680
@@ -23,7 +23,7 @@ constants.maxEdges2 = 20
 constants.TWO = 2
 constants.FIFTEEN = 15
 constants.vertexDegree = 3
-constants.nVertLevels = 5
+constants.nVertLevels = 26
 constants.sphere_radius = terralib.constant(double, 6371229.0) --from ncdump of the grid, default is 1.0, but set to "a" from constants.F in init_atm_core.F
 constants.nlat = 721
 constants.seconds_per_day = terralib.constant(double, 86400.0)
@@ -57,7 +57,7 @@ constants.config_del4u_div_factor = terralib.constant(double, 10.0)
 constants.config_number_rayleigh_damp_u_levels = 6
 constants.config_rayleigh_damp_u_timescale_days = terralib.constant(double, 5.0)
 constants.config_coef_3rd_order = 0.25
-constants.config_dynamics_split_steps = 1 --Default value is 3, but we will temporarily use 1 for simplicity
+constants.config_dynamics_split_steps = 3 --Default value is 3, but we will temporarily use 1 for simplicity
 
 --Not sure about these as they seem to be parameters:
 constants.config_horiz_mixing = "2d_smagorinsky"

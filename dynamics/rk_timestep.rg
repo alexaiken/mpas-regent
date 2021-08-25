@@ -6,6 +6,7 @@ require "dynamics_tasks"
 local constants = require("constants")
 local format = require("std/format")
 
+terralib.linklibrary("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-zgdvh4hxthdhb3mlsviwhgatvbfnslog/lib/libnetcdf.so")
 
 local nCells = constants.nCells
 local nEdges = constants.nEdges
@@ -21,6 +22,79 @@ local nVertLevels = constants.nVertLevels
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
+task write_output(cr : region(ispace(int2d), cell_fs))
+
+where
+    reads writes (cr)
+do
+
+    var ncid_copy = 65539
+
+    --Create a netcdf file
+    file_create("all_vars.nc", &ncid_copy)
+
+    --Initialize the file's dimension variables
+    var nCells_dimid_copy : int
+    var nEdges_dimid_copy : int
+    var nVertices_dimid_copy : int
+    var maxEdges_dimid_copy : int
+    var maxEdges2_dimid_copy : int
+    var TWO_dimid_copy : int
+    var vertexDegree_dimid_copy : int
+    var nVertLevels_dimid_copy : int
+    var time_dimid_copy : int
+
+    --Define the dimension variables
+    --define_dim(ncid: int, dim_name: &int, dim_size: int, dim_id_ptr: &int)
+    define_dim(ncid_copy, "nCells", constants.nCells, &nCells_dimid_copy)
+    define_dim(ncid_copy, "nEdges", constants.nEdges, &nEdges_dimid_copy)
+    define_dim(ncid_copy, "nVertices", constants.nVertices, &nVertices_dimid_copy)
+    define_dim(ncid_copy, "maxEdges", constants.maxEdges, &maxEdges_dimid_copy)
+    define_dim(ncid_copy, "maxEdges2", constants.maxEdges2, &maxEdges2_dimid_copy)
+    define_dim(ncid_copy, "TWO", constants.TWO, &TWO_dimid_copy)
+    define_dim(ncid_copy, "vertexDegree", constants.vertexDegree, &vertexDegree_dimid_copy)
+    define_dim(ncid_copy, "nVertLevels", constants.nVertLevels, &nVertLevels_dimid_copy)
+    define_dim(ncid_copy, "Time", constants.netcdf.NC_UNLIMITED, &time_dimid_copy)
+
+    --For the 2D variables, the dimIDs need to be put in arrays
+    var nEdges_TWO_dimids = array(nEdges_dimid_copy, TWO_dimid_copy)
+    var nCells_maxEdges_dimids = array(nCells_dimid_copy, maxEdges_dimid_copy)
+    var nEdges_maxEdges2_dimids = array(nEdges_dimid_copy, maxEdges2_dimid_copy)
+    var nVertices_vertexDegree_dimids = array(nVertices_dimid_copy, vertexDegree_dimid_copy)
+
+    --Initialize the variable IDs
+    var rho_varid_copy : int
+
+    --Define the variable IDs
+    define_var(ncid_copy, "rho", constants.netcdf.NC_DOUBLE, 3, &nCells_dimid_copy, &rho_varid_copy)
+    
+    --This function signals that we're done writing the metadata.
+    end_def(ncid_copy)
+
+    --Now define the new arrays to hold the data that will be put in the netcdf files
+    var rho_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells*constants.nVertLevels*constants.NUM_TIMESTEPS))
+    
+    --Now we copy the data into the arrays so they can be read into the netcdf files
+    for i = 0, constants.nVertLevels do
+        for j = 0, constants.nCells do
+            for k = 0, constants.NUM_TIMESTEPS do
+                rho_in_copy[k * constants.nVertLevels * constants.nCells + j * constants.NUM_TIMESTEPS + i] = cr[{j, 0}].rho
+            end
+        end
+    end
+
+    --Now we put the data into the netcdf file.
+    put_var_double(ncid_copy, rho_varid_copy, rho_in_copy)
+
+    -- Lastly, we free the allocated memory for the 'copy' arrays
+    constants.c.free(rho_in_copy)
+
+    -- Close the file
+    file_close(ncid_copy)
+    constants.cio.printf("Successfully written netcdf file!\n")
+
+end
+
 --Comments for summarize_timestep
 --Unsure what associated(block) is. Also found in atm_srk3 but ignored
 --nCellsSolve, nEdgesSolve: not sure what these are
@@ -31,8 +105,9 @@ task summarize_timestep(cr : region(ispace(int2d), cell_fs),
                         config_print_detailed_minmax_vel : bool,
                         config_print_global_minmax_vel : bool,
                         config_print_global_minmax_sca : bool)
+
 where
-  reads (cr.{lat, lon, w}, er.{lat, lon, u, v})
+  reads (cr.{pressure_p, lat, lon, w, theta}, er.{lat, lon, u, v})
 do
   format.println("summarizing timestep")
 
@@ -394,36 +469,35 @@ do
   rk_sub_timestep[2] = dt_dynamics/number_of_sub_steps
 
   var number_sub_steps : int[3]
-  number_sub_steps[0] = max(1, number_of_sub_steps/2)
+  number_sub_steps[0] = 1
   number_sub_steps[1] = max(1, number_of_sub_steps/2)
   number_sub_steps[2] = number_of_sub_steps -- index indicates current rk_step val, num_sub_steps[2] is number for the 3rd rk_step
-
 
   -- atm_rk_integration_setup: saves state pre-loop
   format.println("Inside atm_srk3: calling atm_rk_integration_setup...")
   atm_rk_integration_setup(cr, er)
   format.println("Inside atm_srk3: done calling atm_rk_integration_setup...\n")
+  -- This is location 26 in debug mode.
 
   format.println("Inside atm_srk3: calling atm_compute_moist_coefficients...")
   atm_compute_moist_coefficients(cr, er)
   format.println("Inside atm_srk3: done calling atm_compute_moist_coefficients...\n")
+  -- This is location 27 in debug mode.
 
   ------------DYNAMICS SUB STEP LOOP ------------------------
   -- we ignore because assume no transport split (ie dynamics_split = 1, so we only loop once)
-
-
+  
   --compute original vertical coefficients (for initial step)
   format.println("Inside atm_srk3:  calling atm_compute_vert_imp_coefs...")
   atm_compute_vert_imp_coefs(cr, vert_r, rk_sub_timestep[0])
   format.println("Inside atm_srk3: done calling atm_compute_vert_imp_coefs...\n")
-
-
+  -- This is location 28 in debug mode.
 
   ------------------------------------------------------------
   ---------------- BEGIN Runge-Kutta loop --------------------
   -----------------------------------------------------------
-
   for rk_step = 0, 3 do
+
     format.println("RK Step number: {} \n", rk_step)
 
     if rk_step == 1 then
@@ -436,11 +510,12 @@ do
     format.println("Inside atm_srk3: calling atm_compute_dyn_tend...")
     atm_compute_dyn_tend(cr, er, vr, vert_r, rk_sub_timestep[rk_step], dt, constants.config_horiz_mixing, constants.config_mpas_cam_coef, constants.config_mix_full, constants.config_rayleigh_damp_u)
     format.println("Inside atm_srk3: done calling atm_compute_dyn_tend...\n")
+    -- This is location 29 in debug mode.
 
     format.println("Inside atm_srk3: calling atm_set_smlstep_pert_variables...")
     atm_set_smlstep_pert_variables(cpr, er, vert_r)
     format.println("Inside atm_srk3: done calling atm_compute_dyn_tend...\n")
-
+    -- This is location 30 in debug mode.
 
     -- SKIPPING if(config_apply_lbcs @ line 683)
 
@@ -452,24 +527,24 @@ do
       format.println("Inside atm_srk3: performing acoustic substeps within a rk step. Small step no: {} \n", small_step)
 
       atm_advance_acoustic_step(cr, er, vert_r, rk_sub_timestep[rk_step], small_step)
-
+      -- This is location 31 in debug mode.
       atm_divergence_damping_3d(cpr, er, rk_sub_timestep[rk_step])
+      -- This is location 32 in debug mode.
     end
 
     --we need to fix this and comment in
-    --atm_recover_large_step_variables(cr, er, vert_r, number_sub_steps[rk_step], rk_step, dt)
-
+    -- atm_recover_large_step_variables(cr, er, vert_r, number_sub_steps[rk_step], rk_step, dt)
+    -- This is location 33 in debug mode.
     -- SKIPPING if(config_apply_lbcs @ line 934)
 
 
     -- SKIPPING  if (config_scalar_advection .and. (.not. config_split_dynamics_transport) ) @ line 993
 
     atm_compute_solve_diagnostics(cr, er, vr, false, rk_step)
+    -- This is location 34 in debug mode.
 
     -- SKIPPING  if (config_scalar_advection .and. (.not. config_split_dynamics_transport) ) @ line 1246
-
     -- SKIPPING if(config_apply_lbcs @ line 1253)
-
     --for iEdge = 0, nEdges do
     format.println("Horizontal normal velocity at Edge {} is {} \n", 0, er[{0, 0}].u)
     --end
@@ -480,23 +555,21 @@ do
 
   atm_rk_dynamics_substep_finish(cr, er, 1, dynamics_split) --Third argument is dynamics_substep, which should eventually go in a loop
 
+  -- This is location 35 in debug mode.
+
   --------------DYNAMICS SUB STEP LOOP WOULD END HERE-----------------
-
   -- SKIPPING if (config_scalar_advection .and. config_split_dynamics_transport) @ 1355
-
   --mpas_reconstruct_2d(cr, er, false, true) --bools are includeHalos and on_a_sphere
 
   -- SKIPPING physics @ line 1610
   -- SKIPPING if(config_apply_lbcs @ line 1672 & 1714)
 
   summarize_timestep(cr, er, constants.config_print_detailed_minmax_vel, constants.config_print_global_minmax_vel, constants.config_print_global_minmax_sca)
-
+  -- This is location 36 in debug mode.
+  
   --for iCell = 0, nCells do
   --  cio.printf("Surface pressure at Cell %d is %f\n", iCell, cr[{iCell, 0}].pressure_p)
   --end
-
-
-
 end
 
 --__demand(__cuda)
@@ -512,6 +585,7 @@ where
   reads writes (cr, er, vr, vert_r),
   cpr <= cr, csr <= cr, cgr <= cr
 do
+--write_output(cr)
 --MPAS also uses nowTime and itimestep parameters; itimestep only for physics/IAU, and ignoring timekeeping for now
 
   atm_srk3(cr, cpr, csr, cgr, er, vr, vert_r, dt)

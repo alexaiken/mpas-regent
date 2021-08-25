@@ -19,6 +19,96 @@ local nlat = constants.nlat
 local cio = terralib.includec("stdio.h")
 local cmath = terralib.includec("math.h")
 
+--debugging pressure_p variable
+--print_pp_dependent(cr, vertr, ppi, dzw, zw, rr_2d, zz_2d, zgrid_2d, ah, sh, tt, 
+--                  temperature_1d, eta, teta, ppb_2d, pb_2d, pp_2d, rb_2d, pii, etavs, 
+--                  phi, r_earth, omega_e, cp, rgas, dtdz, znut, t0b, ztemp, p0, dz, 
+--                  zt, gravity, delta_t, eta_t, nz1)
+task print_pp_dependent(cr : region(ispace(int2d), cell_fs),
+                        vertr : region(ispace(int1d), vertical_fs),
+                        ppi : double[nVertLevels],
+                        dzw : double[nVertLevels],
+                        zw : double[nVertLevels + 1],
+                        rr_2d : double[nVertLevels * nlat],
+                        zz_2d : double[nVertLevels * nlat],
+                        zgrid_2d : double[(nVertLevels + 1) * nlat],
+                        ah : double[nVertLevels + 1],
+                        sh : double[nVertLevels + 1],
+                        tt : double[nVertLevels],
+                        temperature_1d : double[nVertLevels],
+                        eta : double[nVertLevels],
+                        teta : double[nVertLevels],
+                        ppb_2d : double[nVertLevels * nlat],
+                        pb_2d : double[nVertLevels * nlat],
+                        pp_2d : double[nVertLevels * nlat],
+                        rb_2d : double[nVertLevels * nlat],
+                        pii : double, 
+                        etavs : double,
+                        phi : double,
+                        r_earth : double,
+                        omega_e : double,
+                        cp : double, 
+                        rgas : double,
+                        dtdz : double,
+                        znut : double,
+                        t0b : double,
+                        ztemp : double,
+                        p0 : double,
+                        dz : double,
+                        zt : double,
+                        gravity : double,
+                        delta_t : double,
+                        eta_t : double,
+                        nz1 : int)
+where 
+  reads (cr.{pressure_p, pressure_base, rho_p, rho_base, zz, zgrid, hx}, 
+         vertr.{dzu, fzm, fzp})
+do 
+  format.println("ppi[0] at initialization = {}\n---------------------------------\n", ppi[0])
+  format.println("p0 at initialization = {}\n---------------------------------\n", p0)
+  format.println("dzw[0] at initialization = {}\n---------------------------------\n", dzw[0])
+  format.println("zw[0] at initialization = {}\n---------------------------------\n", zw[0])
+  format.println("dz at initialization = {}\n---------------------------------\n", dz)
+  format.println("zt at initialization = {}\n---------------------------------\n", zt)
+  format.println("gravity at initialization = {}\n---------------------------------\n", gravity)
+  format.println("rr_2d[0] at initialization = {}\n---------------------------------\n", rr_2d[0])
+  format.println("zz_2d[0] at initialization = {}\n---------------------------------\n", zz_2d[0])
+  format.println("zgrid_2d[0] at initialization = {}\n---------------------------------\n", zgrid_2d[0])
+  format.println("ah[0] at initialization = {}\n---------------------------------\n", ah[0])
+  format.println("pii at initialization = {}\n---------------------------------\n", pii)
+  format.println("etavs at initialization = {}\n---------------------------------\n", etavs)
+  format.println("phi at initialization = {}\n---------------------------------\n", phi)
+  format.println("r_earth at initialization = {}\n---------------------------------\n", r_earth)
+  format.println("omega_e at initialization = {}\n---------------------------------\n", omega_e)
+  format.println("sh[0] at initialization = {}\n---------------------------------\n", sh[0])
+  format.println("tt[0] at initialization = {}\n---------------------------------\n", tt[0])
+  format.println("temperature_1d[0] at initialization = {}\n---------------------------------\n", temperature_1d[0])
+  format.println("teta[0] at initialization = {}\n---------------------------------\n", teta[0])
+  format.println("eta[0] at initialization = {}\n---------------------------------\n", eta[0])
+  format.println("ppb_2d[0] at initialization = {}\n---------------------------------\n", ppb_2d[0])
+  format.println("pb_2d[0] at initialization = {}\n---------------------------------\n", pb_2d[0])
+  format.println("cp at initialization = {}\n---------------------------------\n", cp)
+  format.println("rgas at initialization = {}\n---------------------------------\n", rgas)
+  format.println("pp_2d[0] at initialization = {}\n---------------------------------\n", pp_2d[0])
+  format.println("dtdz at initialization = {}\n---------------------------------\n", dtdz)
+  format.println("delta_t at initialization = {}\n---------------------------------\n", delta_t)
+  format.println("znut at initialization = {}\n---------------------------------\n", znut)
+  format.println("eta_t at initialization = {}\n---------------------------------\n", eta_t)
+  format.println("t0b at initialization = {}\n---------------------------------\n", t0b)
+  format.println("nz1 at initialization = {}\n---------------------------------\n", nz1)
+  format.println("rb_2d[0] at initialization = {}\n---------------------------------\n", rb_2d[0])
+  format.println("vertr[0].dzu at initialization = {}\n---------------------------------\n", vertr[0].dzu)
+  format.println("vertr[0].fzp at initialization = {}\n---------------------------------\n", vertr[0].fzp)
+  format.println("vertr[0].fzm at initialization = {}\n---------------------------------\n", vertr[0].fzm)
+  format.println("cr[{0, 0}].rho_p at initialization = {}\n---------------------------------\n", cr[{0, 0}].rho_p)
+  format.println("cr[{0, 0}].zz at initialization = {}\n---------------------------------\n", cr[{0, 0}].zz)
+  format.println("cr[{0, 0}].rho_base at initialization = {}\n---------------------------------\n", cr[{0, 0}].rho_base)
+  format.println("cr[{0, 0}].pressure_base at initialization = {}\n---------------------------------\n", cr[{0, 0}].pressure_base)
+  format.println("ztemp at initialization = {}\n---------------------------------\n", ztemp)
+  format.println("cr[{0, 0}].zgrid at initialization = {}\n---------------------------------\n", cr[{0, 0}].zgrid)
+  format.println("cr[{0, 0}].hx at initialization = {}\n---------------------------------\n", cr[{0, 0}].hx)
+
+end
 
 --__demand(__cuda)
 task init_atm_case_jw(cr : region(ispace(int2d), cell_fs),
@@ -42,7 +132,7 @@ where
                 vr.{areaTriangle, kiteAreasOnVertex, x, y, z},
                 vertr.{dzu, fzm, fzp, cf1, cf2, cf3})
 do
-
+  --print_region_pp_dependent(cr, vertr)  
 -- local vars/constants defined at beginning of subroutine
   var cp = constants.cp
   var rgas = constants.rgas
@@ -158,6 +248,7 @@ do
       cr[{iCell, k}].hx = u0 / gravity * cmath.pow(cmath.cos(etavs), 1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi), 2.0) + 1.0/3.0) + 10.0/63.0) * u0*cmath.pow(cmath.cos(etavs), 1.5) + (1.6 * cmath.pow(cmath.cos(phi), 3) * (cmath.pow(cmath.sin(phi), 2) + 2.0/3.0) - pii/4.0)*r_earth*omega_e)
     end
   end
+  --print_region_pp_dependent(cr, vertr) 
 
 
 --      !     Metrics for hybrid coordinate and vertical stretching
@@ -175,10 +266,10 @@ do
 
   for k=0, nz do
     if k == 0 then
-      sh[k] = -1
+      sh[k] = 0
     else
   --!  sh[k] is the stretching specified for height surfaces
-      sh[k] = cmath.pow(([double](k - 1.0) * dz / zt), str) --- this was (real(k-1)) in mpas; do we need to cast it here too?
+      sh[k] = cmath.pow(([double](k + 1.0 - 1.0) * dz / zt), str) --- this was (real(k-1)) in mpas; do we need to cast it here too?
     end
 
     --cio.printf("dz is %f \n", dz)
@@ -195,7 +286,7 @@ do
 --!                zw[k] = sh[k]*zt yields nonconstant dzeta
 --!                        and nearly constant dzeta/dz
 
-    zw[k] = (k-1)*dz -- in mpas they cast to float
+    zw[k] = (k)*dz -- in mpas they cast to float
 
 --!            zw[k] = sh[k]*zt --- see above comments for which version you want
 --!
@@ -204,7 +295,7 @@ do
 --!                ah[k] = 0 is a terrain-following coordinate
 --!                ah[k] = 1 is a height coordinate
 --
-    ah[k] = 1.0 - cmath.pow(cmath.cos(.5*pii*(k-1)*dz/zt), 6.0)
+    ah[k] = 1.0 - cmath.pow(cmath.cos(.5*pii*(k)*dz/zt), 6.0)
 --!            ah[k] = 0.
 
     --cio.printf("sh[%d] is %f \n", k, sh[k])
@@ -226,6 +317,8 @@ do
     rdzwm[k] = dzw[k]/(dzw[k-1]*(dzw[k]+dzw[k-1]))
   end
 
+  --print_region_pp_dependent(cr, vertr)
+
 
 
 --!**********  how are we storing cf1, cf2 and cf3?
@@ -236,8 +329,8 @@ do
   vertr[0].cf2  = vertr[1].fzm - COF1 - COF2
   vertr[0].cf3  = COF2
 
-
-
+  --format.println("ah[0] at initialization = {}\n---------------------------------\n", ah[0])
+  --format.println("sh[0] at initialization = {}\n---------------------------------\n", ah[0])
 
   for iCell=0, nCells do
     for k=0, nz do
@@ -254,23 +347,27 @@ do
     end
   end
 
+  --print_region_pp_dependent(cr, vertr)
+
   for i=0, nEdges do
     var iCell1 = er[{i, 0}].cellsOnEdge[0] --cellsOnEdge(1,i)
     var iCell2 = er[{i, 0}].cellsOnEdge[1] --cellsOnEdge(2,i)
-    for k=1,nz1 do
+    for k=0,nz1 do
       er[{i, k}].zxu = 0.5 * (cr[{iCell2, k}].zgrid-cr[{iCell1, k}].zgrid + cr[{iCell2, k+1}].zgrid-cr[{iCell1, k+1}].zgrid) / er[{i, 0}].dcEdge
     end
   end
   for i=0, nCells do
     for k=0, nz1 do
-      ztemp = .5*(cr[{i, k+1}].zgrid+cr[{k,i}].zgrid)
+      ztemp = .5*(cr[{i, k+1}].zgrid+cr[{i,k}].zgrid)
       cr[{i, k}].dss = 0.0
-      ztemp = cr[{k,i}].zgrid
+      ztemp = cr[{i,k}].zgrid
       if(ztemp > zd+.1)  then
          cr[{i, k}].dss = cr[{i, k}].dss+xnutr*cmath.pow(cmath.sin(.5*pii*(ztemp-zd)/(zt-zd)), 2)
       end
     end
   end
+
+  --print_region_pp_dependent(cr, vertr)
 
 
 
@@ -299,9 +396,10 @@ do
   var etav : double[nVertLevels]
   var temperature_1d : double[nVertLevels]
   var ptemp : double
+
   for i = 0,  nlat do
 
-    lat_2d[i] = float(i-1)*dlat
+    lat_2d[i] = float(i)*dlat
     phi = lat_2d[i]
     var hx_1d = u0 / gravity * cmath.pow(cmath.cos(etavs),1.5) * ((-2.0 * cmath.pow(cmath.sin(phi), 6) * (cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *(u0)*cmath.pow(cmath.cos(etavs),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)
     for k=0, nz do
@@ -311,7 +409,7 @@ do
       zz_2d[k* nlat + i] = (zw[k+1]-zw[k])/(zgrid_2d[(k+1) * nlat + i]-zgrid_2d[k*nlat + i])
     end
 
-    for k=1,nz1 do
+    for k=0,nz1 do
       ztemp = .5*(zgrid_2d[(k+1)*nlat + i]+zgrid_2d[k*nlat + i])
       ppb_2d[k * nlat + i] = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
       pb_2d[k * nlat + i] = cmath.pow((ppb_2d[k * nlat + i]/p0),(rgas/cp))
@@ -322,7 +420,6 @@ do
       pp_2d[k * nlat + i] = 0.0
       rr_2d[k * nlat + i] = 0.0
     end
-
 
     for itr = 0,10 do
 
@@ -337,7 +434,7 @@ do
       end
 
       phi = lat_2d[i]
-      for k=1,nz1 do
+      for k=0,nz1 do
         temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0)  *2.0*u0*cmath.pow(cmath.cos(etav[k]),1.5) +(1.6*cmath.pow(cmath.cos(phi),3) *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.0+0.61*qv_2d[nlat*k + i])
 
         ztemp   = .5*(zgrid_2d[k * nlat + i]+zgrid_2d[(k+1) * nlat + i])
@@ -357,9 +454,9 @@ do
           rr_2d[k * nlat + i]  = (pp_2d[k * nlat + i]/(rgas*zz_2d[k * nlat + i]) - rb_2d[k * nlat + i]*(tt[k]-t0b))/tt[k]
         end
 
-        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(rr_2d[1 * nlat + i]+rb_2d[1 * nlat + i])*(1.0+qv_2d[1*nlat + i])  -.25*(rr_2d[2 * nlat + i]+rb_2d[2 * nlat + i])*(1.0+qv_2d[2 * nlat + i]))
+        ppi[0] = p0-.5*dzw[0]*gravity *(1.25*(rr_2d[i]+rb_2d[i])*(1.0+qv_2d[i])  -.25*(rr_2d[1 * nlat + i]+rb_2d[1 * nlat + i])*(1.0+qv_2d[1 * nlat + i]))
 
-        ppi[1] = ppi[1]-ppb_2d[1 * nlat + i]
+        ppi[0] = ppi[0]-ppb_2d[i]
         for k=0, nz1-1 do
 
           ppi[k+1] = ppi[k]-vertr[k+1].dzu*gravity*  ( (rr_2d[k * nlat + i]+(rr_2d[k * nlat + i] +rb_2d[k * nlat + i])*qv_2d[k*nlat + i])*vertr[k+1].fzp  + (rr_2d[(k+1) * nlat + i]+(rr_2d[(k+1) * nlat + i]+rb_2d[(k+1) * nlat + i])*qv_2d[(k+1) * nlat + i])*vertr[k+1].fzm )
@@ -372,7 +469,6 @@ do
       end   -- end inner iteration loop itrp
 
     end   -- end outer iteration loop itr
-
 
     for k = 0, nz1 do
       rho_2d[k * nlat + i] = rr_2d[k * nlat + i]+rb_2d[k * nlat + i]
@@ -416,8 +512,9 @@ do
 --!
   for i=0, nCells do
     for k=0,nz1 do
-      ztemp    = .5*(cr[{i, k+1}].zgrid+cr[{k,i}].zgrid)
+      ztemp    = .5*(cr[{i, k+1}].zgrid+cr[{i,k}].zgrid)
       cr[{i, k}].pressure_base = p0*cmath.exp(-gravity*ztemp/(rgas*t0b))
+      --format.println("-------------------------------------\n pressure_base[0, 0] at L425 = {}\n---------------------------------\n", cr[{0, 0}].pressure_base)
       cr[{i, k}].pressure_p = cmath.pow((cr[{i, k}].pressure_base/p0),(rgas/cp))
       cr[{i, k}].rho_base = cr[{i, k}].pressure_base/(rgas*t0b*cr[{i, k}].zz)
       cr[{i, k}].theta_base = t0b/cr[{i, k}].pressure_p
@@ -429,6 +526,8 @@ do
 
 --!     iterations to converge temperature as a function of pressure
 --!
+    --format.println("-------------------------------------\n 1111pressure_p[0] at initialization = {}\n---------------------------------\n", cr[{0, 0}].pressure_p)
+
     for itr = 0, 10 do
 
       for k=0, nz1 do
@@ -444,7 +543,7 @@ do
       for k=0,nz1 do
         temperature_1d[k] = teta[k]+.75*eta[k]*pii*u0/rgas*cmath.sin(etav[k])  *cmath.sqrt(cmath.cos(etav[k]))* ((-2.0*cmath.pow(cmath.sin(phi),6)  *(cmath.pow(cmath.cos(phi),2)+1.0/3.0)+10.0/63.0) *2.*u0*cmath.pow(cmath.cos(etav[k]),1.5)   +(1.6*cmath.pow(cmath.cos(phi),3)   *(cmath.pow(cmath.sin(phi),2)+2.0/3.0)-pii/4.0)*r_earth*omega_e)/(1.+0.61*cr[{i, k}].qv)
 
-        ztemp   = .5*(cr[{k,i}].zgrid+cr[{i, k+1}].zgrid)
+        ztemp   = .5*(cr[{i,k}].zgrid+cr[{i, k+1}].zgrid)
         ptemp   = cr[{i, k}].pressure_base + cr[{i, k}].pressure_p
 
 ------SKIPPING BECAUSE CONDITIONAL ----------
@@ -478,17 +577,14 @@ do
 
       end
 
-
-
-
       for itrp = 0,25 do
         for k=0,nz1 do
           cr[{i,k}].rho_p  = (cr[{i, k}].pressure_p/(rgas*cr[{i, k}].zz) - cr[{i, k}].rho_base*(tt[k]-t0b))/tt[k]
         end
 
-        ppi[1] = p0-.5*dzw[1]*gravity *(1.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+cr[{i, 0}].qv ) -.25*(cr[{i, 2}].rho_p+cr[{i, 2}].rho_base)*(1.+cr[{i, 1}].qv))
+        ppi[0] = p0-.5*dzw[0]*gravity *(1.25*(cr[{i, 0}].rho_p+cr[{i, 0}].rho_base)*(1.+cr[{i, 0}].qv ) -.25*(cr[{i, 1}].rho_p+cr[{i, 1}].rho_base)*(1.+cr[{i, 0}].qv))
 
-        ppi[1] = ppi[1]-cr[{i, 1}].pressure_base
+        ppi[0] = ppi[0]-cr[{i, 0}].pressure_base
         for k=0,nz1-1 do
 
 
@@ -500,13 +596,11 @@ do
           cr[{i, k}].pressure_p = .2*ppi[k]+.8*cr[{i, k}].pressure_p
         end
 
+      --format.println("-------------------------------------\n 1111pressure_p[0] at initialization = {}\n---------------------------------\n", cr[{0, 0}].pressure_p)
+
       end   -- end inner iteration loop itrp
 
     end   -- end outer iteration loop itr
-
-
-
-
 
     for k=0,nz1 do
       cr[{i, k}].exner = cmath.pow(((cr[{i, k}].pressure_base+cr[{i, k}].pressure_p)/p0),(rgas/cp))
@@ -515,12 +609,17 @@ do
       cr[{i, k}].rho_zz = cr[{i, k}].rho_base + cr[{i,k}].rho_p
     end
 
+
     --calculation of surface pressure:
-    cr[{i, 0}].surface_pressure = 0.5*dzw[1]*gravity * (1.25*(cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 0}].qv) -  0.25*(cr[{i, 2}].rho_p + cr[{i, 2}].rho_base) * (1.0 + cr[{i, 1}].qv))
-    cr[{i, 0}].surface_pressure = cr[{i, 0}].surface_pressure + cr[{i, 1}].pressure_p + cr[{i, 1}].pressure_base
+    cr[{i, 0}].surface_pressure = 0.5*dzw[0]*gravity * (1.25*(cr[{i, 0}].rho_p + cr[{i, 0}].rho_base) * (1.0 + cr[{i, 0}].qv) -  0.25*(cr[{i, 1}].rho_p + cr[{i, 1}].rho_base) * (1.0 + cr[{i, 1}].qv))
+    cr[{i, 0}].surface_pressure = cr[{i, 0}].surface_pressure + cr[{i, 0}].pressure_p + cr[{i, 0}].pressure_base
 
   end   -- end loop over cells
-
+  --format.println("********************************************\nrho_p[0] at initialization = {}\n***************************************************\n", cr[{0, 0}].rho_p)
+  --format.println("********************************************\nrho_base[0] at initialization = {}\n***************************************************\n", cr[{0, 0}].rho_base)
+  --format.println("********************************************\nqv[0] at initialization = {}\n***************************************************\n", cr[{0, 0}].qv)
+  --format.println("********************************************\nsurface_pressure[10] at initialization = {}\n***************************************************\n", cr[{10, 0}].surface_pressure)
+  
   var lat_pert = latitude_pert*pii/180.0
   var lon_pert = longitude_pert*pii/180.0
 
@@ -577,8 +676,14 @@ do
      for k=0, nVertLevels do
        etavs = (0.5*(cr[{iCell1, k}].pressure_base+cr[{iCell2, k}].pressure_base+cr[{iCell1, k}].pressure_p+cr[{iCell2, k}].pressure_p)/p0 - 0.252)*pii/2.0
        var fluxk = u0*flux*(cmath.pow(cmath.cos(etavs),1.5))
+        if (iEdge == 0 and k == nVertLevels - 1) then
+          format.println("fluxk = {}", fluxk)
+          format.println("u_pert = {}", u_pert)
+          format.println("flux = {}", flux)
+        end
        er[{iEdge, k}].u = fluxk + u_pert
      end
+
 
 ------end conditional else---------
 
@@ -712,15 +817,18 @@ do
       er[{iEdge, k}].v = 0.0
     end
   end
-
+  format.println("weightsonEdge = {}", er[{0, 0}].weightsOnEdge[0])
+  format.println("u = {}", er[{0, 0}].u)
+  format.println("eoe = {}", er[{0, 0}].edgesOnEdge_ECP[0])
   for iEdge = 0, nEdges do
      for i=0, er[{iEdge, 0}].nEdgesOnEdge do
-        eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i]
+        eoe = er[{iEdge, 0}].edgesOnEdge_ECP[i] - 1
         for k = 0, nVertLevels do
            er[{iEdge, k}].v = er[{iEdge, k}].v + er[{iEdge, 0}].weightsOnEdge[i] * er[{eoe, k}].u
         end
      end
   end
+  format.println("v = {}", er[{0, 0}].v)
 
 --------PSURF is never used, in mpas it only exists for purposes of logging. excluding because of this
 --  for i=0,10 do
@@ -739,5 +847,12 @@ do
         cr[{iCell, k}].theta = cr[{iCell, k}].theta_m / (1.0 + 1.61 * cr[{iCell, k}].qv)
      end
   end
+
+  --format.println("\nVariable values at the end of init_atm_cases.rg:")
+
+  --print_pp_dependent(cr, vertr, ppi, dzw, zw, rr_2d, zz_2d, zgrid_2d, ah, sh, tt, 
+  --                temperature_1d, eta, teta, ppb_2d, pb_2d, pp_2d, rb_2d, pii, etavs, 
+  --                phi, r_earth, omega_e, cp, rgas, dtdz, znut, t0b, ztemp, p0, dz, 
+  --                zt, gravity, delta_t, eta_t, nz1)
 
 end

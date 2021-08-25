@@ -201,6 +201,7 @@ do
     get_var_double(ncid, kiteAreasOnVertex_varid, kiteAreasOnVertex_in)
 
 
+
     var partition_array = read_file([rawstring](graph_file_name))
 
     ----------------------------------
@@ -345,7 +346,7 @@ do
 
      -- Close the file
 	  file_close(ncid)
-
+    
     -- Free allocated arrays
     constants.c.free(latCell_in)
     constants.c.free(lonCell_in)
@@ -513,6 +514,7 @@ do
     var TWO_dimid_copy : int
     var vertexDegree_dimid_copy : int
     var nVertLevels_dimid_copy : int
+    var nVertLevelsplus_dimid_copy : int
     var time_dimid_copy : int
 
     --Define the dimension variables
@@ -525,6 +527,7 @@ do
     define_dim(ncid_copy, "TWO", constants.TWO, &TWO_dimid_copy)
     define_dim(ncid_copy, "vertexDegree", constants.vertexDegree, &vertexDegree_dimid_copy)
     define_dim(ncid_copy, "nVertLevels", constants.nVertLevels, &nVertLevels_dimid_copy)
+    define_dim(ncid_copy, "nVertLevelsplus", constants.nVertLevels + 1, &nVertLevelsplus_dimid_copy)
     define_dim(ncid_copy, "Time", constants.netcdf.NC_UNLIMITED, &time_dimid_copy)
 
     --For the 2D variables, the dimIDs need to be put in arrays
@@ -532,6 +535,8 @@ do
     var nCells_maxEdges_dimids = array(nCells_dimid_copy, maxEdges_dimid_copy)
     var nEdges_maxEdges2_dimids = array(nEdges_dimid_copy, maxEdges2_dimid_copy)
     var nVertices_vertexDegree_dimids = array(nVertices_dimid_copy, vertexDegree_dimid_copy)
+    var nEdges_nVertLevelsplus_dimids = array(nEdges_dimid_copy, nVertLevelsplus_dimid_copy)
+    var nCells_nVertLevels_dimids = array(nCells_dimid_copy, nVertLevels_dimid_copy)
 
     --Initialize the variable IDs
     var latCell_varid_copy : int
@@ -834,6 +839,7 @@ do
     var vertexDegree_dimid_copy : int
     var nVertLevels_dimid_copy : int
     var time_dimid_copy : int
+    var nVertLevelsplus_dimid_copy : int
 
     --Define the dimension variables
     --define_dim(ncid: int, dim_name: &int, dim_size: int, dim_id_ptr: &int)
@@ -845,6 +851,7 @@ do
     define_dim(ncid_copy, "TWO", constants.TWO, &TWO_dimid_copy)
     define_dim(ncid_copy, "vertexDegree", constants.vertexDegree, &vertexDegree_dimid_copy)
     define_dim(ncid_copy, "nVertLevels", constants.nVertLevels, &nVertLevels_dimid_copy)
+    define_dim(ncid_copy, "nVertLevelsplus", constants.nVertLevels + 1, &nVertLevelsplus_dimid_copy)
     define_dim(ncid_copy, "Time", constants.netcdf.NC_UNLIMITED, &time_dimid_copy)
 
     --For the 2D variables, the dimIDs need to be put in arrays
@@ -852,6 +859,10 @@ do
     var nCells_maxEdges_dimids = array(nCells_dimid_copy, maxEdges_dimid_copy)
     var nEdges_maxEdges2_dimids = array(nEdges_dimid_copy, maxEdges2_dimid_copy)
     var nVertices_vertexDegree_dimids = array(nVertices_dimid_copy, vertexDegree_dimid_copy)
+    var nCells_nVertLevels_dimids = array(nCells_dimid_copy, nVertLevels_dimid_copy)
+    var nEdges_nVertLevels_dimids = array(nEdges_dimid_copy, nVertLevels_dimid_copy)
+    var nCells_nVertLevelsplus_dimids = array(nCells_dimid_copy, nVertLevelsplus_dimid_copy)
+    
 
     --Initialize the variable IDs
     var latCell_varid_copy : int
@@ -943,15 +954,15 @@ do
     define_var(ncid_copy, "cellsOnVertex", constants.netcdf.NC_INT, 2, nVertices_vertexDegree_dimids, &cellsOnVertex_varid_copy)
     define_var(ncid_copy, "kiteAreasOnVertex", constants.netcdf.NC_DOUBLE, 2, nVertices_vertexDegree_dimids, &kiteAreasOnVertex_varid_copy)
 
-    define_var(ncid_copy, "u", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &u_varid_copy)
-    define_var(ncid_copy, "v", constants.netcdf.NC_DOUBLE, 1, &nEdges_dimid_copy, &v_varid_copy)
+    define_var(ncid_copy, "u", constants.netcdf.NC_DOUBLE, 2, nEdges_nVertLevels_dimids, &u_varid_copy)
+    define_var(ncid_copy, "v", constants.netcdf.NC_DOUBLE, 2, nEdges_nVertLevels_dimids, &v_varid_copy)
 
-    define_var(ncid_copy, "w", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &w_varid_copy)
-    define_var(ncid_copy, "pressure", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &pressure_varid_copy)
+    define_var(ncid_copy, "w", constants.netcdf.NC_DOUBLE, 2, nCells_nVertLevelsplus_dimids, &w_varid_copy)
+    define_var(ncid_copy, "pressure", constants.netcdf.NC_DOUBLE, 2, nCells_nVertLevels_dimids, &pressure_varid_copy)
 
-    define_var(ncid_copy, "pressure_p", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &pressure_p_varid_copy)
-    define_var(ncid_copy, "rho", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &rho_varid_copy)
-    define_var(ncid_copy, "theta", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &theta_varid_copy)
+    define_var(ncid_copy, "pressure_p", constants.netcdf.NC_DOUBLE, 2, nCells_nVertLevels_dimids, &pressure_p_varid_copy)
+    define_var(ncid_copy, "rho", constants.netcdf.NC_DOUBLE, 2, nCells_nVertLevels_dimids, &rho_varid_copy)
+    define_var(ncid_copy, "theta", constants.netcdf.NC_DOUBLE, 2, nCells_nVertLevels_dimids, &theta_varid_copy)
     define_var(ncid_copy, "surface_pressure", constants.netcdf.NC_DOUBLE, 1, &nCells_dimid_copy, &surface_pressure_varid_copy)
 
 
@@ -998,15 +1009,15 @@ do
     var cellsOnVertex_in_copy : &int = [&int](constants.c.malloc([sizeof(int)] * constants.nVertices*constants.vertexDegree))
     var kiteAreasOnVertex_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nVertices*constants.vertexDegree))
 
-    var u_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
-    var v_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges))
+    var u_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges * constants.nVertLevels))
+    var v_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nEdges * constants.nVertLevels))
 
-    var w_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
-    var pressure_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var w_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells * (constants.nVertLevels + 1)))
+    var pressure_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells * constants.nVertLevels))
 
-    var pressure_p_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
-    var rho_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
-    var theta_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
+    var pressure_p_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells * constants.nVertLevels))
+    var rho_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells * constants.nVertLevels))
+    var theta_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells * constants.nVertLevels))
     var surface_pressure_in_copy : &double = [&double](constants.c.malloc([sizeof(double)] * constants.nCells))
 
 
@@ -1021,12 +1032,6 @@ do
         meshDensity_in_copy[i] = cell_region[{i, 0}].meshDensity
         nEdgesOnCell_in_copy[i] = cell_region[{i, 0}].nEdgesOnCell
         areaCell_in_copy[i] = cell_region[{i, 0}].areaCell
-        pressure_in_copy[i] = cell_region[{i, 0}].pressure
-        w_in_copy[i]  = cell_region[{i, 0}].w
-
-        pressure_p_in_copy[i]  = cell_region[{i, 0}].pressure_p
-        rho_in_copy[i]  = cell_region[{i, 0}].rho
-        theta_in_copy[i]  = cell_region[{i, 0}].theta
         surface_pressure_in_copy[i]  = cell_region[{i, 0}].surface_pressure
 
         for j = 0, constants.maxEdges do
@@ -1034,6 +1039,19 @@ do
             verticesOnCell_in_copy[i*constants.maxEdges + j] = cell_region[{i, 0}].verticesOnCell[j]
             cellsOnCell_in_copy[i*constants.maxEdges + j] = cell_region[{i, 0}].cellsOnCell[j]
         end
+
+        for k = 0, constants.nVertLevels + 1 do
+            if k < constants.nVertLevels + 1 then
+                pressure_in_copy[i*constants.nVertLevels + k] = cell_region[{i, k}].pressure
+                pressure_p_in_copy[i*constants.nVertLevels + k] = cell_region[{i, k}].pressure_p
+                rho_in_copy[i*constants.nVertLevels + k] = cell_region[{i, k}].rho
+                theta_in_copy[i*constants.nVertLevels + k] = cell_region[{i, k}].theta
+                w_in_copy[i*constants.nVertLevels + k] = cell_region[{i, k}].w
+            else
+                w_in_copy[i*constants.nVertLevels + k] = cell_region[{i, k}].w
+            end
+        end
+        
         --constants.cio.printf("Cell COPY : Cell ID %d, nEdgesOnCell is %d\n", indexToCellID_in_copy[i], nEdgesOnCell_in_copy[i])
     end
 
@@ -1062,6 +1080,10 @@ do
         for j = 0, constants.maxEdges2 do
             edgesOnEdge_in_copy[i*constants.maxEdges2 + j] = edge_region[{i, 0}].edgesOnEdge_ECP[j]
             weightsOnEdge_in_copy[i*constants.maxEdges2 + j] = edge_region[{i, 0}].weightsOnEdge[j]
+        end
+        for k = 0, constants.nVertLevels do
+            u_in_copy[i*constants.nVertLevels + k] = edge_region[{i, k}].u
+            v_in_copy[i*constants.nVertLevels + k] = edge_region[{i, k}].v
         end
     end
 

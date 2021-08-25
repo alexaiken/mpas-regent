@@ -12,6 +12,8 @@ local format = require("std/format")
 
 terralib.linklibrary("/home/arjunk1/spack/opt/spack/linux-ubuntu20.04-broadwell/gcc-9.3.0/netcdf-c-4.7.4-zgdvh4hxthdhb3mlsviwhgatvbfnslog/lib/libnetcdf.so")
 
+ 
+
 task main()
   -------------------------------------------
   ----- DEFINE INDEX SPACES AND REGIONS -----
@@ -42,6 +44,7 @@ task main()
   format.println("Calling load mesh...")
   load_mesh(cell_region, edge_region, vertex_region, constants.FILE_NAME, constants.GRAPH_FILE_NAME)
   format.println("Done calling load mesh...\n")
+  -- This is location 0 in debug mode.
 
   var cell_partition_fs = partition_regions(constants.NUM_PARTITIONS, cell_region, edge_region, vertex_region)
 
@@ -56,20 +59,29 @@ task main()
     format.println("Calling init_atm_case_jw...")
     init_atm_case_jw(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region)
     format.println("Done calling init_atm_case_jw...\n")
+    -- This is location 1 in debug mode.
 
     format.println("Calling atm_core_init...")
     atm_core_init(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls)
     format.println("Done calling atm_core_init...\n")
-
+    -- This is location 2 in debug mode.
+    atm_compute_output_diagnostics(cell_region)
+  
     for j = 0, constants.NUM_TIMESTEPS do
-      format.println("Calling atm_do_timestep...iteration {} \n", j)
+      -- format.println("Calling atm_do_timestep...iteration {} \n", j / 8)
+      -- This is location 3 in debug mode.
       atm_do_timestep(cell_region, cell_partition_fs.private_1[i], cell_partition_fs.shared_1[i], cell_partition_fs.ghost_1[i], edge_region, vertex_region, vertical_region, phys_tbls, j)
     end
   end
 
+  -- This is location 17 in debug mode.
+
   atm_compute_output_diagnostics(cell_region)
+  -- This is location 18 in debug mode.
 
   write_output_plotting(cell_region, edge_region, vertex_region)
+  -- This is location 19 in debug mode.
 
 end
+
 regentlib.start(main)

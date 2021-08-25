@@ -1,0 +1,18 @@
+Difference now in atm_timestep: pressure_p not updated in atm_recover_large_step_variables
+-	Value of rtheta_pp becoming -nan
+-	Dependent on value of ts, which is dependent on value of tend_rt
+-	tend_rt does not exist in regent version, used theta_m instead. But these two have different values in fortran.
+-	tend_rt initialization: 
+    o	Fortran: 
+        o	call mpas_pool_get_array(tend, 'theta_m', tend_rt)
+        o	<var name="tend_theta" name_in_code="theta_m" type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3} s^{-1}"
+             description="tendency of coupled potential temperature rho*theta_m/zz from dynamics and physics, updated each RK step"/>
+    o	Regent:
+        o	Is “tend_theta” in cell_region
+
+Timekeeping framework not implemented
+-	Fortran while loop in do_timestep: 
+    o	do while (.not. mpas_is_clock_stop_time(clock))
+    o	atm_do_timestep(domain, dt, itimestep) is called a total of 3073 times
+-	Regent: 
+    o	atm_do_timestep is only called constants.NUM_TIMESTEPS times.
