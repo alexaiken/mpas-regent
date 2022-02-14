@@ -26,7 +26,7 @@ What follows is a distillation of the final conclusions made at the end of the s
 
 To harness implicit parallelization on GPUs and CPUs, Regent requires **strictly disjoint data partitions**. Such partitions are straightforward when performed on arrays. However, **MPAS is an unstructured graph** composed of cells, edges, and vertices. See below.
 
-![Untitled](CURIS%20MPAS-Regent%20Partitioning%20c263e12e28fd4192921a2f3a29c4f687/Untitled.png)
+![Voronoi Cell Mesh](https://github.com/alexaiken/mpas-regent/blob/master/voronoicellmesh.png)
 
 Therefore, we require a preprocessing step to achieve disjoint partitions of cells, edges, and vertices while preserving the ability to calculate values across partitions.
 
@@ -37,7 +37,7 @@ partition layers using the following strategy, given an original partition ***p*
 - ***Private***: cells in ***p*** not in ***Shared*** (in gold at right)
 - ***Ghost**:* cells bordering ***p*** (in gray at right)
 
-![Untitled](CURIS%20MPAS-Regent%20Partitioning%20c263e12e28fd4192921a2f3a29c4f687/Untitled%201.png)
+![Dependent Partitioning Layers](https://github.com/alexaiken/mpas-regent/blob/master/dependentpartitionlayers.png)
 
 Let ***f(x)*** be the set of all neighbor cells of a cell ***x***. Then the i**mage *f(p)*** of all the cells of a partition ***p*** includes the ghost cells of ***p***. Using **image** and preimage, image’s inverse, we can efficiently compute edge, vertex, and cell partitions to allow **parallel computation across partitions**. This is how we computed partitions (see below in Code).
 
